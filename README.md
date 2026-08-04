@@ -104,7 +104,10 @@ The exported instances are read back by ITensors.jl and evaluated against the sa
 analytic formulas the Rust side uses, which is an engine-independent check that the
 inputs really represent the intended functions. First instantiate the environment, then
 run a check per instance (the trailing number is `K` for case 1 and `R` for case 2, and
-the instance must have been exported with `EXPORT_HDF5`):
+the instance must have been exported with `EXPORT_HDF5`). Full profile runs through
+`scripts/run_all.sh` do not export HDF5, so to produce instances for the checks set
+`EXPORT_HDF5` on a runner invocation of your own, for example the case-1 smoke run above
+with `EXPORT_HDF5=/tmp/smoke`:
 
 ```bash
 julia --project=julia -e 'using Pkg; Pkg.instantiate()'
@@ -125,7 +128,9 @@ julia --project=julia julia/check_mpo_mpo.jl /tmp/smoke 8
    `simplett` with an absolute singular value cutoff, `fit` runs on `treetn` with a
    relative cutoff. Timings and errors are comparable, but output bond dimensions are not
    directly comparable across the engines. The generated report repeats this note under
-   its summary table.
+   its summary table. The case-2 `fit` arm also runs a single full sweep, pinned as part
+   of the benchmark definition and recorded as `fit_nsweeps` in every JSON record, so its
+   wall time is only comparable at that stated sweep count.
 3. **The case-1 `fit` arm is pinned to two full sweeps.** The sweep count is part of the
    benchmark definition, since fit cost is linear in it. The upstream elementwise fit
    accuracy problem recorded in `tensor4all-itensorlike/tests/bug_fit_elementwise.rs` did

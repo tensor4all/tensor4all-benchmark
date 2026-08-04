@@ -75,6 +75,7 @@ fn main() -> anyhow::Result<()> {
                 algorithm: algo_name.clone(),
                 params: serde_json::json!({
                     "k_max": k, "r": r, "input_max_bond_dim": input_chi, "max_bond": max_bond,
+                    "runs": runs, "warmups": warmups,
                 }),
                 seed,
                 tolerance: tol,

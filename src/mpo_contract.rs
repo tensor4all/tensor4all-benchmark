@@ -42,6 +42,12 @@ pub fn mpo_contract(
             let fopts = FitOptions {
                 tolerance: tol,
                 max_bond_dim: max_bond,
+                // At the pinned rev the variational update is a stub upstream
+                // (`update_two_site_core` is a placeholder), so every sweep is
+                // dead work: it builds environments and changes nothing. Pinned
+                // to 1 instead of the default 10 to minimize wasted time. This
+                // is part of the benchmark definition, not an incidental value.
+                max_sweeps: 1,
                 ..FitOptions::default()
             };
             contract_fit(a, b, &fopts, None)?

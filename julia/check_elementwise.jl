@@ -2,10 +2,16 @@
 # Reads instance-k<k>.h5 (MPS groups "f","g") and instance-k<k>.json,
 # evaluates both MPS at sample grid points, compares to the analytic series.
 using HDF5, ITensors, ITensorMPS, JSON3
+using Random
+Random.seed!(0)
 
 dir, k = ARGS[1], ARGS[2]
 meta = JSON3.read(read(joinpath(dir, "instance-k$k.json"), String))
 R = meta.r
+@assert meta.k_max == parse(Int, k)
+# Truncation is norm-relative, so the pointwise error scales with the exported
+# tolerance rather than being bounded by a fixed absolute number.
+threshold = 1e3 * meta.tolerance
 
 coeffs(v) = [complex(c[1], c[2]) for c in v]
 series(c, x) = sum(c[j+1] * exp(2im * pi * j * x) for j in 0:length(c)-1)
@@ -30,7 +36,7 @@ h5open(joinpath(dir, "instance-k$k.h5"), "r") do file
             x = i / 2^R
             got = eval_mps(psi, bits)
             want = series(cs, x)
-            if abs(got - want) > 1e-6
+            if abs(got - want) > threshold
                 global fails += 1
                 println("MISMATCH $name x=$x got=$got want=$want")
             end

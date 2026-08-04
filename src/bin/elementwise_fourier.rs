@@ -2,7 +2,9 @@
 //! swept over the number of Fourier modes for each product algorithm.
 
 use std::path::PathBuf;
-use t4a_bench::elementwise::{elementwise_product, max_error_vs_series, ElementwiseAlgo};
+use t4a_bench::elementwise::{
+    elementwise_product, max_error_vs_series, ElementwiseAlgo, FIT_NFULLSWEEPS,
+};
 use t4a_bench::fourier::{compress_svd, FourierSeries};
 use t4a_bench::harness::time_median;
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
@@ -45,6 +47,10 @@ fn main() -> anyhow::Result<()> {
     let out_dir =
         PathBuf::from(std::env::var("OUT_DIR").unwrap_or_else(|_| "result/dev/raw".into()));
 
+    // Accuracy check sampling, recorded in every record's params.
+    let n_error_samples: usize = 256;
+    let error_seed: u64 = seed.wrapping_add(999);
+
     let mut failures = Vec::new();
     for &k in &ks {
         let f = FourierSeries::random(k, seed.wrapping_add(2 * k as u64));
@@ -83,11 +89,12 @@ fn main() -> anyhow::Result<()> {
             let (out, timing) = time_median(warmups, runs, || {
                 elementwise_product(algo, &a, &b, tol, max_bond).expect("algorithm failed")
             });
-            let max_error = max_error_vs_series(&out, &exact, r, 256, seed.wrapping_add(999));
+            let max_error = max_error_vs_series(&out, &exact, r, n_error_samples, error_seed);
             // The gate detects wrong results, not precision. Truncation is
             // norm-relative (the TT norm grows like 2^(R/2)), so the pointwise
             // error accumulates to ~100x tol at R=20, K=64 (measured 6.5e-7).
-            // fit has a known upstream accuracy issue on elementwise products.
+            // The upstream elementwise fit accuracy issue did not reproduce on
+            // these instances; the looser bound for fit is kept as a guard.
             let sanity = if matches!(algo, ElementwiseAlgo::Fit) {
                 1e-2
             } else {
@@ -98,8 +105,12 @@ fn main() -> anyhow::Result<()> {
                 case: "elementwise_fourier".into(),
                 algorithm: algo_name.clone(),
                 params: serde_json::json!({
-                    "k_max": k, "r": r, "input_max_bond_dim": input_chi, "max_bond": max_bond,
+                    "k_max": k, "r": r, "max_bond": max_bond,
                     "runs": runs, "warmups": warmups,
+                    "n_error_samples": n_error_samples, "error_seed": error_seed,
+                    "error_metric": "max_abs",
+                    // Part of the benchmark definition for the fit arm.
+                    "fit_nfullsweeps": FIT_NFULLSWEEPS,
                 }),
                 seed,
                 tolerance: tol,

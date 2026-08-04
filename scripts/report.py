@@ -19,6 +19,12 @@ X_AXIS = {
     "mpo_mpo_quantics": ("input_max_bond_dim", "input bond dimension chi"),
 }
 
+ERROR_LABEL = {
+    # case name -> what `max_error` in the records actually measures
+    "elementwise_fourier": "max abs error",
+    "mpo_mpo_quantics": "max relative error",
+}
+
 NOTES = {
     # case name -> caveat emitted under the summary table
     "mpo_mpo_quantics": (
@@ -56,7 +62,9 @@ def fit_exponent(xs, ys):
 
 def render_case(case, algos, profile_dir: Path):
     xfield, xlabel = X_AXIS[case]
-    lines = [f"# {case}", "", "| algorithm | points | fitted time exponent | worst error |",
+    elabel = ERROR_LABEL.get(case, "max error")
+    lines = [f"# {case}", "",
+             f"| algorithm | points | fitted time exponent | worst {elabel} |",
              "|---|---|---|---|"]
     fig_t, ax_t = plt.subplots(figsize=(5, 4))
     fig_e, ax_e = plt.subplots(figsize=(5, 4))
@@ -71,7 +79,7 @@ def render_case(case, algos, profile_dir: Path):
         ax_e.loglog(xs, es, "o-", label=algo)
     if case in NOTES:
         lines += ["", NOTES[case]]
-    for ax, ylab in ((ax_t, "median wall time [s]"), (ax_e, "max error")):
+    for ax, ylab in ((ax_t, "median wall time [s]"), (ax_e, elabel)):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylab)
         ax.legend()

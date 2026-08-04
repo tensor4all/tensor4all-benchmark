@@ -118,6 +118,7 @@ fn main() -> anyhow::Result<()> {
                     "alpha_range": [alpha_lo, alpha_hi], "max_bond": max_bond,
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
+                    "error_metric": "max_rel_vs_analytic",
                     // Part of the benchmark definition for the fit arm.
                     "fit_nsweeps": FIT_NSWEEPS,
                 }),

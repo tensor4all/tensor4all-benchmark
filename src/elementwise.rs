@@ -8,6 +8,11 @@ use tensor4all_simplett::{tensor3_from_data, AbstractTensorTrain, Tensor3Ops, Te
 use crate::fourier::{compress_svd, FourierSeries};
 use crate::harness::{index_to_bits, sample_grid_indices};
 
+/// The fit arm uses a fixed two full sweeps: the sweep count is part of the
+/// benchmark definition, not something we let adapt or inherit from upstream
+/// defaults (which is 1 at the pinned rev).
+pub const FIT_NFULLSWEEPS: usize = 2;
+
 #[derive(Clone, Copy, Debug)]
 pub enum ElementwiseAlgo {
     Naive,
@@ -90,10 +95,7 @@ fn hadamard_treetn(
         .with_max_rank(max_bond)
         .with_svd_policy(SvdTruncationPolicy::new(tol));
     if fit {
-        // The fit arm uses a fixed two full sweeps: the sweep count is part of the
-        // benchmark definition, not something we let adapt or inherit from upstream
-        // defaults (which is 1 at the pinned rev).
-        opts = opts.with_nfullsweeps(2);
+        opts = opts.with_nfullsweeps(FIT_NFULLSWEEPS);
     }
     let out = hadamard(&ta, &tb, &pairs, &0, opts)
         .map_err(|e| anyhow::anyhow!("hadamard failed: {e:?}"))?;
@@ -232,7 +234,20 @@ mod tests {
              the two arms may be dispatching to the same algorithm"
         );
 
-        // (b) ACI is interpolation-based, Naive is SVD-based, so under truncation they
+        // (b) Naive (full Kronecker product then SVD) and Zipup (single-pass
+        // truncation) must differ in either the bond-dimension profile or the
+        // sampled values under the rank cap.
+        let d_naive_zipup = max_diff(naive, zipup);
+        println!("max |Naive - Zipup| = {d_naive_zipup:.3e}");
+        assert!(
+            dims[0] != dims[1] || d_naive_zipup > 1e-14,
+            "Naive and Zipup agree in both link dims {:?} and sampled values \
+             (max diff {d_naive_zipup:.3e}); the two arms may be dispatching to the \
+             same algorithm",
+            dims[0]
+        );
+
+        // (c) ACI is interpolation-based, Naive is SVD-based, so under truncation they
         // must differ in either the bond-dimension profile or the sampled values.
         let d_naive_aci = max_diff(naive, aci);
         println!("max |Naive - Aci| = {d_naive_aci:.3e}");

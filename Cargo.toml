@@ -14,8 +14,8 @@ tensor4all-quanticstci = { git = "https://github.com/tensor4all/tensor4all-rs", 
 tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "69a24e7e86edc7079b758784864e3976776d208e", package = "tensor4all-hdf5" }
 tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "69a24e7e86edc7079b758784864e3976776d208e", package = "tensor4all-core" }
 num-complex = "0.4"
-rand = "0.8"
-rand_chacha = "0.3"
+rand = "0.9"
+rand_chacha = "0.9"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"

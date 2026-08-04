@@ -37,7 +37,7 @@ pub fn time_median<R>(warmups: usize, repeats: usize, mut f: impl FnMut() -> R) 
 /// `n` random grid indices in [0, 2^r), deterministic in `seed`.
 pub fn sample_grid_indices(r: usize, n: usize, seed: u64) -> Vec<u64> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
-    (0..n).map(|_| rng.gen_range(0..(1u64 << r))).collect()
+    (0..n).map(|_| rng.random_range(0..(1u64 << r))).collect()
 }
 
 /// MSB-first bit decomposition of a grid index into R local indices.

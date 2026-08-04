@@ -38,7 +38,9 @@ impl FourierSeries {
         self.coeffs
             .iter()
             .enumerate()
-            .map(|(k, c)| c * (Complex64::new(0.0, 2.0 * std::f64::consts::PI * k as f64 * x)).exp())
+            .map(|(k, c)| {
+                c * (Complex64::new(0.0, 2.0 * std::f64::consts::PI * k as f64 * x)).exp()
+            })
             .sum()
     }
 

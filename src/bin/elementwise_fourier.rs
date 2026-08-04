@@ -110,7 +110,11 @@ fn main() -> anyhow::Result<()> {
                 output_max_bond_dim: out.rank(),
                 output_bond_dims: out.link_dims(),
             };
-            write_record(&out_dir, &format!("elementwise_fourier-{algo_name}-k{k}"), &rec)?;
+            write_record(
+                &out_dir,
+                &format!("elementwise_fourier-{algo_name}-k{k}"),
+                &rec,
+            )?;
             eprintln!(
                 "  {algo_name}: t={:.4}s err={max_error:.2e} chi_out={}",
                 timing.median_secs,

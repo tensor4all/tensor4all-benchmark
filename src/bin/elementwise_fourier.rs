@@ -57,6 +57,25 @@ fn main() -> anyhow::Result<()> {
         let input_chi = a.rank().max(b.rank());
         eprintln!("k_max={k} input_chi={input_chi}");
 
+        if let Ok(dir) = std::env::var("EXPORT_HDF5") {
+            std::fs::create_dir_all(&dir)?;
+            let h5 = format!("{dir}/instance-k{k}.h5");
+            t4a_bench::hdf5_export::save_tt_as_mps(&h5, "f", &a, false)?;
+            t4a_bench::hdf5_export::save_tt_as_mps(&h5, "g", &b, true)?;
+            let meta = serde_json::json!({
+                "schema_version": 1,
+                "case": "elementwise_fourier",
+                "r": r,
+                "k_max": k,
+                "f_coeffs": f.coeffs.iter().map(|c| [c.re, c.im]).collect::<Vec<_>>(),
+                "g_coeffs": g.coeffs.iter().map(|c| [c.re, c.im]).collect::<Vec<_>>(),
+            });
+            std::fs::write(
+                format!("{dir}/instance-k{k}.json"),
+                serde_json::to_string_pretty(&meta)?,
+            )?;
+        }
+
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (out, timing) = time_median(warmups, runs, || {

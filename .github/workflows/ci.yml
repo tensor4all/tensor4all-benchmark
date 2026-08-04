@@ -1,0 +1,35 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    # The Rust build compiles all of tensor4all-rs from source on a cold cache.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libhdf5-dev liblapack-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --release
+      - name: smoke elementwise
+        run: >
+          BENCH_KS=4 BENCH_R=10 BENCH_RUNS=1 BENCH_WARMUPS=0
+          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke
+          cargo run --release --bin elementwise_fourier
+      - name: smoke mpo
+        run: >
+          BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
+          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke
+          cargo run --release --bin mpo_mpo_quantics
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+      - name: julia checks
+        run: |
+          julia --project=julia -e 'using Pkg; Pkg.instantiate()'
+          julia --project=julia julia/check_elementwise.jl /tmp/smoke 4
+          julia --project=julia julia/check_mpo_mpo.jl /tmp/smoke 8

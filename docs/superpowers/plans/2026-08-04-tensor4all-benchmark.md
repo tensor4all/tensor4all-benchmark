@@ -11,7 +11,7 @@
 
 ## Global Constraints
 
-- Repo root: `/Users/hiroshi/projects/tensor4all/tensor4all-benchmark` (git repo already initialized, spec committed).
+- Repo root: this repository (git repo already initialized, spec committed at `docs/superpowers/specs/2026-08-04-tensor4all-benchmark-design.md`).
 - tensor4all-rs pinned via git: `git = "https://github.com/tensor4all/tensor4all-rs", rev = "69a24e7e86edc7079b758784864e3976776d208e"`. The API signatures below were read from the local checkout on a slightly newer branch; if a signature does not compile against the pin, first try bumping the rev to the current origin/main head, and record the final rev in this plan file.
 - All tensor4all crates must use their default backend feature (`tenferro-cpu-faer`) consistently. Do not mix backends.
 - `tensor4all-hdf5` needs a system HDF5 at build time (`brew install hdf5` on macOS, `libhdf5-dev` on Linux CI).

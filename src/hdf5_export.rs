@@ -4,8 +4,8 @@
 //! `itensorlike::TensorTrain` -> `tensor4all_hdf5::{save_mps, append_mps}`,
 //! which writes the `MPS` v1 schema that ITensorMPS.jl reads.
 
-use num_complex::Complex64;
-use tensor4all_simplett::TensorTrain;
+use tensor4all_core::TensorElement;
+use tensor4all_simplett::{TTScalar, TensorTrain};
 use tensor4all_treetn::tensor_train_to_treetn;
 
 /// Write `tt` into `path` under group `name` as an ITensorMPS.jl `MPS`.
@@ -13,12 +13,18 @@ use tensor4all_treetn::tensor_train_to_treetn;
 /// With `append = false` the file is created (or truncated); with
 /// `append = true` the group is added to an existing file, which is how
 /// several named MPS objects end up in one instance file.
-pub fn save_tt_as_mps(
+/// Both `f64` (written as `Dense{Float64}`) and `Complex64` (written as
+/// `Dense{ComplexF64}`) element types are supported; the bounds are those of
+/// `tensor_train_to_treetn` at the pinned upstream rev.
+pub fn save_tt_as_mps<T>(
     path: &str,
     name: &str,
-    tt: &TensorTrain<Complex64>,
+    tt: &TensorTrain<T>,
     append: bool,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<()>
+where
+    T: TTScalar + TensorElement + Clone,
+{
     let (treetn, _indices) = tensor_train_to_treetn(tt)?;
     let itt = tensor4all_itensorlike::TensorTrain::from_treetn(treetn)?;
     if append {
@@ -34,13 +40,56 @@ mod tests {
     use super::*;
     use crate::fourier::FourierSeries;
     use crate::harness::{index_to_bits, sample_grid_indices};
+    use num_complex::Complex64;
     use tensor4all_simplett::AbstractTensorTrain;
 
     /// HDF5 `MPS` -> `itensorlike` -> `treetn` -> `simplett`, the inverse of
     /// the export bridge, so the loaded tensors can be evaluated pointwise.
-    fn load_tt(path: &str, name: &str) -> TensorTrain<Complex64> {
+    fn load_tt<T>(path: &str, name: &str) -> TensorTrain<T>
+    where
+        T: tensor4all_simplett::TTScalar + TensorElement + Clone,
+    {
         let itt = tensor4all_hdf5::load_mps(path, name).unwrap();
-        tensor4all_treetn::treetn_to_tensor_train::<Complex64>(itt.into_treetn()).unwrap()
+        tensor4all_treetn::treetn_to_tensor_train::<T>(itt.into_treetn()).unwrap()
+    }
+
+    /// The `f64` bridge, checked at the value level like the `Complex64` one:
+    /// a fused (site dim 4) quantics TT of a Gaussian mixture is exported,
+    /// re-read, and evaluated against the TT it was written from.
+    #[test]
+    fn real_fused_qtt_round_trips_through_hdf5() {
+        use crate::gaussian::GaussianMixture2D;
+
+        let r = 6;
+        let box_l = 4.0;
+        let mix = GaussianMixture2D::random(3, box_l, (0.5, 2.0), 7);
+        let (tt, _step) =
+            crate::gaussian::to_quantics_fused_tt(&mix, r, box_l, 1e-10, 100).unwrap();
+
+        let path = std::env::temp_dir().join("t4a_bench_hdf5_export_roundtrip_f64.h5");
+        let _ = std::fs::remove_file(&path);
+        let path_str = path.to_str().unwrap();
+
+        save_tt_as_mps(path_str, "f", &tt, false).unwrap();
+
+        let loaded = tensor4all_hdf5::load_mps(path_str, "f").unwrap();
+        assert_eq!(loaded.len(), r);
+        assert_eq!(loaded.maxbonddim(), tt.rank());
+
+        let back = load_tt::<f64>(path_str, "f");
+        for &(i, j) in &[(0u64, 0u64), (37, 20), (63, 1), (32, 32)] {
+            let xb = crate::harness::index_to_bits(i, r);
+            let yb = crate::harness::index_to_bits(j, r);
+            let fused: Vec<usize> = (0..r).map(|n| xb[n] + 2 * yb[n]).collect();
+            let got = back.evaluate(&fused).unwrap();
+            let want = tt.evaluate(&fused).unwrap();
+            assert!(
+                (got - want).abs() < 1e-12 * want.abs().max(1.0),
+                "f64 round-trip mismatch at ({i},{j}): got {got} want {want}"
+            );
+        }
+
+        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]
@@ -70,7 +119,7 @@ mod tests {
         // analytic series at sampled grid points.
         let scale = (1u64 << r) as f64;
         for (name, series) in [("f", &f), ("g", &g)] {
-            let tt = load_tt(path_str, name);
+            let tt = load_tt::<Complex64>(path_str, name);
             for &i in &sample_grid_indices(r, 20, 11) {
                 let got = tt.evaluate(&index_to_bits(i, r)).unwrap();
                 let want = series.eval(i as f64 / scale);

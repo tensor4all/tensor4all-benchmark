@@ -76,6 +76,32 @@ fn main() -> anyhow::Result<()> {
         let input_chi = fa.rank().max(gb.rank());
         eprintln!("r={r} input_chi={input_chi}");
 
+        // An empty EXPORT_HDF5 counts as unset, so `EXPORT_HDF5=` disables export.
+        if let Some(dir) = std::env::var("EXPORT_HDF5").ok().filter(|d| !d.is_empty()) {
+            std::fs::create_dir_all(&dir)?;
+            let h5 = format!("{dir}/instance-r{r}.h5");
+            // Export the FUSED site-dim-4 TTs (before the Tensor4 conversion),
+            // so `save_mps` applies directly and ITensorMPS.jl sees one site
+            // index of dimension 4 per site.
+            let (ftt, _) = t4a_bench::gaussian::to_quantics_fused_tt(&f, r, box_l, tol, max_bond)?;
+            let (gtt, _) = t4a_bench::gaussian::to_quantics_fused_tt(&g, r, box_l, tol, max_bond)?;
+            t4a_bench::hdf5_export::save_tt_as_mps(&h5, "f", &ftt, false)?;
+            t4a_bench::hdf5_export::save_tt_as_mps(&h5, "g", &gtt, true)?;
+            let meta = serde_json::json!({
+                "schema_version": 1,
+                "case": "mpo_mpo_quantics",
+                "r": r,
+                "box_l": box_l,
+                "tolerance": tol,
+                "f": {"weights": f.weights, "alphas": f.alphas, "centers": f.centers},
+                "g": {"weights": g.weights, "alphas": g.alphas, "centers": g.centers},
+            });
+            std::fs::write(
+                format!("{dir}/instance-r{r}.json"),
+                serde_json::to_string_pretty(&meta)?,
+            )?;
+        }
+
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (h, timing) = time_median(warmups, runs, || {

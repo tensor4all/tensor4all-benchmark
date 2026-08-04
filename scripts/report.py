@@ -25,7 +25,9 @@ NOTES = {
         "Note: naive and zipup use the simplett engine with an absolute "
         "singular value cutoff; fit uses the treetn engine with a relative "
         "cutoff. Output bond dimensions are not directly comparable across "
-        "engines."
+        "engines. The fitted time exponent is measured against input chi "
+        "along a sweep of r, where the site count also grows, so it is not "
+        "a pure chi power law."
     ),
 }
 
@@ -35,6 +37,8 @@ def load(profile_dir: Path):
     for path in sorted((profile_dir / "raw").glob("*.json")):
         rec = json.loads(path.read_text())
         assert rec["schema_version"] == 1, f"unknown schema in {path}"
+        if "algorithm" not in rec:
+            continue  # not a RunRecord (e.g. exported instance sidecar)
         cases[rec["case"]][rec["algorithm"]].append(rec)
     return cases
 
@@ -43,6 +47,8 @@ def fit_exponent(xs, ys):
     xs, ys = np.asarray(xs, float), np.asarray(ys, float)
     mask = (xs > 0) & (ys > 0)
     if mask.sum() < 2:
+        return float("nan")
+    if np.ptp(np.log(xs[mask])) < 1e-9:
         return float("nan")
     p = np.polyfit(np.log(xs[mask]), np.log(ys[mask]), 1)
     return p[0]

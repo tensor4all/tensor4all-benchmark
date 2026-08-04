@@ -70,6 +70,23 @@ fn contract_fit_treetn(
     tol: f64,
     max_bond: usize,
 ) -> anyhow::Result<MPO<f64>> {
+    let opts = ContractOptions::fit()
+        .with_max_rank(max_bond)
+        .with_svd_policy(SvdTruncationPolicy::new(tol))
+        .with_nsweeps(FIT_NSWEEPS);
+    contract_via_bridge(a, b, &opts)
+}
+
+/// Contract two MPOs on the treetn engine with an explicit [`ContractOptions`].
+///
+/// Splitting this out of [`contract_fit_treetn`] lets the tests run the exact
+/// same bridge with a different contraction method or sweep count, so a
+/// comparison isolates the option that changed rather than the engine.
+fn contract_via_bridge(
+    a: &MPO<f64>,
+    b: &MPO<f64>,
+    opts: &ContractOptions,
+) -> anyhow::Result<MPO<f64>> {
     let n = a.len();
     anyhow::ensure!(n == b.len(), "fit: MPO lengths differ ({n} vs {})", b.len());
 
@@ -81,7 +98,7 @@ fn contract_fit_treetn(
     let z_inds: Vec<DynIndex> = (0..n).map(|i| DynIndex::new_dyn(b.site_dim(i).1)).collect();
     for i in 0..n {
         anyhow::ensure!(
-            a.site_dim(i).1 == b.site_dim(i).1,
+            a.site_dim(i).1 == b.site_dim(i).0,
             "fit: contracted site dims differ at site {i}"
         );
     }
@@ -89,12 +106,8 @@ fn contract_fit_treetn(
     let ta = mpo_to_tensortrain(a, &x_inds, &y_inds)?;
     let tb = mpo_to_tensortrain(b, &y_inds, &z_inds)?;
 
-    let opts = ContractOptions::fit()
-        .with_max_rank(max_bond)
-        .with_svd_policy(SvdTruncationPolicy::new(tol))
-        .with_nsweeps(FIT_NSWEEPS);
     let tc = ta
-        .contract(&tb, &opts)
+        .contract(&tb, opts)
         .map_err(|e| anyhow::anyhow!("fit contraction failed: {e}"))?;
 
     tensortrain_to_mpo(&tc, &x_inds, &z_inds)
@@ -266,11 +279,33 @@ mod tests {
         }
     }
 
+    /// Max absolute difference between two MPOs at the same sampled points.
+    fn max_sampled_diff(p: &MPO<f64>, q: &MPO<f64>, r: usize, n: usize, seed: u64) -> f64 {
+        let vp = sample_values(p, r, n, seed);
+        let vq = sample_values(q, r, n, seed);
+        vp.iter()
+            .zip(&vq)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0f64, f64::max)
+    }
+
     /// Guard that `MpoAlgo::Fit` reaches the variational engine rather than
-    /// silently returning the zip-up result. Untruncated, fit and zipup both
-    /// converge to the same tensor, so the two are separated under a bond
-    /// dimension small enough to force real truncation error: there the
-    /// variational sweep moves the solution away from the one-pass zip-up.
+    /// silently returning a zip-up result.
+    ///
+    /// Untruncated, fit and zipup converge to the same tensor, so the arms are
+    /// separated under a bond dimension small enough to force real truncation
+    /// error. The load-bearing comparison is against *treetn* zipup through the
+    /// same bridge, same truncation policy and same max rank: only the
+    /// contraction method differs, so a difference can only come from the
+    /// variational updates. (Comparing against simplett zipup would not prove
+    /// that, since it differs in engine and truncation rule as well and would
+    /// separate even if the variational sweep were a no-op.) The simplett arm is
+    /// kept as a weaker secondary check that `Fit` does not dispatch there.
+    ///
+    /// Measured at `max_bond = 8`: fit vs treetn zipup 1.27, fit vs simplett
+    /// zipup 1.27, on a sampled scale of 13.2 (about 10%), while the two zipup
+    /// results agree to 8.8e-14. So the two zipup paths coincide and the
+    /// variational sweep is what moves the answer.
     #[test]
     fn fit_differs_from_zipup_under_forced_truncation() {
         let (r, l, max_bond) = (8, 6.0, 8);
@@ -278,19 +313,28 @@ mod tests {
         let g = GaussianMixture2D::random(3, l, (0.5, 2.0), 21);
         let (fa, _dy) = to_quantics_mpo(&f, r, l, 1e-6, 128).unwrap();
         let (gb, _) = to_quantics_mpo(&g, r, l, 1e-6, 128).unwrap();
-        let h_zip = mpo_contract(MpoAlgo::Zipup, &fa, &gb, 1e-6, max_bond).unwrap();
+
         let h_fit = mpo_contract(MpoAlgo::Fit, &fa, &gb, 1e-6, max_bond).unwrap();
-        let vz = sample_values(&h_zip, r, 20, 33);
-        let vf = sample_values(&h_fit, r, 20, 33);
-        let max_diff = vz
-            .iter()
-            .zip(&vf)
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0f64, f64::max);
+
+        // Same engine, same bridge, same truncation policy, same max rank.
+        let zip_opts = ContractOptions::zipup()
+            .with_max_rank(max_bond)
+            .with_svd_policy(SvdTruncationPolicy::new(1e-6));
+        let h_treetn_zip = contract_via_bridge(&fa, &gb, &zip_opts).unwrap();
+        let diff_same_engine = max_sampled_diff(&h_fit, &h_treetn_zip, r, 20, 33);
         assert!(
-            max_diff > 1e-14,
-            "fit output is bit-identical to zipup at max_bond={max_bond}: \
-             the Fit arm is not reaching the variational engine (max diff {max_diff:e})"
+            diff_same_engine > 1e-14,
+            "fit output matches treetn zipup at max_bond={max_bond}: the variational \
+             sweeps are not changing the zip-up initializer (max diff {diff_same_engine:e})"
+        );
+
+        // Weaker: Fit is not silently dispatching to the simplett zipup path.
+        let h_simplett_zip = mpo_contract(MpoAlgo::Zipup, &fa, &gb, 1e-6, max_bond).unwrap();
+        let diff_cross_engine = max_sampled_diff(&h_fit, &h_simplett_zip, r, 20, 33);
+        assert!(
+            diff_cross_engine > 1e-14,
+            "fit output is bit-identical to simplett zipup at max_bond={max_bond} \
+             (max diff {diff_cross_engine:e})"
         );
     }
 }

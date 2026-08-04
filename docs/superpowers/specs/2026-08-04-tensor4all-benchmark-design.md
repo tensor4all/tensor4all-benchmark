@@ -104,10 +104,13 @@ Measured: wall time, max relative error vs analytic result, output bond dimensio
 
 ## Correctness reference (Julia)
 
-`julia/` contains a small script (Quantics.jl / ITensors based) that builds the same
-instances from the same coefficients/parameters (shared via a JSON instance file
-written by the Rust generator) and checks agreement within tolerance. This is a test,
-run manually or in CI smoke, not a performance comparison.
+Inputs that must be generated on the fly are generated in Rust only; there is no
+duplicate instance construction on the Julia side. The Rust runner writes the input
+TT/MPO objects (and the computed results where useful) in ITensor-compatible HDF5
+format via tensor4all-hdf5. `julia/` contains a small script (ITensors / Quantics.jl
+based) that reads those HDF5 files and checks agreement within tolerance (e.g.
+contracting or sampling the loaded objects against the analytic reference). This is a
+test, run manually or in CI smoke, not a performance comparison.
 
 ## Results workflow
 
@@ -132,11 +135,17 @@ run manually or in CI smoke, not a performance comparison.
 
 ## Testing
 
+Test format stays deliberately flexible: no rigid harness or fixed fixture layout is
+imposed. Plain `#[test]` functions, per-case smoke binaries, and standalone Julia
+scripts are all acceptable; tests may take tolerances and instance sizes from
+environment variables or arguments so the same test scales from CI smoke to local
+deep checks.
+
 - Unit tests for problem generators (Fourier coefficients normalization, Gaussian
   analytic integral against numerical quadrature at small R).
 - One end-to-end smoke test per case (tiny instance, all algorithms, error within
   tolerance).
-- Julia cross-check as above.
+- Julia cross-check via ITensor-compatible HDF5 as above.
 
 ## Implementation order
 

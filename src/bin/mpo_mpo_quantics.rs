@@ -15,6 +15,14 @@
 //! part of the benchmark definition: its cost is linear in the sweep count, so
 //! the timing column is only comparable against naive and zipup at a stated
 //! number of sweeps.
+//!
+//! Default sweep size: the quantics rank of the default mixture saturates
+//! around chi = 70 to 80, and the simplett naive and zipup arms then cost tens
+//! of seconds to minutes per contraction (bond Kronecker product of size
+//! chi^2 followed by SVDs). The defaults (r = 6, 8, 10 and 3 timed runs, no
+//! warmup) keep a full sweep around twenty minutes on a laptop. Extend with
+//! for example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail;
+//! cost grows roughly linearly in r once the rank has saturated.
 
 use std::path::PathBuf;
 use t4a_bench::gaussian::{to_quantics_mpo, GaussianMixture2D};
@@ -40,7 +48,7 @@ fn parse_algo(s: &str) -> MpoAlgo {
 
 fn main() -> anyhow::Result<()> {
     let rs: Vec<usize> = std::env::var("BENCH_RS")
-        .unwrap_or_else(|_| "10,12,14,16".into())
+        .unwrap_or_else(|_| "6,8,10".into())
         .split(',')
         .map(|s| s.trim().parse().unwrap())
         .collect();
@@ -50,8 +58,8 @@ fn main() -> anyhow::Result<()> {
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
-    let runs: usize = env_or("BENCH_RUNS", 5);
-    let warmups: usize = env_or("BENCH_WARMUPS", 1);
+    let runs: usize = env_or("BENCH_RUNS", 3);
+    let warmups: usize = env_or("BENCH_WARMUPS", 0);
     let seed: u64 = env_or("BENCH_SEED", 0);
     let sanity: f64 = env_or("BENCH_SANITY", 1e-4);
     let algos: Vec<String> = std::env::var("BENCH_ALGOS")

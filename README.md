@@ -72,10 +72,13 @@ like `2^(R/2)`, so the pointwise error is not bounded by the tolerance itself). 
 uses `BENCH_SANITY`, default `1e-4`, for every algorithm. The gates are there to catch
 wrong results, not to certify precision.
 
-Cost warning: the default case-2 sweep (`R` up to 16, 8 Gaussians) takes a long time,
-because `naive` and `zipup` both build the full contracted bond before truncating.
-Trim it with `BENCH_RS` and `BENCH_NGAUSS`, or restrict `BENCH_ALGOS`, when you only want
-a quick signal.
+Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80,
+and `naive` and `zipup` both build the full contracted bond of size chi squared before
+truncating, which costs tens of seconds to minutes per contraction at that rank. The
+default sweep (`R` = 6, 8, 10 with 3 timed runs) therefore takes roughly twenty minutes
+on a laptop. For the heavy tail, extend explicitly, for example
+`BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`; cost grows roughly linearly in `R` once the rank
+has saturated. Restrict `BENCH_ALGOS` when you only want a quick signal.
 
 Environment knobs:
 
@@ -83,7 +86,7 @@ Environment knobs:
 | --- | --- | --- | --- |
 | `BENCH_KS` | case 1 | `4,8,16,32,64` | comma-separated Fourier mode counts `K` to sweep |
 | `BENCH_R` | case 1 | `20` | number of quantics bits |
-| `BENCH_RS` | case 2 | `10,12,14,16` | comma-separated bits per variable `R` to sweep |
+| `BENCH_RS` | case 2 | `6,8,10` | comma-separated bits per variable `R` to sweep |
 | `BENCH_NGAUSS` | case 2 | `8` | number of Gaussians per mixture |
 | `BENCH_BOX_L` | case 2 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_ALPHA_LO` | case 2 | `0.5` | lower bound of the Gaussian width parameter |
@@ -91,8 +94,8 @@ Environment knobs:
 | `BENCH_SANITY` | case 2 | `1e-4` | relative error gate for every algorithm |
 | `BENCH_TOL` | both | `1e-8` | truncation tolerance passed to every algorithm |
 | `BENCH_MAX_BOND` | both | `4096` (case 1), `512` (case 2) | bond dimension cap |
-| `BENCH_RUNS` | both | `5` | timed repetitions, the median is reported |
-| `BENCH_WARMUPS` | both | `1` | untimed warmup repetitions |
+| `BENCH_RUNS` | both | `5` (case 1), `3` (case 2) | timed repetitions, the median is reported |
+| `BENCH_WARMUPS` | both | `1` (case 1), `0` (case 2) | untimed warmup repetitions |
 | `BENCH_SEED` | both | `0` | base seed for instance generation |
 | `BENCH_ALGOS` | both | `naive,zipup,fit,aci` (case 1), `naive,zipup,fit` (case 2) | comma-separated algorithms to run |
 | `OUT_DIR` | both | `result/dev/raw` | directory for the `RunRecord` JSON files |

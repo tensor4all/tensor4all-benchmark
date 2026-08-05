@@ -1,7 +1,12 @@
 //! Case 2 runner: contraction of two quantics MPOs representing 2D Gaussian
 //! mixtures, swept over the number of bits per variable for each algorithm.
 //!
-//! Default algorithms are `naive,zipup,fit`, selectable with `BENCH_ALGOS`.
+//! Default algorithms are `naive,zipup_simplett,zipup_treetn,fit_treetn`,
+//! selectable with `BENCH_ALGOS`. Where both upstream engines implement an
+//! algorithm, both are benchmarked as separate arms and the engine is recorded
+//! as `engine` in every JSON record, so an engine difference shows up as its own
+//! column instead of being folded into one. The only missing pair is simplett
+//! fit, excluded for the upstream stub reason stated below.
 //!
 //! Fixed output budget: the contraction is run with the maximum bond dimension
 //! capped at the input rank (`chi_out <= chi_in`, where `chi_in` is the larger
@@ -16,29 +21,36 @@
 //! construction in `to_quantics_mpo`.
 //!
 //! What the fixed budget measures, as observed at r = 6 and r = 8: the two
-//! simplett arms, naive and zipup, return the same truncated result and the
-//! same error, so the metric does not separate them, only their wall times
-//! differ. The treetn fit arm reaches an error several orders of magnitude
-//! lower at a `chi_out` below the budget it was given. That gap suggests the
-//! simplett truncation is far from the best fixed-rank approximation
-//! available at that rank. This is an observed gap, not a diagnosed cause,
-//! and no upstream issue has been filed for it yet.
+//! simplett arms, `naive` and `zipup_simplett`, return the same truncated
+//! result and the same error, so the metric does not separate them, only their
+//! wall times differ. `zipup_treetn` lands on the same error as the simplett
+//! zipup, to within a percent, but runs two to three orders of magnitude
+//! faster (0.14 s against 107 s at r = 8), so the accuracy of zipup is an
+//! algorithm property while its cost here is an engine property. Only
+//! `fit_treetn` reaches an error several orders of magnitude lower, and it does
+//! so at a `chi_out` below the budget it was given. That accuracy gap suggests
+//! zip-up truncation on either engine is far from the best fixed-rank
+//! approximation available at that rank. Both gaps are observed, not diagnosed,
+//! and no upstream issue has been filed for either yet.
 //!
-//! The `fit` column runs on the treetn variational engine, reached through
-//! `tensor4all_itensorlike::TensorTrain::contract` with `ContractOptions::fit()`
-//! (see `mpo_contract::contract_fit_treetn`). This is the same engine case 1
-//! uses for its elementwise fit. `tensor4all_simplett::mpo::contract_fit` is
-//! deliberately NOT used: at the pinned upstream rev (tensor4all-rs 69a24e7)
-//! its local update `update_two_site_core` is a placeholder that leaves the
-//! core untouched, so that path degenerates to naive plus dead sweeps.
+//! The `zipup_treetn` and `fit_treetn` columns run on the treetn engine,
+//! reached through `tensor4all_itensorlike::TensorTrain::contract` with
+//! `ContractOptions::zipup()` and `ContractOptions::fit()` respectively (see
+//! `mpo_contract`). They share the same bridge, max rank and SVD policy, so the
+//! only difference between them is the contraction method. That is the same
+//! engine case 1 uses for its elementwise fit.
+//! `tensor4all_simplett::mpo::contract_fit` is deliberately NOT benchmarked: at
+//! the pinned upstream rev (tensor4all-rs 69a24e7) its local update
+//! `update_two_site_core` is a placeholder that leaves the core untouched, so
+//! that path degenerates to naive plus dead sweeps.
 //!
-//! Fit is run at a fixed sweep count (`mpo_contract::FIT_NSWEEPS`), which is
-//! part of the benchmark definition: its cost is linear in the sweep count, so
-//! the timing column is only comparable against naive and zipup at a stated
-//! number of sweeps.
+//! `fit_treetn` is run at a fixed sweep count (`mpo_contract::FIT_NSWEEPS`),
+//! which is part of the benchmark definition: its cost is linear in the sweep
+//! count, so the timing column is only comparable against the naive and zipup
+//! arms at a stated number of sweeps.
 //!
 //! Default sweep size: the quantics rank of the default mixture saturates
-//! around chi = 70 to 80, and the simplett naive and zipup arms then cost tens
+//! around chi = 70 to 80, and the simplett arms then cost tens
 //! of seconds to minutes per contraction (bond Kronecker product of size
 //! chi^2 followed by SVDs). The defaults (r = 6, 8, 10 and 1 timed run, no
 //! warmup) keep a full sweep under about ten minutes on a laptop. Extend with
@@ -61,8 +73,9 @@ fn env_or<T: std::str::FromStr>(key: &str, default: T) -> T {
 fn parse_algo(s: &str) -> MpoAlgo {
     match s {
         "naive" => MpoAlgo::Naive,
-        "zipup" => MpoAlgo::Zipup,
-        "fit" => MpoAlgo::Fit,
+        "zipup_simplett" => MpoAlgo::ZipupSimplett,
+        "zipup_treetn" => MpoAlgo::ZipupTreetn,
+        "fit_treetn" => MpoAlgo::FitTreetn,
         other => panic!("unknown algorithm {other}"),
     }
 }
@@ -90,7 +103,7 @@ fn main() -> anyhow::Result<()> {
     // wrongness rather than certifying precision.
     let sanity: f64 = env_or("BENCH_SANITY", 1e-2);
     let algos: Vec<String> = std::env::var("BENCH_ALGOS")
-        .unwrap_or_else(|_| "naive,zipup,fit".into())
+        .unwrap_or_else(|_| "naive,zipup_simplett,zipup_treetn,fit_treetn".into())
         .split(',')
         .map(|s| s.trim().to_string())
         .collect();
@@ -156,6 +169,8 @@ fn main() -> anyhow::Result<()> {
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",
+                    // Upstream engine that actually ran this arm.
+                    "engine": algo.engine(),
                     // Part of the benchmark definition for the fit arm.
                     "fit_nsweeps": FIT_NSWEEPS,
                 }),

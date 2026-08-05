@@ -24,18 +24,27 @@ Two random mixtures of `n` isotropic 2D Gaussians are represented as quantics MP
 `R` bits per variable over the box `[-L, L]^2`, with `x` as the row index and `y` as the
 column index. Contracting the two MPOs over `y` and scaling by the grid spacing
 approximates the integral `int dy f(x, y) g(y, z)`, which has a closed-form Gaussian
-answer, so again the reference is analytic. Algorithms: `naive`, `zipup`, `fit`.
+answer, so again the reference is analytic. Algorithms: `naive` (simplett),
+`zipup_simplett`, `zipup_treetn`, `fit_treetn`. Where both upstream engines implement an
+algorithm, both are benchmarked as separate arms, so the engine is a visible variable
+rather than a hidden one; the two zipup arms are the same algorithm on the two engines and
+their difference isolates the engine. Each record carries the engine that ran it as
+`engine`. The one missing pair is simplett fit, excluded because its variational update is
+a stub upstream (known issue 1).
 The contraction output bond dimension is pinned to the input rank: every algorithm runs
 with its maximum bond dimension capped at `chi_in`, the larger of the two input MPO ranks,
 so all arms are compared at the same output budget. The reported error is then the
 discriminator, namely the residual of the contracted MPO against the analytic Gaussian
 integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6
-and `R` = 8, the two simplett arms `naive` and `zipup` return the same truncated result
-and the same error, so the metric does not separate them and only their wall times differ;
-the treetn `fit` arm reaches an error several orders of magnitude lower at a `chi_out`
-below the budget it was allowed. That gap suggests the simplett truncation is far from the
-best fixed-rank approximation available at that rank. It is an observed gap rather than a
-diagnosed cause, and no upstream issue has been filed for it yet.
+and `R` = 8, the two simplett arms `naive` and `zipup_simplett` return the same truncated
+result and the same error, so the metric does not separate them and only their wall times
+differ. `zipup_treetn` reaches the same error as `zipup_simplett` to within a percent while
+running two to three orders of magnitude faster (0.14 s against 107 s at `R` = 8), so the
+accuracy of zip-up is a property of the algorithm and its cost here is a property of the
+engine. Only `fit_treetn` reaches an error several orders of magnitude lower, at a
+`chi_out` below the budget it was allowed, which suggests zip-up truncation on either
+engine is far from the best fixed-rank approximation available at that rank. Both gaps are
+observed rather than diagnosed, and no upstream issue has been filed for either yet.
 Runner: `src/bin/mpo_mpo_quantics.rs`, sweep over `R`.
 
 ## Latest results
@@ -86,8 +95,8 @@ order-unity wrongness. The gates are there to catch wrong results, not to certif
 precision.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80,
-and `naive` and `zipup` both build the full contracted bond of size chi squared before
-truncating, which costs tens of seconds to minutes per contraction at that rank. Every
+and `naive` and `zipup_simplett` both build the full contracted bond of size chi squared
+before truncating, which costs tens of seconds to minutes per contraction at that rank. Every
 algorithm truncates back to the same output budget `chi_out <= chi_in`, so the arms differ
 in accuracy at equal cost rather than in how far their ranks are allowed to grow. The
 default sweep (`R` = 6, 8, 10 with 1 timed run) therefore stays under about ten minutes
@@ -114,7 +123,7 @@ Environment knobs:
 | `BENCH_RUNS` | both | `5` (case 1), `1` (case 2) | timed repetitions, the median is reported |
 | `BENCH_WARMUPS` | both | `1` (case 1), `0` (case 2) | untimed warmup repetitions |
 | `BENCH_SEED` | both | `0` | base seed for instance generation |
-| `BENCH_ALGOS` | both | `naive,zipup,fit,aci` (case 1), `naive,zipup,fit` (case 2) | comma-separated algorithms to run |
+| `BENCH_ALGOS` | both | `naive,zipup,fit,aci` (case 1), `naive,zipup_simplett,zipup_treetn,fit_treetn` (case 2) | comma-separated algorithms to run |
 | `OUT_DIR` | both | `result/dev/raw` | directory for the `RunRecord` JSON files |
 | `EXPORT_HDF5` | both | unset | directory for ITensors-compatible HDF5 instance dumps, plus their JSON metadata. Set it to enable the Julia checks. An empty value counts as unset. |
 
@@ -148,18 +157,20 @@ analytic mixture to the working tolerance.
    returns the naive contraction and the sweeps are dead work, with environments built by
    impractical scalar loops. It fails no test and prints no warning. Upstream issue:
    [tensor4all-rs#571](https://github.com/tensor4all/tensor4all-rs/issues/571). This
-   benchmark therefore routes the case-2 `fit` arm through the `tensor4all-treetn`
-   engine, bridged via `tensor4all-itensorlike`, which has a complete fit implementation.
-2. **Case 2 mixes engines and truncation semantics.** `naive` and `zipup` run on
-   `simplett` with an absolute singular value cutoff, `fit` runs on `treetn` with a
-   relative cutoff, so the two engines discard different singular values at the same
-   nominal tolerance. The rank cap now binds for all of them at `chi_out <= chi_in`, so
-   output bond dimensions no longer diverge by engine and timings are compared at the same
-   budget; what remains engine-dependent is which directions inside that budget get kept.
-   The generated report repeats this note under
-   its summary table. The case-2 `fit` arm also runs a single full sweep, pinned as part
-   of the benchmark definition and recorded as `fit_nsweeps` in every JSON record, so its
-   wall time is only comparable at that stated sweep count.
+   benchmark therefore has no simplett fit arm: the case-2 fit is `fit_treetn`, run on the
+   `tensor4all-treetn` engine bridged via `tensor4all-itensorlike`, which has a complete
+   fit implementation.
+2. **Case 2 mixes engines and truncation semantics.** `naive` and `zipup_simplett` run on
+   `simplett` with an absolute singular value cutoff, `zipup_treetn` and `fit_treetn` run
+   on `treetn` with a relative cutoff, so the two engines discard different singular values
+   at the same nominal tolerance. The rank cap now binds for all of them at
+   `chi_out <= chi_in`, so output bond dimensions no longer diverge by engine and timings
+   are compared at the same budget; what remains engine-dependent is which directions
+   inside that budget get kept. Running zipup on both engines is what makes that
+   difference measurable instead of confounded with the algorithm. The generated report
+   repeats this note under its summary table. The `fit_treetn` arm also runs a single full
+   sweep, pinned as part of the benchmark definition and recorded as `fit_nsweeps` in every
+   JSON record, so its wall time is only comparable at that stated sweep count.
 3. **The case-1 `fit` arm is pinned to two full sweeps.** The sweep count is part of the
    benchmark definition, since fit cost is linear in it. The upstream elementwise fit
    accuracy problem recorded in `tensor4all-itensorlike/tests/bug_fit_elementwise.rs` did

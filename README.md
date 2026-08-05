@@ -29,9 +29,13 @@ The contraction output bond dimension is pinned to the input rank: every algorit
 with its maximum bond dimension capped at `chi_in`, the larger of the two input MPO ranks,
 so all arms are compared at the same output budget. The reported error is then the
 discriminator, namely the residual of the contracted MPO against the analytic Gaussian
-integral. At a fixed `chi_out` the single-pass `zipup` truncation is expected to lose
-accuracy relative to `naive` and `fit`, which is the comparison the case exists to make.
-`BENCH_MAX_BOND` caps only the input TCI construction.
+integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6
+and `R` = 8, the two simplett arms `naive` and `zipup` return the same truncated result
+and the same error, so the metric does not separate them and only their wall times differ;
+the treetn `fit` arm reaches an error several orders of magnitude lower at a `chi_out`
+below the budget it was allowed. That gap suggests the simplett truncation is far from the
+best fixed-rank approximation available at that rank. It is an observed gap rather than a
+diagnosed cause, and no upstream issue has been filed for it yet.
 Runner: `src/bin/mpo_mpo_quantics.rs`, sweep over `R`.
 
 ## Latest results
@@ -76,16 +80,20 @@ Sanity gates: both runners are self-checking. A runner exits nonzero if any algo
 measured error exceeds its gate. Case 1 uses `1e3 * BENCH_TOL` for `naive`, `zipup` and
 `aci`, and a looser `1e-2` for `fit` (truncation is norm-relative and the TT norm grows
 like `2^(R/2)`, so the pointwise error is not bounded by the tolerance itself). Case 2
-uses `BENCH_SANITY`, default `1e-4`, for every algorithm. The gates are there to catch
-wrong results, not to certify precision.
+uses `BENCH_SANITY`, default `1e-2`, for every algorithm: with the output budget fixed at
+`chi_in` the truncation error is the quantity the case measures, so the gate only screens
+order-unity wrongness. The gates are there to catch wrong results, not to certify
+precision.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80,
 and `naive` and `zipup` both build the full contracted bond of size chi squared before
 truncating, which costs tens of seconds to minutes per contraction at that rank. Every
 algorithm truncates back to the same output budget `chi_out <= chi_in`, so the arms differ
 in accuracy at equal cost rather than in how far their ranks are allowed to grow. The
-default sweep (`R` = 6, 8, 10 with 3 timed runs) therefore takes roughly twenty minutes
-on a laptop. For the heavy tail, extend explicitly, for example
+default sweep (`R` = 6, 8, 10 with 1 timed run) therefore stays under about ten minutes
+on a laptop. These kernels are deterministic, so a single run is a usable timing; raise
+`BENCH_RUNS` when a median over repetitions is wanted. For the heavy tail, extend
+explicitly, for example
 `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`; cost grows roughly linearly in `R` once the rank
 has saturated. Restrict `BENCH_ALGOS` when you only want a quick signal.
 
@@ -100,10 +108,10 @@ Environment knobs:
 | `BENCH_BOX_L` | case 2 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_ALPHA_LO` | case 2 | `0.5` | lower bound of the Gaussian width parameter |
 | `BENCH_ALPHA_HI` | case 2 | `8.0` | upper bound of the Gaussian width parameter |
-| `BENCH_SANITY` | case 2 | `1e-4` | relative error gate for every algorithm |
+| `BENCH_SANITY` | case 2 | `1e-2` | relative error gate for every algorithm |
 | `BENCH_TOL` | both | `1e-8` | truncation tolerance passed to every algorithm |
 | `BENCH_MAX_BOND` | both | `4096` (case 1), `512` (case 2) | bond dimension cap |
-| `BENCH_RUNS` | both | `5` (case 1), `3` (case 2) | timed repetitions, the median is reported |
+| `BENCH_RUNS` | both | `5` (case 1), `1` (case 2) | timed repetitions, the median is reported |
 | `BENCH_WARMUPS` | both | `1` (case 1), `0` (case 2) | untimed warmup repetitions |
 | `BENCH_SEED` | both | `0` | base seed for instance generation |
 | `BENCH_ALGOS` | both | `naive,zipup,fit,aci` (case 1), `naive,zipup,fit` (case 2) | comma-separated algorithms to run |

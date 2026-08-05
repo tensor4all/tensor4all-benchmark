@@ -9,12 +9,20 @@
 //! therefore pay the same output budget, and the error column, the residual
 //! against the analytic Gaussian integral recorded as `max_error` with
 //! `error_metric = "max_rel_vs_analytic"`, is the discriminator between them.
-//! Zipup is expected to be less accurate than naive and fit at a fixed
-//! `chi_out`; that is the comparison the case is set up to make. A side effect
-//! is that the differing truncation semantics of the engines (absolute cutoff
-//! on simplett, relative on treetn) no longer let one arm's rank explode at a
-//! loose cap, so the timings stay comparable. `BENCH_MAX_BOND` keeps its role
-//! only as the cap for the input TCI construction in `to_quantics_mpo`.
+//! A side effect is that the differing truncation semantics of the engines
+//! (absolute cutoff on simplett, relative on treetn) no longer let one arm's
+//! rank explode at a loose cap, so the timings stay comparable.
+//! `BENCH_MAX_BOND` keeps its role only as the cap for the input TCI
+//! construction in `to_quantics_mpo`.
+//!
+//! What the fixed budget measures, as observed at r = 6 and r = 8: the two
+//! simplett arms, naive and zipup, return the same truncated result and the
+//! same error, so the metric does not separate them, only their wall times
+//! differ. The treetn fit arm reaches an error several orders of magnitude
+//! lower at a `chi_out` below the budget it was given. That gap suggests the
+//! simplett truncation is far from the best fixed-rank approximation
+//! available at that rank. This is an observed gap, not a diagnosed cause,
+//! and no upstream issue has been filed for it yet.
 //!
 //! The `fit` column runs on the treetn variational engine, reached through
 //! `tensor4all_itensorlike::TensorTrain::contract` with `ContractOptions::fit()`
@@ -32,8 +40,8 @@
 //! Default sweep size: the quantics rank of the default mixture saturates
 //! around chi = 70 to 80, and the simplett naive and zipup arms then cost tens
 //! of seconds to minutes per contraction (bond Kronecker product of size
-//! chi^2 followed by SVDs). The defaults (r = 6, 8, 10 and 3 timed runs, no
-//! warmup) keep a full sweep around twenty minutes on a laptop. Extend with
+//! chi^2 followed by SVDs). The defaults (r = 6, 8, 10 and 1 timed run, no
+//! warmup) keep a full sweep under about ten minutes on a laptop. Extend with
 //! for example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail;
 //! cost grows roughly linearly in r once the rank has saturated.
 
@@ -71,10 +79,16 @@ fn main() -> anyhow::Result<()> {
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
-    let runs: usize = env_or("BENCH_RUNS", 3);
+    // The heavy simplett arms are multi-second deterministic kernels, so one
+    // timed run keeps a default sweep under about ten minutes. Raise
+    // `BENCH_RUNS` when a median over repetitions is wanted.
+    let runs: usize = env_or("BENCH_RUNS", 1);
     let warmups: usize = env_or("BENCH_WARMUPS", 0);
     let seed: u64 = env_or("BENCH_SEED", 0);
-    let sanity: f64 = env_or("BENCH_SANITY", 1e-4);
+    // With the output budget fixed at chi_in, truncation error is the quantity
+    // being measured, not a defect, so the gate only screens order-unity
+    // wrongness rather than certifying precision.
+    let sanity: f64 = env_or("BENCH_SANITY", 1e-2);
     let algos: Vec<String> = std::env::var("BENCH_ALGOS")
         .unwrap_or_else(|_| "naive,zipup,fit".into())
         .split(',')

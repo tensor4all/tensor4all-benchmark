@@ -52,8 +52,9 @@ Runner: `src/bin/mpo_mpo_quantics.rs`, sweep over `R`.
 - [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md)
 - [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md)
 
-These files, together with the scaling plots next to them and the `run.yaml` describing
-the machine, appear after the first full run is committed. Until then the links are dead.
+The scaling plots sit next to these files, and `result/mac-cpu/run.yaml` records the
+machine, the repository revision, and the pinned tensor4all-rs revision that produced
+them.
 
 ## Running
 

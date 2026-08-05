@@ -1,0 +1,7 @@
+profile: mac-cpu
+date: 2026-08-05T18:46:18Z
+host: MacBook-Pro-7.local
+os: Darwin arm64
+repo_rev: 7186c15f4b02995f4967ca5d734542d8bf328e4d
+tensor4all_rs_rev: 69a24e7e86edc7079b758784864e3976776d208e
+threads: default

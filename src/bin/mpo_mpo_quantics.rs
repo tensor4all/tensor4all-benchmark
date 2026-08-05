@@ -3,6 +3,19 @@
 //!
 //! Default algorithms are `naive,zipup,fit`, selectable with `BENCH_ALGOS`.
 //!
+//! Fixed output budget: the contraction is run with the maximum bond dimension
+//! capped at the input rank (`chi_out <= chi_in`, where `chi_in` is the larger
+//! of the two input MPO ranks), identically for every algorithm. All arms
+//! therefore pay the same output budget, and the error column, the residual
+//! against the analytic Gaussian integral recorded as `max_error` with
+//! `error_metric = "max_rel_vs_analytic"`, is the discriminator between them.
+//! Zipup is expected to be less accurate than naive and fit at a fixed
+//! `chi_out`; that is the comparison the case is set up to make. A side effect
+//! is that the differing truncation semantics of the engines (absolute cutoff
+//! on simplett, relative on treetn) no longer let one arm's rank explode at a
+//! loose cap, so the timings stay comparable. `BENCH_MAX_BOND` keeps its role
+//! only as the cap for the input TCI construction in `to_quantics_mpo`.
+//!
 //! The `fit` column runs on the treetn variational engine, reached through
 //! `tensor4all_itensorlike::TensorTrain::contract` with `ContractOptions::fit()`
 //! (see `mpo_contract::contract_fit_treetn`). This is the same engine case 1
@@ -113,7 +126,7 @@ fn main() -> anyhow::Result<()> {
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (h, timing) = time_median(warmups, runs, || {
-                mpo_contract(algo, &fa, &gb, tol, max_bond).expect("contraction failed")
+                mpo_contract(algo, &fa, &gb, tol, input_chi).expect("contraction failed")
             });
             let max_error =
                 max_rel_error_vs_analytic(&h, dy, &f, &g, r, box_l, n_error_samples, error_seed);
@@ -124,6 +137,8 @@ fn main() -> anyhow::Result<()> {
                 params: serde_json::json!({
                     "r": r, "n_gauss": ngauss, "box_l": box_l,
                     "alpha_range": [alpha_lo, alpha_hi], "max_bond": max_bond,
+                    // Output budget shared by every algorithm: the input rank.
+                    "contract_max_bond": input_chi,
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",

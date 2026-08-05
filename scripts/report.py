@@ -28,10 +28,13 @@ ERROR_LABEL = {
 NOTES = {
     # case name -> caveat emitted under the summary table
     "mpo_mpo_quantics": (
-        "Note: naive and zipup use the simplett engine with an absolute "
-        "singular value cutoff; fit uses the treetn engine with a relative "
-        "cutoff. Output bond dimensions are not directly comparable across "
-        "engines. The fitted time exponent is measured against input chi "
+        "Note: every algorithm contracts at the same output budget, its "
+        "maximum bond dimension capped at the input rank chi, so the error "
+        "column is the discriminator. naive and zipup use the simplett "
+        "engine with an absolute singular value cutoff; fit uses the treetn "
+        "engine with a relative cutoff, so which directions they keep inside "
+        "that budget still differs by engine. "
+        "The fitted time exponent is measured against input chi "
         "along a sweep of r, where the site count also grows, so it is not "
         "a pure chi power law."
     ),

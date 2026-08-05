@@ -25,6 +25,13 @@ Two random mixtures of `n` isotropic 2D Gaussians are represented as quantics MP
 column index. Contracting the two MPOs over `y` and scaling by the grid spacing
 approximates the integral `int dy f(x, y) g(y, z)`, which has a closed-form Gaussian
 answer, so again the reference is analytic. Algorithms: `naive`, `zipup`, `fit`.
+The contraction output bond dimension is pinned to the input rank: every algorithm runs
+with its maximum bond dimension capped at `chi_in`, the larger of the two input MPO ranks,
+so all arms are compared at the same output budget. The reported error is then the
+discriminator, namely the residual of the contracted MPO against the analytic Gaussian
+integral. At a fixed `chi_out` the single-pass `zipup` truncation is expected to lose
+accuracy relative to `naive` and `fit`, which is the comparison the case exists to make.
+`BENCH_MAX_BOND` caps only the input TCI construction.
 Runner: `src/bin/mpo_mpo_quantics.rs`, sweep over `R`.
 
 ## Latest results
@@ -74,7 +81,9 @@ wrong results, not to certify precision.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80,
 and `naive` and `zipup` both build the full contracted bond of size chi squared before
-truncating, which costs tens of seconds to minutes per contraction at that rank. The
+truncating, which costs tens of seconds to minutes per contraction at that rank. Every
+algorithm truncates back to the same output budget `chi_out <= chi_in`, so the arms differ
+in accuracy at equal cost rather than in how far their ranks are allowed to grow. The
 default sweep (`R` = 6, 8, 10 with 3 timed runs) therefore takes roughly twenty minutes
 on a laptop. For the heavy tail, extend explicitly, for example
 `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`; cost grows roughly linearly in `R` once the rank
@@ -135,8 +144,11 @@ analytic mixture to the working tolerance.
    engine, bridged via `tensor4all-itensorlike`, which has a complete fit implementation.
 2. **Case 2 mixes engines and truncation semantics.** `naive` and `zipup` run on
    `simplett` with an absolute singular value cutoff, `fit` runs on `treetn` with a
-   relative cutoff. Timings and errors are comparable, but output bond dimensions are not
-   directly comparable across the engines. The generated report repeats this note under
+   relative cutoff, so the two engines discard different singular values at the same
+   nominal tolerance. The rank cap now binds for all of them at `chi_out <= chi_in`, so
+   output bond dimensions no longer diverge by engine and timings are compared at the same
+   budget; what remains engine-dependent is which directions inside that budget get kept.
+   The generated report repeats this note under
    its summary table. The case-2 `fit` arm also runs a single full sweep, pinned as part
    of the benchmark definition and recorded as `fit_nsweeps` in every JSON record, so its
    wall time is only comparable at that stated sweep count.

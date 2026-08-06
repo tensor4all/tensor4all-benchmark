@@ -17,23 +17,25 @@
     "n_error_samples": 128,
     "n_gauss": 8,
     "r": 6,
-    "runs": 1,
+    "runs": 3,
     "warmups": 0
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.570850083,
+  "wall_time_median_secs": 0.020060416,
   "wall_times_secs": [
-    0.570850083
+    0.026762708,
+    0.019376792,
+    0.020060416
   ],
-  "max_error": 0.00010539578698924516,
+  "max_error": 8.635113698138198e-9,
   "input_max_bond_dim": 53,
-  "output_max_bond_dim": 53,
+  "output_max_bond_dim": 48,
   "output_bond_dims": [
     4,
     16,
-    53,
-    53,
-    16
+    48,
+    16,
+    4
   ]
 }

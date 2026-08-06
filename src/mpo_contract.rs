@@ -321,7 +321,8 @@ mod tests {
             let h = mpo_contract(algo, &fa, &gb, 1e-6, 128).unwrap();
             let err = max_rel_error_vs_analytic(&h, dy, &f, &g, r, l, 50, 22);
             // R=8 discretization floor dominates; bound is loose on purpose
-            // (measured 4.2e-7 for all four algorithms).
+            // (measured 1.7e-6 for naive and fit, 2.8e-6 for the two zipup
+            // arms, at the pinned rev).
             assert!(err < 1e-2, "{algo:?}: rel err {err}");
         }
     }
@@ -350,10 +351,10 @@ mod tests {
     /// no-op.) The simplett arm is kept as a weaker secondary check that
     /// `FitTreetn` does not dispatch there.
     ///
-    /// Measured at `max_bond = 8`: fit vs treetn zipup 1.27, fit vs simplett
-    /// zipup 1.27, on a sampled scale of 13.2 (about 10%), while the two zipup
-    /// results agree to 8.8e-14. So the two zipup paths coincide and the
-    /// variational sweep is what moves the answer.
+    /// Measured at `max_bond = 8` with the pinned rev: fit vs treetn zipup
+    /// 1.18, fit vs simplett zipup 1.18, on a sampled scale of 13.2 (about 9%),
+    /// while the two zipup results agree to 2.0e-14. So the two zipup paths
+    /// coincide and the variational sweep is what moves the answer.
     #[test]
     fn fit_differs_from_zipup_under_forced_truncation() {
         let (r, l, max_bond) = (8, 6.0, 8);

@@ -14,24 +14,23 @@
 //! therefore pay the same output budget, and the error column, the residual
 //! against the analytic Gaussian integral recorded as `max_error` with
 //! `error_metric = "max_rel_vs_analytic"`, is the discriminator between them.
-//! A side effect is that the differing truncation semantics of the engines
-//! (absolute cutoff on simplett, relative on treetn) no longer let one arm's
-//! rank explode at a loose cap, so the timings stay comparable.
+//! Both engines now truncate relative to the largest singular value, so at the
+//! same nominal tolerance they discard the same singular values.
 //! `BENCH_MAX_BOND` keeps its role only as the cap for the input TCI
 //! construction in `to_quantics_mpo`.
 //!
-//! What the fixed budget measures, as observed at r = 6 and r = 8: the two
-//! simplett arms, `naive` and `zipup_simplett`, return the same truncated
-//! result and the same error, so the metric does not separate them, only their
-//! wall times differ. `zipup_treetn` lands on the same error as the simplett
-//! zipup, to within a percent, but runs two to three orders of magnitude
-//! faster (0.14 s against 107 s at r = 8), so the accuracy of zipup is an
-//! algorithm property while its cost here is an engine property. Only
-//! `fit_treetn` reaches an error several orders of magnitude lower, and it does
-//! so at a `chi_out` below the budget it was given. That accuracy gap suggests
-//! zip-up truncation on either engine is far from the best fixed-rank
-//! approximation available at that rank. Both gaps are observed, not diagnosed,
-//! and no upstream issue has been filed for either yet.
+//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
+//! rev: `naive` and `fit_treetn` land on the same error, around 1e-8, which is
+//! the reference floor of the case, at the same `chi_out` (59 to 61) well below
+//! the budget. The two zipup arms, `zipup_simplett` and `zipup_treetn`, agree
+//! with each other to the last reported digit and sit three to four orders of
+//! magnitude higher, around 1e-5 to 1e-4, at the full budget. So the split is
+//! algorithmic rather than engine-driven: single-pass zip-up truncation is what
+//! costs accuracy, and the two engines running it produce the same answer.
+//! What zipup buys is speed: it is the fastest arm at every r and stays flat
+//! near 0.2 s, while `naive` grows steeply (0.64 s at r = 8, 5.3 s at r = 10)
+//! because it forms the full contracted bond before truncating. `fit_treetn`
+//! reaches naive accuracy at a fraction of the naive cost.
 //!
 //! The `zipup_treetn` and `fit_treetn` columns run on the treetn engine,
 //! reached through `tensor4all_itensorlike::TensorTrain::contract` with
@@ -40,9 +39,18 @@
 //! only difference between them is the contraction method. That is the same
 //! engine case 1 uses for its elementwise fit.
 //! `tensor4all_simplett::mpo::contract_fit` is deliberately NOT benchmarked: at
-//! the pinned upstream rev (tensor4all-rs 69a24e7) its local update
-//! `update_two_site_core` is a placeholder that leaves the core untouched, so
-//! that path degenerates to naive plus dead sweeps.
+//! the pinned upstream rev (tensor4all-rs 7cfec22) its local update
+//! `update_two_site_core` is still a placeholder that leaves the core
+//! untouched, so that path degenerates to naive plus dead sweeps
+//! (tensor4all-rs#571).
+//!
+//! The pinned rev includes tensor4all-rs#574, which changed simplett in three
+//! ways that this case sees directly: MPO factorize truncation became relative
+//! to the largest singular value instead of absolute, `contract_zipup`'s scalar
+//! loop became an einsum (about 800x faster), and `contract_naive`'s
+//! compression sweep now establishes a right-to-left QR gauge before
+//! truncating, which dropped its error by about three orders of magnitude onto
+//! the variational fit result.
 //!
 //! `fit_treetn` is run at a fixed sweep count (`mpo_contract::FIT_NSWEEPS`),
 //! which is part of the benchmark definition: its cost is linear in the sweep
@@ -50,12 +58,14 @@
 //! arms at a stated number of sweeps.
 //!
 //! Default sweep size: the quantics rank of the default mixture saturates
-//! around chi = 70 to 80, and the simplett arms then cost tens
-//! of seconds to minutes per contraction (bond Kronecker product of size
-//! chi^2 followed by SVDs). The defaults (r = 6, 8, 10 and 1 timed run, no
-//! warmup) keep a full sweep under about ten minutes on a laptop. Extend with
-//! for example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail;
-//! cost grows roughly linearly in r once the rank has saturated.
+//! around chi = 70 to 80. `naive` is the only expensive arm, since it forms the
+//! full contracted bond of size chi^2 before truncating; every other arm stays
+//! under half a second across the default range. The defaults (r = 6, 8, 10
+//! with 3 timed runs, no warmup) keep a full sweep well under a minute on a
+//! laptop. r = 12 is left out of the defaults because naive costs about 12.6 s
+//! there, against 5.3 s at r = 10. Extend with for example
+//! `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail, and restrict
+//! `BENCH_ALGOS` to drop naive if only the cheap arms are wanted.
 
 use std::path::PathBuf;
 use t4a_bench::gaussian::{to_quantics_mpo, GaussianMixture2D};
@@ -92,10 +102,10 @@ fn main() -> anyhow::Result<()> {
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
-    // The heavy simplett arms are multi-second deterministic kernels, so one
-    // timed run keeps a default sweep under about ten minutes. Raise
-    // `BENCH_RUNS` when a median over repetitions is wanted.
-    let runs: usize = env_or("BENCH_RUNS", 1);
+    // Since tensor4all-rs#574 the whole default sweep costs seconds, so three
+    // timed runs are affordable and the reported median is more stable than a
+    // single sample. Raise `BENCH_RUNS` further for the heavy tail.
+    let runs: usize = env_or("BENCH_RUNS", 3);
     let warmups: usize = env_or("BENCH_WARMUPS", 0);
     let seed: u64 = env_or("BENCH_SEED", 0);
     // With the output budget fixed at chi_in, truncation error is the quantity

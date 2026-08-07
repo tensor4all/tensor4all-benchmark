@@ -29,7 +29,7 @@ fn parse_algo(s: &str) -> ElementwiseAlgo {
 
 fn main() -> anyhow::Result<()> {
     let ks: Vec<usize> = std::env::var("BENCH_KS")
-        .unwrap_or_else(|_| "4,8,16,32,64".into())
+        .unwrap_or_else(|_| "4,8,16,32,64,128".into())
         .split(',')
         .map(|s| s.trim().parse().unwrap())
         .collect();

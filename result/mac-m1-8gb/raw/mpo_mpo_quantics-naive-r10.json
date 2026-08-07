@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "case": "mpo_mpo_quantics",
+  "algorithm": "naive",
+  "params": {
+    "alpha_range": [
+      0.5,
+      8.0
+    ],
+    "box_l": 6.0,
+    "contract_max_bond": 79,
+    "engine": "simplett",
+    "error_metric": "max_rel_vs_analytic",
+    "error_seed": 99,
+    "fit_nsweeps": 1,
+    "max_bond": 512,
+    "n_error_samples": 128,
+    "n_gauss": 8,
+    "r": 10,
+    "runs": 3,
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 15.87572,
+  "wall_times_secs": [
+    19.126222083,
+    15.58784575,
+    15.87572
+  ],
+  "max_error": 2.8907148724288823e-8,
+  "input_max_bond_dim": 79,
+  "output_max_bond_dim": 61,
+  "output_bond_dims": [
+    4,
+    16,
+    50,
+    61,
+    37,
+    27,
+    16,
+    13,
+    4
+  ]
+}

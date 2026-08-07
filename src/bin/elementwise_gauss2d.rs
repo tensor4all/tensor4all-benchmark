@@ -26,17 +26,18 @@
 //! shared with case 1 and recorded as `fit_nsweeps`: the fit cost is linear in
 //! the sweep count, so its wall time is only comparable at a stated count.
 //!
-//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
-//! revision (chi_in of 53, 76, 77): `naive` and `fit_treetn` agree to the last
-//! reported digit at 8.5e-9, 2.3e-8 and 2.5e-8, at the same chi_out of 39, 60
-//! and 61, well inside the budget. `aci` matches them or beats them (3.6e-11,
-//! 8.4e-9, 1.1e-8) and is by far the cheapest arm, 1 ms to 43 ms, because it
+//! What the fixed budget measures, as observed at r = 6 to 14 with the pinned
+//! revision (chi_in of 53 to 80): `naive` and `fit_treetn` agree to the last
+//! reported digit or close to it, 8.5e-9 to 6.4e-8, at the same chi_out of 39
+//! to 62, well inside the budget. `aci` matches them or beats them (3.6e-11 to
+//! 1.3e-8) and is by far the cheapest arm, 1.5 ms to 46 ms, because it
 //! never forms the product it is approximating. `zipup_treetn` collapses: it
-//! spends the whole budget and still returns 6.2e-1, 4.2e-1 and 5.6e-1, that
-//! is, an answer with no correct digits. Its error also swings by a factor of
-//! two between runs of the same configuration, since chi_in moves by one and
-//! the truncation it forces is severe, so read it as order one rather than as
-//! a number. The separation is much sharper than in case 2, where the same
+//! spends the whole budget and still returns errors between 8e-2 and 8e-1,
+//! that is, an answer with at most one correct digit. Its error also swings by
+//! a factor of several between runs of the same configuration, since chi_in
+//! moves by one and the truncation it forces is severe, so read it as order
+//! one rather than as a number. The separation is much sharper than in case 2,
+//! where the same
 //! single-pass truncation cost only three to four orders of magnitude, because
 //! the exact elementwise product has rank up to chi_in squared and a budget of
 //! chi_in discards almost all of it, whereas naive and fit reach a
@@ -44,8 +45,9 @@
 //! smoothly (1.8e-7 at 8 chi_in, 3.9e-8 unconstrained at chi_out = 837), so
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
-//! bond before truncating: 0.05 s at r = 6, 1.8 s at r = 8, 4.6 s at r = 10,
-//! against 0.57 s for `fit_treetn` and 0.27 s for `zipup_treetn` at r = 10.
+//! bond before truncating: it grows from well under a second at r = 6 to about
+//! 8 s per run at r = 10 to 14, while every other arm stays under two
+//! seconds across the default sweep (r = 6, 8, 10, 12, 14).
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
@@ -63,8 +65,8 @@ const CASE: &str = "elementwise_gauss2d";
 /// At the fixed output budget the single-pass zip-up truncation of an
 /// elementwise product is not merely less accurate, it fails outright: the
 /// measured relative error at the pinned revision is of order one across the
-/// default sweep, between 4e-1 and 9e-1 depending on r and on the run, against
-/// 1e-8 or better for every other arm. That
+/// default sweep, between 8e-2 and 8e-1 depending on r and on the run, against
+/// 1e-7 or better for every other arm. That
 /// is the headline result of this case, not a defect: given the same two inputs
 /// and a budget of 8 chi_in the same arm reaches 1.8e-7, and unconstrained it
 /// reaches 3.9e-8, so the algorithm is sound and the budget is what breaks it.
@@ -92,7 +94,7 @@ fn parse_algo(s: &str) -> ElementwiseAlgo {
 
 fn main() -> anyhow::Result<()> {
     let rs: Vec<usize> = std::env::var("BENCH_RS")
-        .unwrap_or_else(|_| "6,8,10".into())
+        .unwrap_or_else(|_| "6,8,10,12,14".into())
         .split(',')
         .map(|s| s.trim().parse().unwrap())
         .collect();

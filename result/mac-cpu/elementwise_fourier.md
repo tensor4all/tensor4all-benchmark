@@ -2,10 +2,10 @@
 
 | algorithm | points | fitted time exponent | worst max abs error |
 |---|---|---|---|
-| aci | 5 | 0.78 | 2.86e-07 |
-| fit | 5 | 1.25 | 6.49e-07 |
-| naive | 5 | 1.88 | 6.49e-07 |
-| zipup | 5 | 1.75 | 5.02e-07 |
+| aci | 5 | 0.94 | 2.86e-07 |
+| fit | 5 | 1.37 | 6.49e-07 |
+| naive | 5 | 2.28 | 6.49e-07 |
+| zipup | 5 | 1.74 | 5.02e-07 |
 
 ![time](./elementwise_fourier-time.svg)
 

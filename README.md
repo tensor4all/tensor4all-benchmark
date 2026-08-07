@@ -54,7 +54,7 @@ orders of magnitude higher, around `1e-5` to `1e-4`, at the full budget. The spl
 therefore algorithmic rather than engine-driven: single-pass zip-up truncation is what
 costs accuracy, and both engines running it produce the same answer. What zip-up buys is
 speed, since it is the fastest arm at every `R` and stays flat near 0.2 s, while `naive`
-grows steeply (0.64 s at `R` = 8, 5.3 s at `R` = 10) because it forms the full contracted
+grows steeply (0.38 s at `R` = 8, 5.2 s at `R` = 10) because it forms the full contracted
 bond before truncating. `fit_treetn` reaches naive accuracy at a fraction of the naive cost.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
@@ -76,12 +76,12 @@ compare two engines on one algorithm.
 Like case 2, the output bond dimension is pinned to the input rank: every algorithm runs
 capped at `chi_in`, the larger of the two input ranks, so all arms are compared at the same
 output budget and the error is the discriminator. `BENCH_MAX_BOND` caps only the input TCI
-construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 76
+construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 75
 and 77), `naive` and `fit_treetn` agree to the last reported digit at `8.5e-9`, `2.3e-8` and
-`2.5e-8`, at the same `chi_out` of 39, 60 and 61, well inside the budget. `aci` matches or
-beats them (`3.6e-11`, `8.4e-9`, `1.1e-8`) and is by far the cheapest arm, 1 ms to 43 ms,
+`1.4e-8`, at the same `chi_out` of 39, 60 and 61, well inside the budget. `aci` matches or
+beats them (`3.6e-11`, `1.3e-8`, `8.2e-9`) and is by far the cheapest arm, 1 ms to 113 ms,
 because it never forms the product it is approximating. `zipup_treetn` collapses: it spends
-the whole budget and still returns `6.2e-1`, `4.2e-1` and `5.6e-1`, an answer with no
+the whole budget and still returns `6.2e-1`, `3.2e-1` and `4.8e-1`, an answer with no
 correct digits, and that number swings by a factor of two between runs of the same
 configuration, so read it as order one rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
@@ -91,7 +91,7 @@ while naive and fit find a near-optimal basis for the same budget. Raising the b
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
 again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6, 1.8 s at `R` = 8, 4.6 s at `R` = 10, against 0.57 s for `fit_treetn` and 0.27 s for
+`R` = 6, 3.6 s at `R` = 8, 5.4 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.26 s for
 `zipup_treetn` at `R` = 10.
 Runner: [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs), sweep over `R`.
 
@@ -153,7 +153,7 @@ a non-finite result. The gates are there to catch wrong results, not to certify 
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.03 s at `R` = 6, 0.64 s at `R` = 8, 5.3 s at `R` = 10. Every other arm
+only expensive arm: 0.02 s at `R` = 6, 0.38 s at `R` = 8, 5.2 s at `R` = 10. Every other arm
 stays under half a second across that range. Every algorithm truncates back to the same
 output budget `chi_out <= chi_in`, so the arms differ in accuracy at equal budget rather
 than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10 with 3
@@ -163,7 +163,7 @@ example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, droppin
 when you only want a quick signal.
 
 Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 1.8 s at `R` = 8 and 4.6 s at `R` = 10, and every other arm stays under a
+at `R` = 6, 3.6 s at `R` = 8 and 5.4 s at `R` = 10, and every other arm stays under a
 second. Its default sweep takes a little over a minute, and `scripts/run_all.sh` finishes in
 about two and a half minutes for all three cases plus the reports (measured 2 min 35 s for
 the committed `mac-cpu` sweep).
@@ -273,7 +273,7 @@ the wrong instance.
    repository, as a core-wise bond Kronecker product plus an SVD sweep on simplett
    primitives, and is recorded with `engine` = `local` to keep that visible.
 8. **Case-3 `zipup_treetn` has no correct digits at the fixed output budget.** It returns a
-   relative error of order one, between `4e-1` and `9e-1` depending on `R` and on the run,
+   relative error of order one, between `3e-1` and `9e-1` depending on `R` and on the run,
    across the default sweep, having spent the whole
    `chi_in` budget. This is a property of the case, not a defect of the arm: the exact
    elementwise product has rank up to `chi_in` squared, and given more room the same arm

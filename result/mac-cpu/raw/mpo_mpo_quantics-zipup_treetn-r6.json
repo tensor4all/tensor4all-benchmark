@@ -22,11 +22,11 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.019051125,
+  "wall_time_median_secs": 0.018717667,
   "wall_times_secs": [
-    0.019051125,
-    0.018468916,
-    0.01908275
+    0.019521458,
+    0.018717667,
+    0.018696792
   ],
   "max_error": 0.0001053957869882763,
   "input_max_bond_dim": 53,

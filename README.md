@@ -47,17 +47,18 @@ so all arms are compared at the same output budget. The reported error is then t
 discriminator, namely the residual of the contracted MPO against the analytic Gaussian
 integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6, 8, 10, 12
 and 14 with the pinned revision, `naive` and `fit_treetn` land on the same error, `8.6e-9`
-to `2.9e-8`, which is the reference floor of the case (known issue 4), at the same `chi_out`
+to `3.0e-8`, which is the reference floor of the case (known issue 4), at the same `chi_out`
 of 48 to 61, well below the budget they were allowed. The two zipup arms, `zipup_simplett`
 and `zipup_treetn`, agree with each other to the last reported digit and sit three to four
 orders of magnitude higher, `1.8e-5` to `1.1e-4`, at the full budget. The split is
 therefore algorithmic rather than engine-driven: single-pass zip-up truncation is what
 costs accuracy, and both engines running it produce the same answer. What zip-up buys is
-speed, since it is the fastest arm at every `R` and stays flat between 0.02 s and 0.35 s,
-while `naive` grows steeply (2.1 s at `R` = 8, 28 s at `R` = 10, around 96 s at `R` = 12)
-because it forms the full contracted bond before truncating; at `R` >= 10 its wall time is
-memory bound on the 8 GB test machine and should be read as order of magnitude (known
-issue 9). `fit_treetn` reaches naive accuracy in under 0.65 s at every `R`.
+speed, since it is the fastest arm at every `R` and stays flat between 0.01 s and 0.3 s,
+while `naive` grows steeply (1.3 s at `R` = 8, 16 s at `R` = 10, around 45 to 48 s at
+`R` = 12 and 14) because it forms the full contracted bond before truncating; at
+`R` >= 10 its wall time is memory bound on the 8 GB machine of the committed profile and
+sensitive to ambient memory pressure (known issue 9). `fit_treetn` reaches naive accuracy
+in under 0.55 s at every `R`.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
 ### Case 3: elementwise product of 2D quantics Gaussian mixtures
@@ -79,12 +80,12 @@ Like case 2, the output bond dimension is pinned to the input rank: every algori
 capped at `chi_in`, the larger of the two input ranks, so all arms are compared at the same
 output budget and the error is the discriminator. `BENCH_MAX_BOND` caps only the input TCI
 construction. As measured at `R` = 6, 8, 10, 12 and 14 with the pinned revision (`chi_in`
-of 53, 77, 79, 78 and 80), `naive` and `fit_treetn` agree to the last reported digit or
-close to it, `8.5e-9` to `5.8e-8`, at the same `chi_out` of 39 to 62, well inside the
-budget. `aci` matches or beats them (`3.6e-11` to `2.1e-8`) and is by far the cheapest arm,
-2.6 ms to 58 ms, because it never forms the product it is approximating. `zipup_treetn`
-collapses: it spends the whole budget and still returns errors between `8.5e-2` and
-`8.0e-1` across the sweep, an answer with at most one correct digit, and that number swings
+of 53, 76, 78, 80 and 79), `naive` and `fit_treetn` agree to the last reported digit or
+close to it, `8.5e-9` to `6.4e-8`, at the same `chi_out` of 39 to 62, well inside the
+budget. `aci` matches or beats them (`3.6e-11` to `1.3e-8`) and is by far the cheapest arm,
+1.5 ms to 46 ms, because it never forms the product it is approximating. `zipup_treetn`
+collapses: it spends the whole budget and still returns errors between `1.7e-1` and
+`6.2e-1` across the sweep, an answer with no correct digits, and that number swings
 by a factor of several between runs of the same configuration, so read it as order one
 rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
@@ -93,9 +94,9 @@ product has rank up to `chi_in` squared and a budget of `chi_in` discards nearly
 while naive and fit find a near-optimal basis for the same budget. Raising the budget
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
-again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.11 s at
-`R` = 6, 5.1 s at `R` = 8, around 11 s at `R` = 10 to 14, against 1.6 s for `fit_treetn`
-and 0.84 s for `zipup_treetn` at `R` = 14.
+again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.09 s at
+`R` = 6, 4.2 s at `R` = 8, around 8 s at `R` = 10 to 14, against 1.2 s for `fit_treetn`
+and 0.4 s for `zipup_treetn` at `R` = 14.
 Runner: [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs), sweep over `R`.
 
 ## Latest results
@@ -172,21 +173,21 @@ a non-finite result. The gates are there to catch wrong results, not to certify 
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.04 s at `R` = 6, 2.1 s at `R` = 8, 28 s at `R` = 10, around 90 to
-100 s per run at `R` = 12 and 14. Every other arm stays under a second across that range.
-At `R` >= 10 the naive intermediates outgrow the 8 GB test machine, so its wall time there
-is memory bound and varies with ambient memory pressure (known issue 9). Every algorithm
+only expensive arm: 0.04 s at `R` = 6, 1.3 s at `R` = 8, 16 s at `R` = 10, around 45 to
+48 s per run at `R` = 12 and 14. Every other arm stays under a second across that range.
+At `R` >= 10 the naive intermediates outgrow an 8 GB machine, so its wall time there is
+memory bound and varies with ambient memory pressure (known issue 9). Every algorithm
 truncates back to the same output budget `chi_out <= chi_in`, so the arms differ in
 accuracy at equal budget rather than in how far their ranks are allowed to grow. The
 default sweep (`R` = 6, 8, 10, 12, 14 with 3 timed runs) is dominated by the naive runs at
-`R` = 12 and 14 and takes roughly ten minutes on a laptop. For a quick signal, restrict
+`R` = 12 and 14 and takes roughly six minutes on a laptop. For a quick signal, restrict
 `BENCH_ALGOS` to drop `naive`, or shorten `BENCH_RS`.
 
-Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.11 s
-at `R` = 6, 5.1 s at `R` = 8 and around 11 s at `R` = 10 to 14, and every other arm stays
-under two seconds. Its default sweep takes about three minutes, and `scripts/run_all.sh`
-finishes in about 14 minutes for all three cases plus the reports (measured 13 min 31 s
-for the committed `mac-m1-8gb` sweep).
+Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.09 s
+at `R` = 6, 4.2 s at `R` = 8 and around 8 s at `R` = 10 to 14, and every other arm stays
+under two seconds. Its default sweep takes about two minutes, and `scripts/run_all.sh`
+finishes in roughly eight minutes for all three cases plus the reports, as measured for
+the committed `mac-m1-8gb` sweep on an otherwise idle machine.
 
 Environment knobs:
 
@@ -306,17 +307,20 @@ the wrong instance.
    result. Read the case-3 zipup error column as a verdict on the budget rather than as a
    precision measurement.
 9. **`naive` wall times at `R` >= 10 are memory bound on the `mac-m1-8gb` machine.** The
-   naive arms form intermediates of bond `chi_in` squared, which at chi around 80 outgrow
-   an 8 GB machine's free memory (swap was in heavy use during the sweep), so their wall
-   time depends on ambient memory pressure: the spread across the three timed runs within
-   one sweep reaches 17 percent at `R` = 14, and the `R` = 12 median can come out above
-   the `R` = 14 one. For scale, the `mac-cpu` profile, a different Mac at the previous
-   pin, measured the case-2 naive point at `R` = 10 at 5.2 s against about 28 s on
-   `mac-m1-8gb`, with identical errors and `chi_out`. The cheap arms differ by tens of
-   percent at most between the two machines. Errors and bond dimensions are unaffected,
-   since the computation is the same arithmetic either way. So compare naive timings only
-   within one profile, and treat them at `R` >= 10 as order of magnitude there. This is
-   also why profiles are per machine and why `run.yaml` records the chip and memory.
+   naive arms form intermediates of bond `chi_in` squared, which at chi around 80 press
+   against an 8 GB machine's free memory, so their wall time depends on ambient memory
+   pressure: the case-2 point at `R` = 10 measured about 28 s per run on a session with
+   swap nearly full and 16 s on the same machine right after a reboot, same code, same
+   errors, same `chi_out`. The committed sweep is the post-reboot one, taken on an
+   otherwise idle machine, where the spread across the three timed runs stays within
+   about 5 percent at `R` = 12 and 14 (22 percent at `R` = 10, whose first run pays the
+   page-in). For scale across machines, the `mac-cpu` profile, a different Mac at the
+   previous pin, measured the same `R` = 10 point at 5.2 s. The cheap arms differ far
+   less. Errors and bond dimensions are unaffected everywhere, since the computation is
+   the same arithmetic either way. So compare naive timings only within one profile, run
+   official sweeps on an idle machine, and read cross-profile time ratios as hardware
+   statements. This is also why profiles are per machine and why `run.yaml` records the
+   chip and memory.
 
 ## License
 

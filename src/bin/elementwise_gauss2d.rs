@@ -28,9 +28,9 @@
 //!
 //! What the fixed budget measures, as observed at r = 6 to 14 with the pinned
 //! revision (chi_in of 53 to 80): `naive` and `fit_treetn` agree to the last
-//! reported digit or close to it, 8.5e-9 to 5.8e-8, at the same chi_out of 39
+//! reported digit or close to it, 8.5e-9 to 6.4e-8, at the same chi_out of 39
 //! to 62, well inside the budget. `aci` matches them or beats them (3.6e-11 to
-//! 2.1e-8) and is by far the cheapest arm, 2.6 ms to 58 ms, because it
+//! 1.3e-8) and is by far the cheapest arm, 1.5 ms to 46 ms, because it
 //! never forms the product it is approximating. `zipup_treetn` collapses: it
 //! spends the whole budget and still returns errors between 8e-2 and 8e-1,
 //! that is, an answer with at most one correct digit. Its error also swings by
@@ -46,7 +46,7 @@
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
 //! bond before truncating: it grows from well under a second at r = 6 to about
-//! 10 s per run at r = 12 and 14, while every other arm stays under two
+//! 8 s per run at r = 10 to 14, while every other arm stays under two
 //! seconds across the default sweep (r = 6, 8, 10, 12, 14).
 
 use std::path::PathBuf;

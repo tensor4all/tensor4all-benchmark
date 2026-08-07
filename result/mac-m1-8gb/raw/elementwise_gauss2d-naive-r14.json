@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "case": "elementwise_gauss2d",
+  "algorithm": "naive",
+  "params": {
+    "alpha_range": [
+      0.5,
+      8.0
+    ],
+    "box_l": 6.0,
+    "contract_max_bond": 79,
+    "engine": "local",
+    "error_metric": "max_rel_vs_analytic",
+    "error_seed": 99,
+    "fit_nsweeps": 2,
+    "max_bond": 512,
+    "n_error_samples": 128,
+    "n_gauss": 8,
+    "r": 14,
+    "runs": 3,
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 8.108915,
+  "wall_times_secs": [
+    8.108915,
+    8.016968791,
+    8.8515625
+  ],
+  "max_error": 6.392037127239305e-8,
+  "input_max_bond_dim": 79,
+  "output_max_bond_dim": 61,
+  "output_bond_dims": [
+    4,
+    15,
+    41,
+    61,
+    48,
+    34,
+    21,
+    15,
+    13,
+    10,
+    9,
+    6,
+    4
+  ]
+}

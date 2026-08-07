@@ -28,8 +28,8 @@
 //! algorithmic rather than engine-driven: single-pass zip-up truncation is what
 //! costs accuracy, and the two engines running it produce the same answer.
 //! What zipup buys is speed: it is the fastest arm at every r and stays flat
-//! between 0.02 s and 0.35 s, while `naive` grows steeply (2.1 s at r = 8,
-//! 28 s at r = 10 on the committed sweep's 8 GB machine, README known issue 9)
+//! between 0.01 s and 0.3 s, while `naive` grows steeply (1.3 s at r = 8,
+//! 16 s at r = 10 on the committed sweep's 8 GB machine, README known issue 9)
 //! because it forms the full contracted bond before truncating. `fit_treetn`
 //! reaches naive accuracy at a fraction of the naive cost.
 //!
@@ -63,8 +63,8 @@
 //! full contracted bond of size chi^2 before truncating; every other arm stays
 //! around a second or less across the default range. The defaults (r = 6, 8,
 //! 10, 12, 14 with 3 timed runs, no warmup) size the whole case at roughly
-//! ten minutes on a laptop, nearly all of it naive at r = 10 to 14, which
-//! costs 30 to 100 s per run there (memory bound on an 8 GB machine, see
+//! six minutes on a laptop, nearly all of it naive at r = 10 to 14, which
+//! costs 16 to 48 s per run there (memory bound on an 8 GB machine, see
 //! README known issue 9). Extend with for example
 //! `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail, and restrict
 //! `BENCH_ALGOS` to drop naive if only the cheap arms are wanted.

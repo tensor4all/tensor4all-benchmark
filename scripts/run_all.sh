@@ -37,10 +37,14 @@ else
   MEM_GB="$(awk '/MemTotal/ {printf "%d", $2 / 1048576}' /proc/meminfo 2>/dev/null || echo unknown)"
 fi
 
+# No hostname: on a public repository a DHCP name leaks the operator's
+# institution and location over time, and the machine identity is better
+# carried by the profile name, the label below and the hardware fields.
+# Set BENCH_MACHINE to override the label.
 cat > "$OUT/run.yaml" <<EOF
 profile: $PROFILE
 date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-host: $(hostname)
+machine: ${BENCH_MACHINE:-$PROFILE}
 os: $(uname -sm)
 chip: $CHIP
 memory_gb: $MEM_GB

@@ -44,8 +44,9 @@
 //! smoothly (1.8e-7 at 8 chi_in, 3.9e-8 unconstrained at chi_out = 837), so
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
-//! bond before truncating: 0.05 s at r = 6, 1.8 s at r = 8, 4.6 s at r = 10,
-//! against 0.57 s for `fit_treetn` and 0.27 s for `zipup_treetn` at r = 10.
+//! bond before truncating: it grows from well under a second at r = 6 to about
+//! 10 s per run at r = 12 and 14, while every other arm stays under two
+//! seconds across the default sweep (r = 6, 8, 10, 12, 14).
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
@@ -92,7 +93,7 @@ fn parse_algo(s: &str) -> ElementwiseAlgo {
 
 fn main() -> anyhow::Result<()> {
     let rs: Vec<usize> = std::env::var("BENCH_RS")
-        .unwrap_or_else(|_| "6,8,10".into())
+        .unwrap_or_else(|_| "6,8,10,12,14".into())
         .split(',')
         .map(|s| s.trim().parse().unwrap())
         .collect();

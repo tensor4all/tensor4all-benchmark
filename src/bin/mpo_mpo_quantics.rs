@@ -60,10 +60,10 @@
 //! Default sweep size: the quantics rank of the default mixture saturates
 //! around chi = 70 to 80. `naive` is the only expensive arm, since it forms the
 //! full contracted bond of size chi^2 before truncating; every other arm stays
-//! under half a second across the default range. The defaults (r = 6, 8, 10
-//! with 3 timed runs, no warmup) keep a full sweep well under a minute on a
-//! laptop. r = 12 is left out of the defaults because naive costs about 12.6 s
-//! there, against 5.3 s at r = 10. Extend with for example
+//! around a second or less across the default range. The defaults (r = 6, 8,
+//! 10, 12, 14 with 3 timed runs, no warmup) size the whole case at roughly
+//! twelve minutes on a laptop, nearly all of it naive at r = 12 and 14, which
+//! cost about 100 s per run each. Extend with for example
 //! `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail, and restrict
 //! `BENCH_ALGOS` to drop naive if only the cheap arms are wanted.
 
@@ -92,7 +92,7 @@ fn parse_algo(s: &str) -> MpoAlgo {
 
 fn main() -> anyhow::Result<()> {
     let rs: Vec<usize> = std::env::var("BENCH_RS")
-        .unwrap_or_else(|_| "6,8,10".into())
+        .unwrap_or_else(|_| "6,8,10,12,14".into())
         .split(',')
         .map(|s| s.trim().parse().unwrap())
         .collect();

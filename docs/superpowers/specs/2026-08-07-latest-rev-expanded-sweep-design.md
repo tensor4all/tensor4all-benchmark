@@ -80,3 +80,8 @@ Open questions:
    recording `threads: default`?
 6. Case 2's reference floor near 1e-8 comes from the tail outside the box. If higher
    accuracy comparisons are ever wanted, should `BENCH_BOX_L` grow?
+7. The mac-cpu profile has mixed machines: the 2026-08-07 morning sweep ran on
+   Hiroshi's Mac, the afternoon one on an 8 GB M1 MacBook Pro where the naive arms at
+   r >= 10 are memory bound (README known issue 9), and run.yaml records only the
+   hostname. Should run.yaml capture chip and memory size, and should profiles be split
+   per machine? Which machine produces the official numbers?

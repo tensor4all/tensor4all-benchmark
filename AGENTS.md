@@ -42,16 +42,6 @@ hardware fields in `run.yaml` carry the identity.
 move all the crates together, and never mix backend features across them. A bump
 can change measured numbers, so it belongs in its own commit with a rerun.
 
-## Pushing
-
-Proposed, awaiting the maintainer's edit or veto. Work lands on main through a
-pull request: push a branch, let CI run, and let a human decide the merge. Do
-not push to main directly, and never force push a shared branch. An AI agent
-may push a branch when asked to, but merging stays a human decision. A change
-that replaces `result/<profile>/` says in its PR description which machine
-produced the sweep, so the numbers are reviewed together with the hardware
-that made them.
-
 ## Prose style
 
 No em dashes or en dashes anywhere in this repository's documents, comments or

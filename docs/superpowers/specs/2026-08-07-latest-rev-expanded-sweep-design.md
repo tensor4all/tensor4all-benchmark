@@ -1,7 +1,7 @@
 # Update to latest tensor4all-rs and expand the default sweeps
 
 Date: 2026-08-07
-Status: approved by repo user (lingrui96), pending execution
+Status: implemented
 
 ## Goal
 
@@ -57,7 +57,7 @@ minute defaults, and produce a question list for Hiroshi about the next benchmar
   (512) should stay slack at R = 14. If chi_in drifts up instead, the fixed output
   budget `chi_in` changes meaning across R and the report note should say so.
 
-## Questions for Hiroshi (next case, direction)
+## Next case and direction, asked and answered
 
 Candidate directions for a fourth case:
 
@@ -71,20 +71,24 @@ Candidate directions for a fourth case:
   with proper warmup would be new work (AGENTS.md warns about JIT).
 - (d) Higher dimension: 3D quantics, fused site dimension 8.
 
-Open questions:
+Answers, from the maintainer's review of the pull request on 2026-08-07:
 
-1. Which of (a) through (d) first, or something else entirely?
-2. Is a fix planned for the simplett `contract_fit` stub
-   (tensor4all-rs#571)? That would enable the missing simplett fit arm in case 2.
-3. Is a simplett elementwise product for tensor trains planned (known issue 7)? That
-   would give cases 1 and 3 a second engine on the same algorithm.
-4. Are machine profiles beyond mac-cpu wanted (Linux, cluster)?
-5. Should official sweeps pin the thread count (`RAYON_NUM_THREADS`) instead of
-   recording `threads: default`?
-6. Case 2's reference floor near 1e-8 comes from the tail outside the box. If higher
-   accuracy comparisons are ever wanted, should `BENCH_BOX_L` grow?
-7. The mac-cpu profile has mixed machines: the 2026-08-07 morning sweep ran on
-   Hiroshi's Mac, the afternoon one on an 8 GB M1 MacBook Pro where the naive arms at
-   r >= 10 are memory bound (README known issue 9), and run.yaml records only the
-   hostname. Should run.yaml capture chip and memory size, and should profiles be split
-   per machine? Which machine produces the official numbers?
+1. Fourth case: benchmark TCI or quantics construction first, option (a), since #575
+   changes that path directly and every current case excludes construction from the
+   timed region.
+2. simplett `contract_fit`: tensor4all-rs#571 is still open with no assignee or
+   milestone, so keep the simplett fit arm excluded.
+3. simplett elementwise product for tensor trains: no public issue or plan exists.
+   Track it separately only when it blocks planned work.
+4. Keep `mac-m1-8gb` as a machine-specific profile, but do not use its memory-bound
+   naive timings as the cross-machine headline.
+5. `threads: default` is acceptable for this profile. Pin a numeric thread count for a
+   future official cross-machine sweep.
+6. Keep `BENCH_BOX_L` at 6. If higher accuracy comparisons are needed, use a
+   finite-box analytic reference rather than only enlarging the box at fixed R.
+7. Per-machine profiles, the chip and memory fields, and the hostname removal are
+   accepted as implemented here.
+
+The branch, pull request and human merge policy proposed alongside this work was
+removed from the change: it belongs in a separate change, made as accepted maintainer
+policy rather than as a proposal awaiting veto.

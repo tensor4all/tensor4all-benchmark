@@ -168,7 +168,6 @@ pub fn max_error_vs_series(
 /// the layout `gaussian::to_quantics_fused_tt` produces. The normalization
 /// matches case 2: the largest sampled `|reference|`, so the two cases report
 /// the same kind of number under `error_metric = "max_rel_vs_analytic"`.
-#[allow(clippy::too_many_arguments)]
 pub fn max_rel_error_vs_mixture_product(
     h: &TensorTrain<f64>,
     f: &GaussianMixture2D,

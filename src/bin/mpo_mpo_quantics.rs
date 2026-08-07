@@ -19,16 +19,17 @@
 //! `BENCH_MAX_BOND` keeps its role only as the cap for the input TCI
 //! construction in `to_quantics_mpo`.
 //!
-//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
+//! What the fixed budget measures, as observed at r = 6 to 14 with the pinned
 //! rev: `naive` and `fit_treetn` land on the same error, around 1e-8, which is
-//! the reference floor of the case, at the same `chi_out` (59 to 61) well below
+//! the reference floor of the case, at the same `chi_out` (48 to 61) well below
 //! the budget. The two zipup arms, `zipup_simplett` and `zipup_treetn`, agree
 //! with each other to the last reported digit and sit three to four orders of
 //! magnitude higher, around 1e-5 to 1e-4, at the full budget. So the split is
 //! algorithmic rather than engine-driven: single-pass zip-up truncation is what
 //! costs accuracy, and the two engines running it produce the same answer.
 //! What zipup buys is speed: it is the fastest arm at every r and stays flat
-//! near 0.2 s, while `naive` grows steeply (0.64 s at r = 8, 5.3 s at r = 10)
+//! between 0.02 s and 0.35 s, while `naive` grows steeply (2.1 s at r = 8,
+//! 28 s at r = 10 on the committed sweep's 8 GB machine, README known issue 9)
 //! because it forms the full contracted bond before truncating. `fit_treetn`
 //! reaches naive accuracy at a fraction of the naive cost.
 //!
@@ -39,7 +40,7 @@
 //! only difference between them is the contraction method. That is the same
 //! engine case 1 uses for its elementwise fit.
 //! `tensor4all_simplett::mpo::contract_fit` is deliberately NOT benchmarked: at
-//! the pinned upstream rev (tensor4all-rs 7cfec22) its local update
+//! the pinned upstream rev (tensor4all-rs ae655a9) its local update
 //! `update_two_site_core` is still a placeholder that leaves the core
 //! untouched, so that path degenerates to naive plus dead sweeps
 //! (tensor4all-rs#571).
@@ -62,8 +63,9 @@
 //! full contracted bond of size chi^2 before truncating; every other arm stays
 //! around a second or less across the default range. The defaults (r = 6, 8,
 //! 10, 12, 14 with 3 timed runs, no warmup) size the whole case at roughly
-//! twelve minutes on a laptop, nearly all of it naive at r = 12 and 14, which
-//! cost about 100 s per run each. Extend with for example
+//! ten minutes on a laptop, nearly all of it naive at r = 10 to 14, which
+//! costs 30 to 100 s per run there (memory bound on an 8 GB machine, see
+//! README known issue 9). Extend with for example
 //! `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5` for the heavy tail, and restrict
 //! `BENCH_ALGOS` to drop naive if only the cheap arms are wanted.
 

@@ -11,9 +11,9 @@ revision that produced it. The pinned `tensor4all-rs` revision lives in `Cargo.t
 
 | Case | What it measures | Details | Runner | Latest report | Plots |
 | --- | --- | --- | --- | --- | --- |
-| 1. `elementwise_fourier` | Elementwise product of two 1D quantics Fourier series, swept over the mode count `K`, against the exact product series | [description](#case-1-elementwise-hadamard-product-of-quantics-tensor-trains) | [`src/bin/elementwise_fourier.rs`](src/bin/elementwise_fourier.rs) | [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md) | [time](result/mac-cpu/elementwise_fourier-time.svg), [error](result/mac-cpu/elementwise_fourier-error.svg) |
-| 2. `mpo_mpo_quantics` | Contraction of two 2D quantics Gaussian-mixture MPOs over their shared variable, swept over bits per variable `R`, against the closed-form Gaussian integral | [description](#case-2-mpo-mpo-contraction-of-2d-quantics-gaussian-mixtures) | [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs) | [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md) | [time](result/mac-cpu/mpo_mpo_quantics-time.svg), [error](result/mac-cpu/mpo_mpo_quantics-error.svg) |
-| 3. `elementwise_gauss2d` | Elementwise product of two 2D quantics Gaussian mixtures at a fixed output budget, swept over bits per variable `R`, against the exact pointwise product | [description](#case-3-elementwise-product-of-2d-quantics-gaussian-mixtures) | [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs) | [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md) | [time](result/mac-cpu/elementwise_gauss2d-time.svg), [error](result/mac-cpu/elementwise_gauss2d-error.svg) |
+| 1. `elementwise_fourier` | Elementwise product of two 1D quantics Fourier series, swept over the mode count `K`, against the exact product series | [description](#case-1-elementwise-hadamard-product-of-quantics-tensor-trains) | [`src/bin/elementwise_fourier.rs`](src/bin/elementwise_fourier.rs) | [`result/mac-m1-8gb/elementwise_fourier.md`](result/mac-m1-8gb/elementwise_fourier.md) | [time](result/mac-m1-8gb/elementwise_fourier-time.svg), [error](result/mac-m1-8gb/elementwise_fourier-error.svg) |
+| 2. `mpo_mpo_quantics` | Contraction of two 2D quantics Gaussian-mixture MPOs over their shared variable, swept over bits per variable `R`, against the closed-form Gaussian integral | [description](#case-2-mpo-mpo-contraction-of-2d-quantics-gaussian-mixtures) | [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs) | [`result/mac-m1-8gb/mpo_mpo_quantics.md`](result/mac-m1-8gb/mpo_mpo_quantics.md) | [time](result/mac-m1-8gb/mpo_mpo_quantics-time.svg), [error](result/mac-m1-8gb/mpo_mpo_quantics-error.svg) |
+| 3. `elementwise_gauss2d` | Elementwise product of two 2D quantics Gaussian mixtures at a fixed output budget, swept over bits per variable `R`, against the exact pointwise product | [description](#case-3-elementwise-product-of-2d-quantics-gaussian-mixtures) | [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs) | [`result/mac-m1-8gb/elementwise_gauss2d.md`](result/mac-m1-8gb/elementwise_gauss2d.md) | [time](result/mac-m1-8gb/elementwise_gauss2d-time.svg), [error](result/mac-m1-8gb/elementwise_gauss2d-error.svg) |
 
 ## Benchmark cases
 
@@ -45,17 +45,19 @@ The contraction output bond dimension is pinned to the input rank: every algorit
 with its maximum bond dimension capped at `chi_in`, the larger of the two input MPO ranks,
 so all arms are compared at the same output budget. The reported error is then the
 discriminator, namely the residual of the contracted MPO against the analytic Gaussian
-integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6, 8
-and 10 with the pinned revision, `naive` and `fit_treetn` land on the same error, around
-`1e-8`, which is the reference floor of the case (known issue 4), at the same `chi_out` of
-59 to 61, well below the budget they were allowed. The two zipup arms, `zipup_simplett` and
-`zipup_treetn`, agree with each other to the last reported digit and sit three to four
-orders of magnitude higher, around `1e-5` to `1e-4`, at the full budget. The split is
+integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6, 8, 10, 12
+and 14 with the pinned revision, `naive` and `fit_treetn` land on the same error, `8.6e-9`
+to `2.9e-8`, which is the reference floor of the case (known issue 4), at the same `chi_out`
+of 48 to 61, well below the budget they were allowed. The two zipup arms, `zipup_simplett`
+and `zipup_treetn`, agree with each other to the last reported digit and sit three to four
+orders of magnitude higher, `1.8e-5` to `1.1e-4`, at the full budget. The split is
 therefore algorithmic rather than engine-driven: single-pass zip-up truncation is what
 costs accuracy, and both engines running it produce the same answer. What zip-up buys is
-speed, since it is the fastest arm at every `R` and stays flat near 0.2 s, while `naive`
-grows steeply (0.38 s at `R` = 8, 5.2 s at `R` = 10) because it forms the full contracted
-bond before truncating. `fit_treetn` reaches naive accuracy at a fraction of the naive cost.
+speed, since it is the fastest arm at every `R` and stays flat between 0.02 s and 0.35 s,
+while `naive` grows steeply (2.1 s at `R` = 8, 28 s at `R` = 10, around 96 s at `R` = 12)
+because it forms the full contracted bond before truncating; at `R` >= 10 its wall time is
+memory bound on the 8 GB test machine and should be read as order of magnitude (known
+issue 9). `fit_treetn` reaches naive accuracy in under 0.65 s at every `R`.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
 ### Case 3: elementwise product of 2D quantics Gaussian mixtures
@@ -76,34 +78,46 @@ compare two engines on one algorithm.
 Like case 2, the output bond dimension is pinned to the input rank: every algorithm runs
 capped at `chi_in`, the larger of the two input ranks, so all arms are compared at the same
 output budget and the error is the discriminator. `BENCH_MAX_BOND` caps only the input TCI
-construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 75
-and 77), `naive` and `fit_treetn` agree to the last reported digit at `8.5e-9`, `2.3e-8` and
-`1.4e-8`, at the same `chi_out` of 39, 60 and 61, well inside the budget. `aci` matches or
-beats them (`3.6e-11`, `1.3e-8`, `8.2e-9`) and is by far the cheapest arm, 1 ms to 113 ms,
-because it never forms the product it is approximating. `zipup_treetn` collapses: it spends
-the whole budget and still returns `6.2e-1`, `3.2e-1` and `4.8e-1`, an answer with no
-correct digits, and that number swings by a factor of two between runs of the same
-configuration, so read it as order one rather than as a measurement. The separation is much
+construction. As measured at `R` = 6, 8, 10, 12 and 14 with the pinned revision (`chi_in`
+of 53, 77, 79, 78 and 80), `naive` and `fit_treetn` agree to the last reported digit or
+close to it, `8.5e-9` to `5.8e-8`, at the same `chi_out` of 39 to 62, well inside the
+budget. `aci` matches or beats them (`3.6e-11` to `2.1e-8`) and is by far the cheapest arm,
+2.6 ms to 58 ms, because it never forms the product it is approximating. `zipup_treetn`
+collapses: it spends the whole budget and still returns errors between `8.5e-2` and
+`8.0e-1` across the sweep, an answer with at most one correct digit, and that number swings
+by a factor of several between runs of the same configuration, so read it as order one
+rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
 truncation cost only three to four orders of magnitude, because the exact elementwise
 product has rank up to `chi_in` squared and a budget of `chi_in` discards nearly all of it,
 while naive and fit find a near-optimal basis for the same budget. Raising the budget
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
-again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6, 3.6 s at `R` = 8, 5.4 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.26 s for
-`zipup_treetn` at `R` = 10.
+again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.11 s at
+`R` = 6, 5.1 s at `R` = 8, around 11 s at `R` = 10 to 14, against 1.6 s for `fit_treetn`
+and 0.84 s for `zipup_treetn` at `R` = 14.
 Runner: [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs), sweep over `R`.
 
 ## Latest results
 
+One profile per physical machine, so numbers from different hardware never overwrite
+each other. Each profile's `run.yaml` records the machine label, chip, memory, the
+repository revision and the pinned tensor4all-rs revision that produced it.
+
+`mac-m1-8gb`, an 8 GB Apple M1 MacBook Pro, at the current pin and the full default
+sweeps. The quoted numbers in the case descriptions above come from this profile:
+
+- [`result/mac-m1-8gb/elementwise_fourier.md`](result/mac-m1-8gb/elementwise_fourier.md)
+- [`result/mac-m1-8gb/mpo_mpo_quantics.md`](result/mac-m1-8gb/mpo_mpo_quantics.md)
+- [`result/mac-m1-8gb/elementwise_gauss2d.md`](result/mac-m1-8gb/elementwise_gauss2d.md)
+
+`mac-cpu`, the maintainer's Mac, kept as the second machine's record: measured at the
+previous pin `7cfec22` with the previous, lighter default sweeps (`R` = 6, 8, 10 and
+`K` up to 64), before `run.yaml` carried hardware fields:
+
 - [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md)
 - [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md)
 - [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md)
-
-The scaling plots sit next to these files, and `result/mac-cpu/run.yaml` records the
-machine, the repository revision, and the pinned tensor4all-rs revision that produced
-them.
 
 ## Running
 
@@ -116,15 +130,20 @@ Prerequisites:
 - [uv](https://docs.astral.sh/uv/) for the report generator (matplotlib, numpy).
 - Julia (optional), only for the independent ITensors.jl correctness checks below.
 
-Full run and report for a machine profile:
+Full run and report for a machine profile. Name the profile after the machine, one
+profile per physical machine, for example:
 
 ```bash
-scripts/run_all.sh mac-cpu
+scripts/run_all.sh mac-m1-8gb
 ```
 
 This builds in release mode, runs all three cases with their default sweeps into
-`result/mac-cpu/raw/`, writes `result/mac-cpu/run.yaml`, and renders the Markdown reports
-and SVG plots.
+`result/<profile>/raw/`, writes `result/<profile>/run.yaml`, and renders the Markdown
+reports and SVG plots. `run.yaml` deliberately records no hostname, only a machine
+label (`BENCH_MACHINE`, defaulting to the profile name) plus the chip and memory size,
+since a hostname on a public repository can leak the operator's institution and
+location. On a machine without `uv`, point `REPORT_PYTHON` at any python that has
+matplotlib and numpy.
 
 Smoke run (small, fast, useful for checking the toolchain). Cases 2 and 3 write the same
 `instance-r<R>` file names, so give them different `EXPORT_HDF5` directories when both are
@@ -153,28 +172,29 @@ a non-finite result. The gates are there to catch wrong results, not to certify 
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.02 s at `R` = 6, 0.38 s at `R` = 8, 5.2 s at `R` = 10. Every other arm
-stays under half a second across that range. Every algorithm truncates back to the same
-output budget `chi_out <= chi_in`, so the arms differ in accuracy at equal budget rather
-than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10 with 3
-timed runs) therefore takes well under a minute on a laptop. `R` = 12 is left out of the
-defaults because naive costs about 12.6 s there. For the heavy tail, extend explicitly, for
-example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, dropping `naive`,
-when you only want a quick signal.
+only expensive arm: 0.04 s at `R` = 6, 2.1 s at `R` = 8, 28 s at `R` = 10, around 90 to
+100 s per run at `R` = 12 and 14. Every other arm stays under a second across that range.
+At `R` >= 10 the naive intermediates outgrow the 8 GB test machine, so its wall time there
+is memory bound and varies with ambient memory pressure (known issue 9). Every algorithm
+truncates back to the same output budget `chi_out <= chi_in`, so the arms differ in
+accuracy at equal budget rather than in how far their ranks are allowed to grow. The
+default sweep (`R` = 6, 8, 10, 12, 14 with 3 timed runs) is dominated by the naive runs at
+`R` = 12 and 14 and takes roughly ten minutes on a laptop. For a quick signal, restrict
+`BENCH_ALGOS` to drop `naive`, or shorten `BENCH_RS`.
 
-Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 3.6 s at `R` = 8 and 5.4 s at `R` = 10, and every other arm stays under a
-second. Its default sweep takes a little over a minute, and `scripts/run_all.sh` finishes in
-about two and a half minutes for all three cases plus the reports (measured 2 min 35 s for
-the committed `mac-cpu` sweep).
+Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.11 s
+at `R` = 6, 5.1 s at `R` = 8 and around 11 s at `R` = 10 to 14, and every other arm stays
+under two seconds. Its default sweep takes about three minutes, and `scripts/run_all.sh`
+finishes in about 14 minutes for all three cases plus the reports (measured 13 min 31 s
+for the committed `mac-m1-8gb` sweep).
 
 Environment knobs:
 
 | Variable | Applies to | Default | Meaning |
 | --- | --- | --- | --- |
-| `BENCH_KS` | case 1 | `4,8,16,32,64` | comma-separated Fourier mode counts `K` to sweep |
+| `BENCH_KS` | case 1 | `4,8,16,32,64,128` | comma-separated Fourier mode counts `K` to sweep |
 | `BENCH_R` | case 1 | `20` | number of quantics bits |
-| `BENCH_RS` | cases 2 and 3 | `6,8,10` | comma-separated bits per variable `R` to sweep |
+| `BENCH_RS` | cases 2 and 3 | `6,8,10,12,14` | comma-separated bits per variable `R` to sweep |
 | `BENCH_NGAUSS` | cases 2 and 3 | `8` | number of Gaussians per mixture |
 | `BENCH_BOX_L` | cases 2 and 3 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_ALPHA_LO` | cases 2 and 3 | `0.5` | lower bound of the Gaussian width parameter |
@@ -263,8 +283,11 @@ the wrong instance.
    `contract_naive`'s compression sweep now establishes a right-to-left QR gauge before
    truncating, which dropped its error by about three orders of magnitude so that naive
    matches the variational fit. The pinned rev is
-   `7cfec2270700d4b218e02f451a340518b84016fb`, which contains all three. Earlier numbers in
-   this repository's git history predate them and are not comparable.
+   `ae655a9ec08a0c3df8c25369b84be0d04e2a2bf3`, which contains all three plus
+   [tensor4all-rs#575](https://github.com/tensor4all/tensor4all-rs/pull/575), a treetci
+   convergence fix that stops input TCI construction early once the rank saturates at
+   `max_bond_dim`. Earlier numbers in this repository's git history predate these fixes
+   and are not comparable.
 7. **simplett has no elementwise product for tensor trains at the pinned revision.** It
    offers MPO-MPO contraction (`contract_naive`, `contract_zipup`, the stubbed
    `contract_fit`) but nothing that forms a Hadamard product of two tensor trains, so cases
@@ -273,7 +296,7 @@ the wrong instance.
    repository, as a core-wise bond Kronecker product plus an SVD sweep on simplett
    primitives, and is recorded with `engine` = `local` to keep that visible.
 8. **Case-3 `zipup_treetn` has no correct digits at the fixed output budget.** It returns a
-   relative error of order one, between `3e-1` and `9e-1` depending on `R` and on the run,
+   relative error of order one, between `8e-2` and `8e-1` depending on `R` and on the run,
    across the default sweep, having spent the whole
    `chi_in` budget. This is a property of the case, not a defect of the arm: the exact
    elementwise product has rank up to `chi_in` squared, and given more room the same arm
@@ -282,6 +305,18 @@ the wrong instance.
    so it is gated at a hardcoded `5.0` that only catches a scale blow-up or a non-finite
    result. Read the case-3 zipup error column as a verdict on the budget rather than as a
    precision measurement.
+9. **`naive` wall times at `R` >= 10 are memory bound on the `mac-m1-8gb` machine.** The
+   naive arms form intermediates of bond `chi_in` squared, which at chi around 80 outgrow
+   an 8 GB machine's free memory (swap was in heavy use during the sweep), so their wall
+   time depends on ambient memory pressure: the spread across the three timed runs within
+   one sweep reaches 17 percent at `R` = 14, and the `R` = 12 median can come out above
+   the `R` = 14 one. For scale, the `mac-cpu` profile, a different Mac at the previous
+   pin, measured the case-2 naive point at `R` = 10 at 5.2 s against about 28 s on
+   `mac-m1-8gb`, with identical errors and `chi_out`. The cheap arms differ by tens of
+   percent at most between the two machines. Errors and bond dimensions are unaffected,
+   since the computation is the same arithmetic either way. So compare naive timings only
+   within one profile, and treat them at `R` >= 10 as order of magnitude there. This is
+   also why profiles are per machine and why `run.yaml` records the chip and memory.
 
 ## License
 

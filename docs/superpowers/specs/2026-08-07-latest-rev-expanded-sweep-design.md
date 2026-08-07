@@ -18,8 +18,11 @@ minute defaults, and produce a question list for Hiroshi about the next benchmar
 2. **The pin update and the sweep expansion land together in one commit**, by explicit
    instruction of the repo user, overriding the AGENTS.md rule that a bump gets its own
    commit. Old results are superseded, not preserved for comparison.
-3. **Default sweeps grow to a roughly 20 minute full run**, and `result/mac-cpu` is
-   regenerated as the single standard result set. No separate heavy profile.
+3. **Default sweeps grow to a roughly 20 minute full run.** Amended later the same day
+   after user feedback: instead of regenerating `result/mac-cpu` in place, profiles are
+   split per physical machine. `mac-cpu` stays frozen as the maintainer's machine's
+   record at the previous pin, and this sweep lands in `mac-m1-8gb`. `run.yaml` gains
+   chip and memory fields and drops the hostname for privacy.
 4. **No new benchmark case yet.** Candidate directions and open questions go to Hiroshi
    first (see below).
 

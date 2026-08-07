@@ -26,17 +26,18 @@
 //! shared with case 1 and recorded as `fit_nsweeps`: the fit cost is linear in
 //! the sweep count, so its wall time is only comparable at a stated count.
 //!
-//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
-//! revision (chi_in of 53, 76, 77): `naive` and `fit_treetn` agree to the last
-//! reported digit at 8.5e-9, 2.3e-8 and 2.5e-8, at the same chi_out of 39, 60
-//! and 61, well inside the budget. `aci` matches them or beats them (3.6e-11,
-//! 8.4e-9, 1.1e-8) and is by far the cheapest arm, 1 ms to 43 ms, because it
+//! What the fixed budget measures, as observed at r = 6 to 14 with the pinned
+//! revision (chi_in of 53 to 80): `naive` and `fit_treetn` agree to the last
+//! reported digit or close to it, 8.5e-9 to 5.8e-8, at the same chi_out of 39
+//! to 62, well inside the budget. `aci` matches them or beats them (3.6e-11 to
+//! 2.1e-8) and is by far the cheapest arm, 2.6 ms to 58 ms, because it
 //! never forms the product it is approximating. `zipup_treetn` collapses: it
-//! spends the whole budget and still returns 6.2e-1, 4.2e-1 and 5.6e-1, that
-//! is, an answer with no correct digits. Its error also swings by a factor of
-//! two between runs of the same configuration, since chi_in moves by one and
-//! the truncation it forces is severe, so read it as order one rather than as
-//! a number. The separation is much sharper than in case 2, where the same
+//! spends the whole budget and still returns errors between 8e-2 and 8e-1,
+//! that is, an answer with at most one correct digit. Its error also swings by
+//! a factor of several between runs of the same configuration, since chi_in
+//! moves by one and the truncation it forces is severe, so read it as order
+//! one rather than as a number. The separation is much sharper than in case 2,
+//! where the same
 //! single-pass truncation cost only three to four orders of magnitude, because
 //! the exact elementwise product has rank up to chi_in squared and a budget of
 //! chi_in discards almost all of it, whereas naive and fit reach a
@@ -64,8 +65,8 @@ const CASE: &str = "elementwise_gauss2d";
 /// At the fixed output budget the single-pass zip-up truncation of an
 /// elementwise product is not merely less accurate, it fails outright: the
 /// measured relative error at the pinned revision is of order one across the
-/// default sweep, between 4e-1 and 9e-1 depending on r and on the run, against
-/// 1e-8 or better for every other arm. That
+/// default sweep, between 8e-2 and 8e-1 depending on r and on the run, against
+/// 1e-7 or better for every other arm. That
 /// is the headline result of this case, not a defect: given the same two inputs
 /// and a budget of 8 chi_in the same arm reaches 1.8e-7, and unconstrained it
 /// reaches 3.9e-8, so the algorithm is sound and the budget is what breaks it.

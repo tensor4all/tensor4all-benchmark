@@ -25,6 +25,11 @@ jobs:
           BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
           OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke
           cargo run --release --bin mpo_mpo_quantics
+      - name: smoke elementwise gauss2d
+        run: >
+          BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
+          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke-gauss2d
+          cargo run --release --bin elementwise_gauss2d
       - uses: julia-actions/setup-julia@v2
         with:
           version: "1"
@@ -33,3 +38,4 @@ jobs:
           julia --project=julia -e 'using Pkg; Pkg.instantiate()'
           julia --project=julia julia/check_elementwise.jl /tmp/smoke 4
           julia --project=julia julia/check_mpo_mpo.jl /tmp/smoke 8
+          julia --project=julia julia/check_elementwise_gauss2d.jl /tmp/smoke-gauss2d 8

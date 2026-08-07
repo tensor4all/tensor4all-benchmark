@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "case": "mpo_mpo_quantics",
-  "algorithm": "zipup_treetn",
+  "case": "elementwise_gauss2d",
+  "algorithm": "aci",
   "params": {
     "alpha_range": [
       0.5,
@@ -9,10 +9,10 @@
     ],
     "box_l": 6.0,
     "contract_max_bond": 76,
-    "engine": "treetn",
+    "engine": "aci",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
-    "fit_nsweeps": 1,
+    "fit_nsweeps": 2,
     "max_bond": 512,
     "n_error_samples": 128,
     "n_gauss": 8,
@@ -22,22 +22,22 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.128334916,
+  "wall_time_median_secs": 0.018702125,
   "wall_times_secs": [
-    0.130956208,
-    0.1264465,
-    0.128334916
+    0.018702125,
+    0.018725625,
+    0.018367083
   ],
-  "max_error": 0.000021946770711702076,
+  "max_error": 8.396980618166697e-9,
   "input_max_bond_dim": 76,
-  "output_max_bond_dim": 76,
+  "output_max_bond_dim": 71,
   "output_bond_dims": [
     4,
+    15,
+    42,
+    71,
+    50,
     16,
-    55,
-    76,
-    76,
-    55,
-    12
+    4
   ]
 }

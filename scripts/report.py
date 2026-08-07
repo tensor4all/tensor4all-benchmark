@@ -17,12 +17,14 @@ X_AXIS = {
     # case name -> (record field used as x, axis label)
     "elementwise_fourier": ("input_max_bond_dim", "input bond dimension chi"),
     "mpo_mpo_quantics": ("input_max_bond_dim", "input bond dimension chi"),
+    "elementwise_gauss2d": ("input_max_bond_dim", "input bond dimension chi"),
 }
 
 ERROR_LABEL = {
     # case name -> what `max_error` in the records actually measures
     "elementwise_fourier": "max abs error",
     "mpo_mpo_quantics": "max relative error",
+    "elementwise_gauss2d": "max relative error",
 }
 
 NOTES = {
@@ -39,6 +41,24 @@ NOTES = {
         "The fitted time exponent is measured against input chi "
         "along a sweep of r, where the site count also grows, so it is not "
         "a pure chi power law."
+    ),
+    "elementwise_gauss2d": (
+        "Note: every algorithm forms the product at the same output budget, "
+        "its maximum bond dimension capped at the input rank chi, so the error "
+        "column is the discriminator. The exact elementwise product has rank up "
+        "to chi squared, so this budget is tight: naive, fit_treetn and aci "
+        "stay near the working tolerance while zipup_treetn spends the whole "
+        "budget and still returns an order-unity relative error. Raising the "
+        "budget recovers it, so that is the price of the fixed budget rather "
+        "than a broken arm. There is no simplett arm here: simplett exposes no "
+        "elementwise product for tensor trains at the pinned revision, so this "
+        "case cannot compare the two engines on one algorithm the way case 2 "
+        "does. The engine that ran each arm is recorded as engine: local for "
+        "naive, treetn for the two hadamard arms, aci for the cross "
+        "interpolation. "
+        "The fitted time exponent is measured against input chi along a sweep "
+        "of r, where the site count also grows, so it is not a pure chi power "
+        "law."
     ),
 }
 

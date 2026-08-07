@@ -13,7 +13,9 @@ use num_complex::Complex64;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
-use tensor4all_simplett::{tensor3_from_data, CompressionMethod, CompressionOptions, TensorTrain};
+use tensor4all_simplett::{tensor3_from_data, TensorTrain};
+
+use crate::scalar::BenchScalar;
 
 #[derive(Clone, Debug)]
 pub struct FourierSeries {
@@ -95,18 +97,17 @@ impl FourierSeries {
     }
 }
 
-pub fn compress_svd(
-    tt: &mut TensorTrain<Complex64>,
+/// SVD-compress `tt` in place, for any scalar the benchmark runs on.
+///
+/// The body lives in [`crate::scalar::BenchScalar`] because the upstream bound
+/// on `TensorTrain::compress` names a trait this crate cannot reach; see that
+/// module for why.
+pub fn compress_svd<T: BenchScalar>(
+    tt: &mut TensorTrain<T>,
     tol: f64,
     max_bond: usize,
 ) -> anyhow::Result<()> {
-    tt.compress(&CompressionOptions {
-        method: CompressionMethod::SVD,
-        tolerance: tol,
-        max_bond_dim: max_bond,
-        normalize_error: true,
-    })?;
-    Ok(())
+    T::compress_svd_in_place(tt, tol, max_bond)
 }
 
 #[cfg(test)]

@@ -1,7 +1,11 @@
-# Usage: julia --project=julia julia/check_mpo_mpo.jl <dir> <r>
+# Usage: julia --project=julia julia/check_elementwise_gauss2d.jl <dir> <r>
 # Reads instance-r<r>.h5 (MPS groups "f","g", site dim 4 = fused (x,y) bit pair)
 # and instance-r<r>.json, evaluates both MPS at random fused grid indices and
 # compares to the analytic Gaussian-mixture formula.
+# This is the case-3 mirror of check_mpo_mpo.jl. The two are near identical
+# because the two cases export the same kind of instance, a pair of fused
+# site-dim-4 quantics TTs of Gaussian mixtures; only the case name differs, and
+# the copy is kept so each case's check can be read and run on its own.
 using HDF5, ITensors, ITensorMPS, JSON3
 using Random
 Random.seed!(0)
@@ -10,9 +14,7 @@ dir, rstr = ARGS[1], ARGS[2]
 R = parse(Int, rstr)
 meta = JSON3.read(read(joinpath(dir, "instance-r$rstr.json"), String))
 @assert meta.r == R
-# Cases 2 and 3 both export instance-r<r>.{h5,json}, so a shared export
-# directory would silently hand this script the other case's instance.
-@assert meta.case == "mpo_mpo_quantics"
+@assert meta.case == "elementwise_gauss2d"
 L = meta.box_l
 # The exported TTs are TCI approximations at meta.tolerance, and the truncation
 # is norm-relative, so the pointwise error scales with the tolerance rather than
@@ -51,7 +53,7 @@ h5open(joinpath(dir, "instance-r$rstr.h5"), "r") do file
             xb = [Int((ix >> (R - n)) & 1) for n in 1:R]  # MSB first
             yb = [Int((iy >> (R - n)) & 1) for n in 1:R]
             # Fused local index s = s1 + 2*s2, x (variable 1) least significant;
-            # matches the Rust side (see gaussian::to_quantics_mpo).
+            # matches the Rust side (see gaussian::to_quantics_fused_tt).
             fused = [xb[n] + 2 * yb[n] for n in 1:R]
             got = eval_mps(psi, fused)
             want = mixture(m, coord(ix), coord(iy))
@@ -66,4 +68,4 @@ h5open(joinpath(dir, "instance-r$rstr.h5"), "r") do file
 end
 println("max relative deviation: $maxdev (threshold $threshold)")
 fails == 0 || error("$fails mismatches")
-println("check_mpo_mpo: OK")
+println("check_elementwise_gauss2d: OK")

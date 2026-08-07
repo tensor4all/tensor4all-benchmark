@@ -16,7 +16,7 @@ its own warmup loop and a stated count, as `BENCH_WARMUPS` does in Rust.
 
 ## Runners are self checking
 
-Both runners exit nonzero when any arm's error exceeds its sanity gate, so a
+Every runner exits nonzero when any arm's error exceeds its sanity gate, so a
 green exit is part of the evidence that a change is sound. The gates screen order
 unity wrongness, not precision. Never loosen one silently to make a run pass.
 

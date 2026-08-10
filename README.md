@@ -14,6 +14,7 @@ revision that produced it. The pinned `tensor4all-rs` revision lives in `Cargo.t
 | 1. `elementwise_fourier` | Elementwise product of two 1D quantics Fourier series, swept over the mode count `K`, against the exact product series | [description](#case-1-elementwise-hadamard-product-of-quantics-tensor-trains) | [`src/bin/elementwise_fourier.rs`](src/bin/elementwise_fourier.rs) | [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md) | [time](result/mac-cpu/elementwise_fourier-time.svg), [error](result/mac-cpu/elementwise_fourier-error.svg) |
 | 2. `mpo_mpo_quantics` | Contraction of two 2D quantics Gaussian-mixture MPOs over their shared variable, swept over bits per variable `R`, against the closed-form Gaussian integral | [description](#case-2-mpo-mpo-contraction-of-2d-quantics-gaussian-mixtures) | [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs) | [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md) | [time](result/mac-cpu/mpo_mpo_quantics-time.svg), [error](result/mac-cpu/mpo_mpo_quantics-error.svg) |
 | 3. `elementwise_gauss2d` | Elementwise product of two 2D quantics Gaussian mixtures at a fixed output budget, swept over bits per variable `R`, against the exact pointwise product | [description](#case-3-elementwise-product-of-2d-quantics-gaussian-mixtures) | [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs) | [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md) | [time](result/mac-cpu/elementwise_gauss2d-time.svg), [error](result/mac-cpu/elementwise_gauss2d-error.svg) |
+| 4. `elementwise_gauss2d_scaling` | Density-constant scaling study of case 3: how the quantics input rank `chi_in` grows with the number of Gaussians `N` when the box area grows proportionally to `N` | [description](#case-4-density-constant-scaling-of-the-quantics-rank) | [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs) | [`result/mac-cpu/elementwise_gauss2d_scaling.md`](result/mac-cpu/elementwise_gauss2d_scaling.md) | [chi](result/mac-cpu/elementwise_gauss2d_scaling-chi.svg), [time](result/mac-cpu/elementwise_gauss2d_scaling-time.svg), [error](result/mac-cpu/elementwise_gauss2d_scaling-error.svg) |
 
 ## Benchmark cases
 
@@ -76,12 +77,12 @@ compare two engines on one algorithm.
 Like case 2, the output bond dimension is pinned to the input rank: every algorithm runs
 capped at `chi_in`, the larger of the two input ranks, so all arms are compared at the same
 output budget and the error is the discriminator. `BENCH_MAX_BOND` caps only the input TCI
-construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 75
-and 77), `naive` and `fit_treetn` agree to the last reported digit at `8.5e-9`, `2.3e-8` and
-`1.4e-8`, at the same `chi_out` of 39, 60 and 61, well inside the budget. `aci` matches or
-beats them (`3.6e-11`, `1.3e-8`, `8.2e-9`) and is by far the cheapest arm, 1 ms to 113 ms,
+construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 76
+and 79), `naive` and `fit_treetn` agree to the last reported digit at `8.5e-9`, `2.3e-8` and
+`1.1e-8`, at the same `chi_out` of 39, 60 and 62, well inside the budget. `aci` matches or
+beats them (`3.6e-11`, `1.1e-8`, `2.4e-8`) and is by far the cheapest arm, 1 ms to 41 ms,
 because it never forms the product it is approximating. `zipup_treetn` collapses: it spends
-the whole budget and still returns `6.2e-1`, `3.2e-1` and `4.8e-1`, an answer with no
+the whole budget and still returns `6.2e-1`, `4.0e-1` and `5.3e-1`, an answer with no
 correct digits, and that number swings by a factor of two between runs of the same
 configuration, so read it as order one rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
@@ -91,15 +92,61 @@ while naive and fit find a near-optimal basis for the same budget. Raising the b
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
 again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6, 3.6 s at `R` = 8, 5.4 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.26 s for
+`R` = 6, 3.7 s at `R` = 8, 5.8 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.28 s for
 `zipup_treetn` at `R` = 10.
 Runner: [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs), sweep over `R`.
+
+### Case 4: density-constant scaling of the quantics rank
+
+Case 3 holds the mixture fixed and sweeps the bit count, so its `chi_in` saturates and says
+nothing about how hard a bigger problem is. Case 4 asks the complementary question: how does
+the quantics input rank `chi_in` of a 2D Gaussian mixture grow with the number of Gaussians
+`N` when the DENSITY of Gaussians is held constant? Two hypotheses are worth separating,
+`chi ~ sqrt(N)`, which is what a boundary-law or one-dimensional-cut picture predicts for a
+fused 2D quantics train, and `chi ~ N`, which is what a naive sum-of-terms picture predicts.
+
+The construction keeps two things fixed while `N` grows. Density first: the box half-width
+is `L = L0 * sqrt(N / N0)`, so the box area `(2L)^2` grows proportionally to `N` and the
+number of Gaussians per unit area is the same at every point of the sweep. Resolution
+second: growing the box at a fixed bit count would coarsen the grid and under-resolve each
+Gaussian, which would confound rank growth with a loss of resolution, so the bit count grows
+with the box as `R = R0 + round(log2(L / L0))`, one extra bit per doubling of `L`. That keeps
+the grid spacing `2L / 2^R` roughly constant, so every Gaussian is resolved by roughly the
+same number of grid points at every `N`. Because `R` moves in integer steps while `L` moves
+continuously, the spacing is constant only up to a factor of at most `sqrt(2)`. The defaults
+`L0` = 6.0, `N0` = 8, `R0` = 10 make `N` = 8 exactly the case-3 instance.
+
+Everything else mirrors case 3: two independent mixtures, fused 2D quantics trains, and the
+elementwise product `h = f * g` at the fixed output budget `chi_out <= chi_in`, judged by the
+sampled max relative error against the exact pointwise product. The arms are `zipup_treetn`,
+`fit_treetn` and `aci` only. The case-3 `naive` arm is excluded from the defaults: it forms
+the full `chi_in`-squared bond before truncating, and this case deliberately pushes `chi_in`
+to roughly twice the case-3 value, where that arm would dominate the wall time of the whole
+sweep without adding a separate conclusion, since it tracks `fit_treetn` to the last reported
+digit in case 3. Pass it through `BENCH_ALGOS` if you want it.
+
+As measured over the default sweep `N` = 8, 16, 32, 64 with the pinned revision, `chi_in` is
+79, 104, 117 and 143 at `L` = 6.000, 8.485, 12.000 and 16.971 and `R` = 10, 11, 11 and 12. A
+least-squares fit of `log(chi_in)` against `log(N)` gives `chi_in ~ N^0.27`, so over this
+range the growth is sublinear by a wide margin and even slower than `sqrt(N)`: an eightfold
+increase in the number of Gaussians costs less than a doubling of the rank. The linear
+hypothesis is comfortably excluded, and the `sqrt(N)` hypothesis is the closer of the two
+without being reached, which is consistent with `sqrt(N)` acting as an upper bound that
+finite-size effects have not yet saturated. Read the exponent as a measurement over one
+decade of `N` on one seed rather than as an asymptotic law. On the arms themselves the case-3
+verdict survives at twice the rank: `fit_treetn` and `aci` stay near the working tolerance
+(worst `3.2e-8` and `7.3e-9`) while `zipup_treetn` returns an order-unity relative error at
+the full budget, and `aci` stops being the cheap arm as `chi_in` grows, rising from 41 ms at
+`N` = 8 to 1.63 s at `N` = 64 against 3.15 s for `fit_treetn`.
+Runner: [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs),
+sweep over `N`.
 
 ## Latest results
 
 - [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md)
 - [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md)
 - [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md)
+- [`result/mac-cpu/elementwise_gauss2d_scaling.md`](result/mac-cpu/elementwise_gauss2d_scaling.md)
 
 The scaling plots sit next to these files, and `result/mac-cpu/run.yaml` records the
 machine, the repository revision, and the pinned tensor4all-rs revision that produced
@@ -122,7 +169,7 @@ Full run and report for a machine profile:
 scripts/run_all.sh mac-cpu
 ```
 
-This builds in release mode, runs all three cases with their default sweeps into
+This builds in release mode, runs all four cases with their default sweeps into
 `result/mac-cpu/raw/`, writes `result/mac-cpu/run.yaml`, and renders the Markdown reports
 and SVG plots.
 
@@ -138,7 +185,14 @@ BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
 BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
   OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke-gauss2d \
   cargo run --release --bin elementwise_gauss2d
+BENCH_NS=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
+  OUT_DIR=/tmp/smoke cargo run --release --bin elementwise_gauss2d_scaling
 ```
+
+Case 4 exports no HDF5 instances and has no Julia check of its own. Its instances are the
+same kind of object as case 3's, a pair of fused site-dimension-4 quantics tensor trains of
+Gaussian mixtures, so what an export would verify is already verified by the case-3 check at
+`N` = 8, which is the same instance by construction.
 
 Sanity gates: every runner is self-checking. A runner exits nonzero if any algorithm's
 measured error exceeds its gate. Case 1 uses `1e3 * BENCH_TOL` for `naive`, `zipup` and
@@ -149,7 +203,11 @@ uses `BENCH_SANITY`, default `1e-2`, for every algorithm: with the output budget
 order-unity wrongness. Case 3 uses `BENCH_SANITY` in the same way for `naive`, `fit_treetn`
 and `aci`, and a hardcoded `5.0` for `zipup_treetn`, whose fixed-budget error is itself of
 order one (known issue 8), so for that arm the gate can only catch a gross scale blow-up or
-a non-finite result. The gates are there to catch wrong results, not to certify precision.
+a non-finite result. Case 4 applies the case-3 rule unchanged, `BENCH_SANITY` for
+`fit_treetn` and `aci` and a hardcoded `5.0` for `zipup_treetn`, and additionally fails if
+any instance's `chi_in` reaches `BENCH_MAX_BOND`, since a rank pinned at the construction cap
+would measure the cap rather than the function. The gates are there to catch wrong results,
+not to certify precision.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
@@ -164,9 +222,16 @@ when you only want a quick signal.
 
 Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
 at `R` = 6, 3.6 s at `R` = 8 and 5.4 s at `R` = 10, and every other arm stays under a
-second. Its default sweep takes a little over a minute, and `scripts/run_all.sh` finishes in
-about two and a half minutes for all three cases plus the reports (measured 2 min 35 s for
-the committed `mac-cpu` sweep).
+second. Its default sweep takes a little over a minute.
+
+Case 4 is the slow one, and its cost is dominated by the quantics TCI construction of the
+inputs rather than by the arms: at `N` = 64 the two input trains take a few minutes to build
+while the three arms together take about 6 s. That construction runs once per `N`, so
+`BENCH_RUNS` barely moves the total. The default sweep `N` = 8, 16, 32, 64 takes about five
+minutes; `N` = 128 is left out because the construction cost roughly doubles again per step
+and the fitted exponent is already stable over the decade in the defaults. With case 4 added,
+`scripts/run_all.sh` finishes in about eight minutes for all four cases plus the reports
+(measured 7 min 49 s for the committed `mac-cpu` sweep).
 
 Environment knobs:
 
@@ -177,17 +242,21 @@ Environment knobs:
 | `BENCH_RS` | cases 2 and 3 | `6,8,10` | comma-separated bits per variable `R` to sweep |
 | `BENCH_NGAUSS` | cases 2 and 3 | `8` | number of Gaussians per mixture |
 | `BENCH_BOX_L` | cases 2 and 3 | `6.0` | half-width `L` of the box `[-L, L]` |
-| `BENCH_ALPHA_LO` | cases 2 and 3 | `0.5` | lower bound of the Gaussian width parameter |
-| `BENCH_ALPHA_HI` | cases 2 and 3 | `8.0` | upper bound of the Gaussian width parameter |
-| `BENCH_SANITY` | cases 2 and 3 | `1e-2` | relative error gate. Case 2 applies it to every algorithm; case 3 applies it to all but `zipup_treetn`, which is gated at a hardcoded `5.0` |
+| `BENCH_NS` | case 4 | `8,16,32,64` | comma-separated Gaussian counts `N` to sweep. Case 4 derives `L` and `R` from `N`, so it ignores `BENCH_NGAUSS`, `BENCH_BOX_L` and `BENCH_RS` |
+| `BENCH_L0` | case 4 | `6.0` | reference box half-width, the `L` at `N` = `BENCH_N0` |
+| `BENCH_N0` | case 4 | `8` | reference Gaussian count, the `N` at which `L` = `BENCH_L0` and `R` = `BENCH_R0` |
+| `BENCH_R0` | case 4 | `10` | reference bits per variable, the `R` at `N` = `BENCH_N0`. Lower it for a cheap probe of the whole sweep |
+| `BENCH_ALPHA_LO` | cases 2, 3 and 4 | `0.5` | lower bound of the Gaussian width parameter |
+| `BENCH_ALPHA_HI` | cases 2, 3 and 4 | `8.0` | upper bound of the Gaussian width parameter |
+| `BENCH_SANITY` | cases 2, 3 and 4 | `1e-2` | relative error gate. Case 2 applies it to every algorithm; cases 3 and 4 apply it to all but `zipup_treetn`, which is gated at a hardcoded `5.0` |
 | `BENCH_TOL` | all | `1e-8` | truncation tolerance passed to every algorithm |
-| `BENCH_MAX_BOND` | all | `4096` (case 1), `512` (cases 2 and 3) | bond dimension cap. In cases 2 and 3 it caps only the input TCI construction, since the arms themselves run at the fixed output budget `chi_in` |
-| `BENCH_RUNS` | all | `5` (case 1), `3` (cases 2 and 3) | timed repetitions, the median is reported |
-| `BENCH_WARMUPS` | all | `1` (case 1), `0` (cases 2 and 3) | untimed warmup repetitions |
+| `BENCH_MAX_BOND` | all | `4096` (case 1), `512` (cases 2, 3 and 4) | bond dimension cap. In cases 2, 3 and 4 it caps only the input TCI construction, since the arms themselves run at the fixed output budget `chi_in`. Case 4 fails rather than reports if an instance reaches it, since `chi_in` is what that case measures |
+| `BENCH_RUNS` | all | `5` (case 1), `3` (cases 2, 3 and 4) | timed repetitions, the median is reported |
+| `BENCH_WARMUPS` | all | `1` (case 1), `0` (cases 2, 3 and 4) | untimed warmup repetitions |
 | `BENCH_SEED` | all | `0` | base seed for instance generation |
-| `BENCH_ALGOS` | all | `naive,zipup,fit,aci` (case 1), `naive,zipup_simplett,zipup_treetn,fit_treetn` (case 2), `naive,zipup_treetn,fit_treetn,aci` (case 3) | comma-separated algorithms to run |
+| `BENCH_ALGOS` | all | `naive,zipup,fit,aci` (case 1), `naive,zipup_simplett,zipup_treetn,fit_treetn` (case 2), `naive,zipup_treetn,fit_treetn,aci` (case 3), `zipup_treetn,fit_treetn,aci` (case 4) | comma-separated algorithms to run |
 | `OUT_DIR` | all | `result/dev/raw` | directory for the `RunRecord` JSON files |
-| `EXPORT_HDF5` | all | unset | directory for ITensors-compatible HDF5 instance dumps, plus their JSON metadata. Set it to enable the Julia checks. An empty value counts as unset. Cases 2 and 3 use the same file names, so give them separate directories |
+| `EXPORT_HDF5` | cases 1, 2 and 3 | unset | directory for ITensors-compatible HDF5 instance dumps, plus their JSON metadata. Set it to enable the Julia checks. An empty value counts as unset. Cases 2 and 3 use the same file names, so give them separate directories. Case 4 exports nothing and ignores it |
 
 ## Julia correctness checks
 
@@ -281,7 +350,9 @@ the wrong instance.
    error is of order one, the sanity gate cannot screen order-unity wrongness for this arm,
    so it is gated at a hardcoded `5.0` that only catches a scale blow-up or a non-finite
    result. Read the case-3 zipup error column as a verdict on the budget rather than as a
-   precision measurement.
+   precision measurement. Case 4 inherits all of this: it runs the same arm at the same fixed
+   budget on the same kind of instance, at roughly twice the rank, and sees the same
+   order-unity error.
 
 ## License
 

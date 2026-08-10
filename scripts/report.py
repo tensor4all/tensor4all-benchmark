@@ -18,6 +18,7 @@ X_AXIS = {
     "elementwise_fourier": ("input_max_bond_dim", "input bond dimension chi"),
     "mpo_mpo_quantics": ("input_max_bond_dim", "input bond dimension chi"),
     "elementwise_gauss2d": ("input_max_bond_dim", "input bond dimension chi"),
+    "elementwise_gauss2d_scaling": ("input_max_bond_dim", "input bond dimension chi"),
 }
 
 ERROR_LABEL = {
@@ -25,6 +26,7 @@ ERROR_LABEL = {
     "elementwise_fourier": "max abs error",
     "mpo_mpo_quantics": "max relative error",
     "elementwise_gauss2d": "max relative error",
+    "elementwise_gauss2d_scaling": "max relative error",
 }
 
 NOTES = {
@@ -60,6 +62,25 @@ NOTES = {
         "of r, where the site count also grows, so it is not a pure chi power "
         "law."
     ),
+    "elementwise_gauss2d_scaling": (
+        "Note: this case is the density-constant scaling study of "
+        "elementwise_gauss2d. The number of Gaussians N is swept while the box "
+        "area grows proportionally to N, box half-width L = L0 sqrt(N / N0), so "
+        "the Gaussians per unit area stay fixed, and the bit count grows with "
+        "the box, R = R0 + round(log2(L / L0)), so the grid spacing and hence "
+        "the resolution per Gaussian stay roughly constant. The quantity of "
+        "interest is the input rank chi_in as a function of N, reported in the "
+        "instance table and the chi plot below. The elementwise product itself "
+        "runs at the same fixed output budget chi_out <= chi_in as case 3. The "
+        "naive arm of case 3 is excluded here: it forms the full chi_in-squared "
+        "bond before truncating, which dominates the sweep at these ranks "
+        "without adding a conclusion, since it tracks fit_treetn to the last "
+        "reported digit in case 3. As in case 3, zipup_treetn spends the whole "
+        "budget and still returns an order-unity relative error. "
+        "The fitted time exponent is measured against input chi along a sweep "
+        "of N, where the site count also grows, so it is not a pure chi power "
+        "law."
+    ),
 }
 
 
@@ -85,6 +106,52 @@ def fit_exponent(xs, ys):
     return p[0]
 
 
+def render_gauss2d_scaling_extra(case, algos, profile_dir: Path):
+    """Case-4 only: the rank-versus-N answer the generic tables cannot show.
+
+    The generic path plots everything against chi_in, which is the x axis of
+    every other case. Here chi_in is the dependent variable and N is the knob,
+    so this adds the instance table, the fitted exponent of chi_in against N,
+    and a log-log chi_in versus N plot. Returns extra Markdown lines.
+    """
+    # One instance per N, shared by every arm, so read it off any one arm.
+    recs = sorted(next(iter(algos.values())), key=lambda rec: rec["params"]["n_gauss"])
+    ns = [rec["params"]["n_gauss"] for rec in recs]
+    chis = [rec["input_max_bond_dim"] for rec in recs]
+    lines = ["", "## Instances and input rank", "",
+             "| N | box half-width L | bits per variable R | input rank chi_in |",
+             "|---|---|---|---|"]
+    for rec in recs:
+        p = rec["params"]
+        lines.append(
+            f"| {p['n_gauss']} | {p['box_l']:.3f} | {p['r']} | "
+            f"{rec['input_max_bond_dim']} |"
+        )
+    expo = fit_exponent(ns, chis)
+    lines += ["", f"Fitted over this sweep, chi_in grows like N^x with "
+                  f"x = {expo:.2f}, against x = 0.5 for the sqrt(N) hypothesis "
+                  f"and x = 1 for the linear one."]
+
+    fig, ax = plt.subplots(figsize=(5, 4))
+    ax.loglog(ns, chis, "o-", label=f"chi_in (N^{expo:.2f})")
+    ax.set_xlabel("number of Gaussians N")
+    ax.set_ylabel("input bond dimension chi_in")
+    ax.legend()
+    ax.grid(True, which="both", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(profile_dir / f"{case}-chi.svg")
+    plt.close(fig)
+    lines += ["", f"![chi](./{case}-chi.svg)"]
+    return lines
+
+
+EXTRA_RENDER = {
+    # case name -> function(case, algos, profile_dir) -> extra Markdown lines.
+    # Case-keyed on purpose: the generic path stays untouched.
+    "elementwise_gauss2d_scaling": render_gauss2d_scaling_extra,
+}
+
+
 def render_case(case, algos, profile_dir: Path):
     xfield, xlabel = X_AXIS[case]
     elabel = ERROR_LABEL.get(case, "max error")
@@ -104,6 +171,8 @@ def render_case(case, algos, profile_dir: Path):
         ax_e.loglog(xs, es, "o-", label=algo)
     if case in NOTES:
         lines += ["", NOTES[case]]
+    if case in EXTRA_RENDER:
+        lines += EXTRA_RENDER[case](case, algos, profile_dir)
     for ax, ylab in ((ax_t, "median wall time [s]"), (ax_e, elabel)):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylab)

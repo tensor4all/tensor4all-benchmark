@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "case": "elementwise_gauss2d_scaling",
+  "algorithm": "fit_treetn",
+  "params": {
+    "alpha_range": [
+      0.5,
+      8.0
+    ],
+    "box_l": 16.970562748477143,
+    "contract_max_bond": 143,
+    "engine": "treetn",
+    "error_metric": "max_rel_vs_analytic",
+    "error_seed": 99,
+    "fit_nsweeps": 2,
+    "l0": 6.0,
+    "max_bond": 512,
+    "n0": 8,
+    "n_error_samples": 128,
+    "n_gauss": 64,
+    "r": 12,
+    "r0": 10,
+    "runs": 3,
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 3.151440167,
+  "wall_times_secs": [
+    3.168314875,
+    3.141685791,
+    3.151440167
+  ],
+  "max_error": 1.5038758701730218e-8,
+  "input_max_bond_dim": 143,
+  "output_max_bond_dim": 120,
+  "output_bond_dims": [
+    4,
+    14,
+    33,
+    95,
+    120,
+    70,
+    43,
+    28,
+    19,
+    13,
+    4
+  ]
+}

@@ -8,7 +8,7 @@
       8.0
     ],
     "box_l": 6.0,
-    "contract_max_bond": 77,
+    "contract_max_bond": 79,
     "engine": "local",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
@@ -22,20 +22,20 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 5.354789042,
+  "wall_time_median_secs": 5.821350125,
   "wall_times_secs": [
-    5.354789042,
-    5.222220875,
-    5.356151541
+    5.821350125,
+    5.477451834,
+    5.984196292
   ],
-  "max_error": 1.399939993081259e-8,
-  "input_max_bond_dim": 77,
-  "output_max_bond_dim": 61,
+  "max_error": 1.1044682511886096e-8,
+  "input_max_bond_dim": 79,
+  "output_max_bond_dim": 62,
   "output_bond_dims": [
     4,
     15,
     41,
-    61,
+    62,
     47,
     34,
     21,

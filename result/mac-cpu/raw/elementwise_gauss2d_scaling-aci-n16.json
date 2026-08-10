@@ -3,16 +3,20 @@
   "case": "elementwise_gauss2d_scaling",
   "algorithm": "aci",
   "params": {
+    "aci_scale_tolerance": true,
     "alpha_range": [
       0.5,
       8.0
     ],
     "box_l": 8.485281374238571,
-    "contract_max_bond": 104,
+    "contract_max_bond": 103,
+    "contract_tol": 1e-15,
     "engine": "aci",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
     "fit_nsweeps": 2,
+    "input_scale_f": 2.066477285160887,
+    "input_scale_g": 0.7767228331725128,
     "l0": 6.0,
     "max_bond": 512,
     "n0": 8,
@@ -20,30 +24,31 @@
     "n_gauss": 16,
     "r": 11,
     "r0": 10,
+    "ref_scale": 0.6551543244294972,
     "runs": 3,
     "warmups": 0
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.073134125,
+  "wall_time_median_secs": 0.089948667,
   "wall_times_secs": [
-    0.07514275,
-    0.071437458,
-    0.073134125
+    0.093248875,
+    0.089948667,
+    0.085566167
   ],
-  "max_error": 4.744091221082127e-9,
-  "input_max_bond_dim": 104,
-  "output_max_bond_dim": 95,
+  "max_error": 8.024456037435878e-9,
+  "input_max_bond_dim": 103,
+  "output_max_bond_dim": 103,
   "output_bond_dims": [
     4,
-    14,
-    37,
-    95,
-    92,
-    61,
-    38,
-    25,
-    14,
+    15,
+    50,
+    103,
+    103,
+    103,
+    103,
+    64,
+    16,
     4
   ]
 }

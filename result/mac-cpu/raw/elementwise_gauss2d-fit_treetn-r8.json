@@ -3,40 +3,45 @@
   "case": "elementwise_gauss2d",
   "algorithm": "fit_treetn",
   "params": {
+    "aci_scale_tolerance": false,
     "alpha_range": [
       0.5,
       8.0
     ],
     "box_l": 6.0,
-    "contract_max_bond": 76,
+    "contract_max_bond": 77,
+    "contract_tol": 1e-15,
     "engine": "treetn",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
     "fit_nsweeps": 2,
+    "input_scale_f": 0.9572169537165215,
+    "input_scale_g": 0.8724716890024252,
     "max_bond": 512,
     "n_error_samples": 128,
     "n_gauss": 8,
     "r": 8,
+    "ref_scale": 0.46251481110172116,
     "runs": 3,
     "warmups": 0
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.327622292,
+  "wall_time_median_secs": 0.352599666,
   "wall_times_secs": [
-    0.329252458,
-    0.327622292,
-    0.326534
+    0.369933958,
+    0.35213525,
+    0.352599666
   ],
-  "max_error": 2.291804419103351e-8,
-  "input_max_bond_dim": 76,
-  "output_max_bond_dim": 60,
+  "max_error": 6.108928805197952e-9,
+  "input_max_bond_dim": 77,
+  "output_max_bond_dim": 77,
   "output_bond_dims": [
     4,
     15,
-    41,
-    60,
-    42,
+    57,
+    77,
+    64,
     16,
     4
   ]

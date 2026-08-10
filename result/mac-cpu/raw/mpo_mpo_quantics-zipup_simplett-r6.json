@@ -9,6 +9,7 @@
     ],
     "box_l": 6.0,
     "contract_max_bond": 53,
+    "contract_tol": 1e-15,
     "engine": "simplett",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
@@ -22,11 +23,11 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.014477167,
+  "wall_time_median_secs": 0.014771542,
   "wall_times_secs": [
-    0.014641208,
-    0.013548666,
-    0.014477167
+    0.014958125,
+    0.014771542,
+    0.014052084
   ],
   "max_error": 0.00010539578698807446,
   "input_max_bond_dim": 53,

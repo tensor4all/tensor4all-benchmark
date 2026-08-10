@@ -3,43 +3,48 @@
   "case": "elementwise_gauss2d",
   "algorithm": "naive",
   "params": {
+    "aci_scale_tolerance": false,
     "alpha_range": [
       0.5,
       8.0
     ],
     "box_l": 6.0,
-    "contract_max_bond": 79,
+    "contract_max_bond": 78,
+    "contract_tol": 1e-15,
     "engine": "local",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
     "fit_nsweeps": 2,
+    "input_scale_f": 1.0116257087218627,
+    "input_scale_g": 0.8457799985689375,
     "max_bond": 512,
     "n_error_samples": 128,
     "n_gauss": 8,
     "r": 10,
+    "ref_scale": 0.46251481110172116,
     "runs": 3,
     "warmups": 0
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 5.821350125,
+  "wall_time_median_secs": 4.1835465,
   "wall_times_secs": [
-    5.821350125,
-    5.477451834,
-    5.984196292
+    4.1835465,
+    4.287371125,
+    3.701758459
   ],
-  "max_error": 1.1044682511886096e-8,
-  "input_max_bond_dim": 79,
-  "output_max_bond_dim": 62,
+  "max_error": 7.416630450436481e-9,
+  "input_max_bond_dim": 78,
+  "output_max_bond_dim": 78,
   "output_bond_dims": [
     4,
     15,
-    41,
-    62,
-    47,
-    34,
-    21,
-    13,
+    57,
+    78,
+    78,
+    78,
+    64,
+    16,
     4
   ]
 }

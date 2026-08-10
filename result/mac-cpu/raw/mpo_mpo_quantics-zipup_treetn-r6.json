@@ -9,6 +9,7 @@
     ],
     "box_l": 6.0,
     "contract_max_bond": 53,
+    "contract_tol": 1e-15,
     "engine": "treetn",
     "error_metric": "max_rel_vs_analytic",
     "error_seed": 99,
@@ -22,11 +23,11 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.01869425,
+  "wall_time_median_secs": 0.019198292,
   "wall_times_secs": [
-    0.019200833,
-    0.018649083,
-    0.01869425
+    0.019523833,
+    0.019198292,
+    0.018955791
   ],
   "max_error": 0.0001053957869882763,
   "input_max_bond_dim": 53,

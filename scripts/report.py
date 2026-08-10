@@ -115,6 +115,10 @@ def render_gauss2d_scaling_extra(case, algos, profile_dir: Path):
     and a log-log chi_in versus N plot. Returns extra Markdown lines.
     """
     # One instance per N, shared by every arm, so read it off any one arm.
+    # Cheap check that this really is one instance per N: every arm must have
+    # been run over the same N set, or reading off one arm would misreport.
+    n_sets = {name: {rec["params"]["n_gauss"] for rec in rs} for name, rs in algos.items()}
+    assert len(set(map(frozenset, n_sets.values()))) == 1, f"arms disagree on N: {n_sets}"
     recs = sorted(next(iter(algos.values())), key=lambda rec: rec["params"]["n_gauss"])
     ns = [rec["params"]["n_gauss"] for rec in recs]
     chis = [rec["input_max_bond_dim"] for rec in recs]
@@ -127,6 +131,13 @@ def render_gauss2d_scaling_extra(case, algos, profile_dir: Path):
             f"| {p['n_gauss']} | {p['box_l']:.3f} | {p['r']} | "
             f"{rec['input_max_bond_dim']} |"
         )
+    # A single N (the CI smoke, or a probe) has no slope to fit, so say nothing
+    # rather than print "x = nan" and draw a one-point log-log plot.
+    if len(set(ns)) < 2:
+        lines += ["", "Only one N in this sweep, so there is no rank-versus-N "
+                      "exponent to fit and no chi plot."]
+        return lines
+
     expo = fit_exponent(ns, chis)
     lines += ["", f"Fitted over this sweep, chi_in grows like N^x with "
                   f"x = {expo:.2f}, against x = 0.5 for the sqrt(N) hypothesis "

@@ -19,11 +19,10 @@ its own warmup loop and a stated count, as `BENCH_WARMUPS` does in Rust.
 Every runner exits nonzero when any arm's error exceeds its sanity gate, so a
 green exit is part of the evidence that a change is sound. The gates screen order
 unity wrongness, not precision. The one exception is the `zipup_treetn` arm of
-cases 3 and 4,
-gated at a hardcoded `5.0` because its error at the fixed output budget is
-genuinely of order one (README known issue 8), so for that arm the gate catches
-only a non-finite result or a runaway magnitude. Never loosen one silently to
-make a run pass.
+cases 3 and 4, gated at a hardcoded `5.0` because its error at the fixed output
+budget is genuinely of order one (README known issue 8), so for that arm the
+gate catches only a non-finite result or a runaway magnitude. Never loosen one
+silently to make a run pass.
 
 ## Results are committed deliberately
 

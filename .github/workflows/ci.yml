@@ -34,7 +34,7 @@ jobs:
         # No EXPORT_HDF5: case 4 exports no instances, so there is no Julia
         # check for it, and a single N is enough to exercise the runner.
         run: >
-          BENCH_NS=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
+          BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
           OUT_DIR=/tmp/smoke
           cargo run --release --bin elementwise_gauss2d_scaling
       - uses: julia-actions/setup-julia@v2

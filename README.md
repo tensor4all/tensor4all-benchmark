@@ -132,8 +132,10 @@ range the growth is sublinear by a wide margin and even slower than `sqrt(N)`: a
 increase in the number of Gaussians costs less than a doubling of the rank. The linear
 hypothesis is comfortably excluded, and the `sqrt(N)` hypothesis is the closer of the two
 without being reached, which is consistent with `sqrt(N)` acting as an upper bound that
-finite-size effects have not yet saturated. Read the exponent as a measurement over one
-decade of `N` on one seed rather than as an asymptotic law. On the arms themselves the case-3
+finite-size effects have not yet saturated. Read the exponent as a measurement over a factor
+of 8 in `N` on one seed rather than as an asymptotic law. It is robust against the quantics
+construction wobble of known issue 5: perturbing all four `chi_in` values by plus or minus 2
+moves the fitted slope only within 0.25 to 0.30. On the arms themselves the case-3
 verdict survives at twice the rank: `fit_treetn` and `aci` stay near the working tolerance
 (worst `3.2e-8` and `7.3e-9`) while `zipup_treetn` returns an order-unity relative error at
 the full budget, and `aci` stops being the cheap arm as `chi_in` grows, rising from 41 ms at
@@ -185,7 +187,7 @@ BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
 BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
   OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke-gauss2d \
   cargo run --release --bin elementwise_gauss2d
-BENCH_NS=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
+BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1 \
   OUT_DIR=/tmp/smoke cargo run --release --bin elementwise_gauss2d_scaling
 ```
 
@@ -221,7 +223,7 @@ example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, droppin
 when you only want a quick signal.
 
 Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 3.6 s at `R` = 8 and 5.4 s at `R` = 10, and every other arm stays under a
+at `R` = 6, 3.7 s at `R` = 8 and 5.8 s at `R` = 10, and every other arm stays under a
 second. Its default sweep takes a little over a minute.
 
 Case 4 is the slow one, and its cost is dominated by the quantics TCI construction of the
@@ -229,7 +231,7 @@ inputs rather than by the arms: at `N` = 64 the two input trains take a few minu
 while the three arms together take about 6 s. That construction runs once per `N`, so
 `BENCH_RUNS` barely moves the total. The default sweep `N` = 8, 16, 32, 64 takes about five
 minutes; `N` = 128 is left out because the construction cost roughly doubles again per step
-and the fitted exponent is already stable over the decade in the defaults. With case 4 added,
+and the fitted exponent is already stable over the factor of 8 in the defaults. With case 4 added,
 `scripts/run_all.sh` finishes in about eight minutes for all four cases plus the reports
 (measured 7 min 49 s for the committed `mac-cpu` sweep).
 
@@ -317,11 +319,12 @@ the wrong instance.
    two differ by the tail outside the box. At the default box size that mismatch is a
    relative error around `1e-8`. Error curves that plateau at that level are hitting the
    reference, not a tensor network artifact.
-5. **Quantics TCI construction is not bit-reproducible across runs** in cases 2 and 3, even
-   at a fixed seed: the input bond dimension can vary by one between runs of the same
-   instance. The recorded `input_max_bond_dim` always reflects the actual run, so the
-   plots stay self-consistent, but two runs of the same configuration can differ slightly
-   on the x axis.
+5. **Quantics TCI construction is not bit-reproducible across runs** in cases 2, 3 and 4,
+   even at a fixed seed: the input bond dimension can vary by one or two between runs of
+   the same instance. Consecutive case-3 sweeps at identical code and seeds gave `chi_in`
+   of 53, 75, 77 and then 53, 76, 79. The recorded `input_max_bond_dim` always reflects
+   the actual run, so the plots stay self-consistent, but two runs of the same
+   configuration can differ slightly on the x axis.
 6. **Resolved upstream, included in the pinned revision.**
    [tensor4all-rs#574](https://github.com/tensor4all/tensor4all-rs/pull/574) fixed three
    simplett defects that this benchmark had recorded as case-2 anomalies: MPO factorize

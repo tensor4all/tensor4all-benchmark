@@ -27,25 +27,28 @@
 //! the sweep count, so its wall time is only comparable at a stated count.
 //!
 //! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
-//! revision (chi_in of 53, 76, 77): `naive` and `fit_treetn` agree to the last
-//! reported digit at 8.5e-9, 2.3e-8 and 2.5e-8, at the same chi_out of 39, 60
-//! and 61, well inside the budget. `aci` matches them or beats them (3.6e-11,
-//! 8.4e-9, 1.1e-8) and is by far the cheapest arm, 1 ms to 43 ms, because it
+//! revision (chi_in of 53, 76, 79): `naive` and `fit_treetn` agree to the last
+//! reported digit at 8.5e-9, 2.3e-8 and 1.1e-8, at the same chi_out of 39, 60
+//! and 62, well inside the budget. `aci` matches them or beats them (3.6e-11,
+//! 1.1e-8, 2.4e-8) and is by far the cheapest arm, 1 ms to 41 ms, because it
 //! never forms the product it is approximating. `zipup_treetn` collapses: it
-//! spends the whole budget and still returns 6.2e-1, 4.2e-1 and 5.6e-1, that
+//! spends the whole budget and still returns 6.2e-1, 4.0e-1 and 5.3e-1, that
 //! is, an answer with no correct digits. Its error also swings by a factor of
-//! two between runs of the same configuration, since chi_in moves by one and
-//! the truncation it forces is severe, so read it as order one rather than as
-//! a number. The separation is much sharper than in case 2, where the same
-//! single-pass truncation cost only three to four orders of magnitude, because
-//! the exact elementwise product has rank up to chi_in squared and a budget of
-//! chi_in discards almost all of it, whereas naive and fit reach a
+//! two between runs of the same configuration, since chi_in moves by one or
+//! two and the truncation it forces is severe, so read it as order one rather
+//! than as a number. The separation is much sharper than in case 2, where the
+//! same single-pass truncation cost only three to four orders of magnitude,
+//! because the exact elementwise product has rank up to chi_in squared and a
+//! budget of chi_in discards almost all of it, whereas naive and fit reach a
 //! near-optimal basis for the same budget. Raising the budget recovers zipup
 //! smoothly (1.8e-7 at 8 chi_in, 3.9e-8 unconstrained at chi_out = 837), so
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
-//! bond before truncating: 0.05 s at r = 6, 1.8 s at r = 8, 4.6 s at r = 10,
-//! against 0.57 s for `fit_treetn` and 0.27 s for `zipup_treetn` at r = 10.
+//! bond before truncating: 0.05 s at r = 6, 3.7 s at r = 8, 5.8 s at r = 10,
+//! against 0.58 s for `fit_treetn` and 0.28 s for `zipup_treetn` at r = 10.
+//! These are the numbers of the committed `mac-cpu` sweep under
+//! `result/mac-cpu/`; the quantics construction wobble of README known issue 5
+//! moves chi_in, and with it the timings, by a little from run to run.
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{

@@ -94,6 +94,22 @@ the price of the fixed budget rather than a broken arm (known issue 8). On cost,
 again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
 `R` = 6, 3.7 s at `R` = 8, 5.8 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.28 s for
 `zipup_treetn` at `R` = 10.
+
+One pitfall is worth naming, because the metric hides it. The relative error is normalized
+by the largest sampled `|f * g|`, and `f` and `g` are drawn independently, so if the
+Gaussians are made too narrow (a high `BENCH_ALPHA_HI`) or the density too low, the two
+mixtures stop overlapping, the product is numerically zero everywhere on the grid, and the
+normalization collapses exponentially while the error it divides stays finite. The reported
+number would then be noise dressed as an accuracy. Both runners therefore measure, over the
+same sampled points the error uses, the reference scale `ref_scale` = max `|f * g|` and the
+input scales `input_scale_f` and `input_scale_g`, and refuse to benchmark the instance
+before any timing if `ref_scale` falls below `1e-6 * input_scale_f * input_scale_g`, with a
+message pointing at `BENCH_ALPHA_HI` and at the density. All three scales are recorded in
+the params of every case-3 and case-4 record, so the health of an instance can be checked
+after the fact. The default instances are nowhere near the guard: `ref_scale` is `5.3e-1`
+against input scales of `1.2` and `0.87` at `R` = 6, a ratio of `0.49`, roughly five orders
+of magnitude above the threshold.
+
 Runner: [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs), sweep over `R`.
 
 ### Case 4: density-constant scaling of the quantics rank
@@ -123,7 +139,11 @@ sampled max relative error against the exact pointwise product. The arms are `zi
 the full `chi_in`-squared bond before truncating, and this case deliberately pushes `chi_in`
 to roughly twice the case-3 value, where that arm would dominate the wall time of the whole
 sweep without adding a separate conclusion, since it tracks `fit_treetn` to the last reported
-digit in case 3. Pass it through `BENCH_ALGOS` if you want it.
+digit in case 3. Pass it through `BENCH_ALGOS` if you want it. The overlap guard of case 3
+applies here unchanged, and matters more, since the box grows with `N`: the runner records
+`ref_scale`, `input_scale_f` and `input_scale_g` and refuses a degenerate instance before
+timing. At the default `N` = 8 point `ref_scale` is `4.6e-1` against input scales of `1.0`
+and `0.85`, a ratio of `0.54`.
 
 As measured over the default sweep `N` = 8, 16, 32, 64 with the pinned revision, `chi_in` is
 79, 104, 117 and 143 at `L` = 6.000, 8.485, 12.000 and 16.971 and `R` = 10, 11, 11 and 12. A

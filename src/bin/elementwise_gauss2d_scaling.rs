@@ -49,7 +49,8 @@
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
-    elementwise_product, max_rel_error_vs_mixture_product, ElementwiseAlgo, FIT_NFULLSWEEPS,
+    check_mixture_product_not_degenerate, elementwise_product, max_rel_error_vs_mixture_product,
+    ElementwiseAlgo, FIT_NFULLSWEEPS,
 };
 use t4a_bench::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
 use t4a_bench::harness::time_median;
@@ -136,7 +137,14 @@ fn main() -> anyhow::Result<()> {
         let (fa, _step) = to_quantics_fused_tt(&f, r, box_l, tol, max_bond)?;
         let (gb, _) = to_quantics_fused_tt(&g, r, box_l, tol, max_bond)?;
         let input_chi = fa.rank().max(gb.rank());
-        eprintln!("n={n} box_l={box_l:.3} r={r} input_chi={input_chi}");
+        // Fail fast, before any timing: at constant density the box grows with
+        // N, so this is where too narrow a Gaussian would empty the product.
+        let scales =
+            check_mixture_product_not_degenerate(&f, &g, r, box_l, n_error_samples, error_seed)?;
+        eprintln!(
+            "n={n} box_l={box_l:.3} r={r} input_chi={input_chi} ref_scale={:.3e}",
+            scales.ref_scale
+        );
         // The point of the case is how chi_in grows, so a chi_in pinned at the
         // construction cap would be a measurement of the cap instead.
         if input_chi >= max_bond {
@@ -167,6 +175,12 @@ fn main() -> anyhow::Result<()> {
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",
+                    // Scales of the reference and of the two inputs at the same
+                    // sampled points, so a degenerate instance is visible in the
+                    // record rather than hidden inside the relative error.
+                    "ref_scale": scales.ref_scale,
+                    "input_scale_f": scales.input_scale_f,
+                    "input_scale_g": scales.input_scale_g,
                     // Upstream engine that actually ran this arm.
                     "engine": algo.engine(),
                     // Part of the benchmark definition for the fit arm.

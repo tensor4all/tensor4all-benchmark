@@ -195,6 +195,98 @@ pub fn max_rel_error_vs_mixture_product(
     max_abs / max_ref.max(f64::MIN_POSITIVE)
 }
 
+/// Ratio at which the sampled elementwise product counts as numerically zero.
+///
+/// The relative error of cases 3 and 4 is normalized by the largest sampled
+/// `|f * g|`. If the two mixtures barely overlap, that number collapses
+/// exponentially while `max |f|` and `max |g|` stay of order one, and the
+/// reported relative error stops measuring anything. A product scale below
+/// `DEGENERACY_THRESHOLD` times the product of the two input scales means the
+/// sampled reference has lost at least six orders of magnitude to the lack of
+/// overlap, which is far outside anything a healthy instance produces: the
+/// default case-3 and case-4 instances sit at a ratio near 0.5, five to six
+/// orders of magnitude above the threshold.
+pub const DEGENERACY_THRESHOLD: f64 = 1e-6;
+
+/// Scales of the case-3 and case-4 reference, all measured over one and the
+/// same set of sampled grid points.
+#[derive(Clone, Copy, Debug)]
+pub struct MixtureProductScales {
+    /// `max |f(x, y) * g(x, y)|`, the normalization of the relative error.
+    pub ref_scale: f64,
+    /// `max |f(x, y)|`.
+    pub input_scale_f: f64,
+    /// `max |g(x, y)|`.
+    pub input_scale_g: f64,
+}
+
+impl MixtureProductScales {
+    /// True when the sampled product has collapsed relative to the inputs, so
+    /// the relative error metric of the case is meaningless.
+    pub fn is_degenerate(&self) -> bool {
+        self.ref_scale < DEGENERACY_THRESHOLD * self.input_scale_f * self.input_scale_g
+    }
+}
+
+/// Reference and input scales at the same sampled grid points that
+/// [`max_rel_error_vs_mixture_product`] uses, given the same `r`, `box_l`,
+/// `n_samples` and `seed`.
+pub fn mixture_product_scales(
+    f: &GaussianMixture2D,
+    g: &GaussianMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> MixtureProductScales {
+    let xs = sample_grid_indices(r, n_samples, seed);
+    let ys = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
+    let mut s = MixtureProductScales {
+        ref_scale: 0.0,
+        input_scale_f: 0.0,
+        input_scale_g: 0.0,
+    };
+    for (&ix, &iy) in xs.iter().zip(&ys) {
+        let x = grid_coord(ix, r, box_l);
+        let y = grid_coord(iy, r, box_l);
+        let (fv, gv) = (f.eval(x, y), g.eval(x, y));
+        s.ref_scale = s.ref_scale.max((fv * gv).abs());
+        s.input_scale_f = s.input_scale_f.max(fv.abs());
+        s.input_scale_g = s.input_scale_g.max(gv.abs());
+    }
+    s
+}
+
+/// Fail-fast guard for cases 3 and 4: refuse to benchmark an instance whose
+/// elementwise product is numerically zero at the sampled points.
+///
+/// Returns the scales on success so the caller can record them.
+pub fn check_mixture_product_not_degenerate(
+    f: &GaussianMixture2D,
+    g: &GaussianMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> anyhow::Result<MixtureProductScales> {
+    let s = mixture_product_scales(f, g, r, box_l, n_samples, seed);
+    anyhow::ensure!(
+        !s.is_degenerate(),
+        "degenerate instance at r={r}, box_l={box_l}: the two mixtures barely overlap, so the \
+         elementwise product is numerically zero at the sampled points (ref_scale {:.3e} against \
+         input_scale_f {:.3e} and input_scale_g {:.3e}, ratio {:.3e} below the threshold {:.0e}) \
+         and the relative error metric, which divides by ref_scale, is meaningless. Lower \
+         BENCH_ALPHA_HI so the Gaussians are wider, or raise the density (more Gaussians, or a \
+         smaller box).",
+        s.ref_scale,
+        s.input_scale_f,
+        s.input_scale_g,
+        s.ref_scale / (s.input_scale_f * s.input_scale_g).max(f64::MIN_POSITIVE),
+        DEGENERACY_THRESHOLD
+    );
+    Ok(s)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,6 +374,44 @@ mod tests {
                 "{algo:?}: rel err {err} exceeds {bound}"
             );
         }
+    }
+
+    /// Two mixtures whose supports sit in opposite corners of the box: each one
+    /// is of order one where it lives, but the product is zero to machine
+    /// precision everywhere, so the guard must refuse the instance.
+    #[test]
+    fn degeneracy_guard_fires_on_non_overlapping_mixtures() {
+        use crate::gaussian::GaussianMixture2D;
+
+        let (r, l) = (6, 4.0);
+        let far = |sign: f64| GaussianMixture2D {
+            weights: vec![1.0],
+            alphas: vec![50.0],
+            centers: vec![(sign * l / 2.0, sign * l / 2.0)],
+        };
+        let (f, g) = (far(-1.0), far(1.0));
+
+        let s = mixture_product_scales(&f, &g, r, l, 128, 7);
+        println!(
+            "ref_scale {:.3e}, input scales {:.3e} and {:.3e}",
+            s.ref_scale, s.input_scale_f, s.input_scale_g
+        );
+        assert!(s.input_scale_f > 1e-3 && s.input_scale_g > 1e-3);
+        assert!(s.is_degenerate(), "guard predicate missed a zero product");
+
+        let err = check_mixture_product_not_degenerate(&f, &g, r, l, 128, 7)
+            .expect_err("the guard must reject this instance");
+        let msg = err.to_string();
+        assert!(msg.contains("barely overlap"), "unexpected message: {msg}");
+        assert!(msg.contains("BENCH_ALPHA_HI"), "unexpected message: {msg}");
+
+        // A healthy instance of the same shape must pass, so the guard is not
+        // simply always firing.
+        let f2 = GaussianMixture2D::random(8, 6.0, (0.5, 8.0), 1);
+        let g2 = GaussianMixture2D::random(8, 6.0, (0.5, 8.0), 2);
+        let s2 = check_mixture_product_not_degenerate(&f2, &g2, 8, 6.0, 128, 99).unwrap();
+        println!("default-like instance: ref_scale {:.3e}", s2.ref_scale);
+        assert!(!s2.is_degenerate());
     }
 
     /// Guards against a dispatch swap between the arms of `elementwise_product`.

@@ -1,7 +1,9 @@
 profile: mac-cpu
-date: 2026-08-10T11:20:14Z
-host: e246-074.eduroam.tuwien.ac.at
+date: 2026-08-10T11:46:57Z
+machine: mac-cpu
 os: Darwin arm64
-repo_rev: da845e22443f7234f232f2c918424c934294ba73
+chip: Apple M5 Max
+memory_gb: 128
+repo_rev: 90fbd828277c3a8d8c3ba14f51f20268a85fd235
 tensor4all_rs_rev: 1b9a517aeca81b0a28a32da7843197427312844b
 threads: default

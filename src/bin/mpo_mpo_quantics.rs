@@ -28,17 +28,17 @@
 //!
 //! What the fixed budget measures, as observed over the default sweep r = 6 to
 //! 14 with the pinned rev: `naive` and `fit_treetn` land on the same error,
-//! 5.7e-10 to 2.9e-9, which is below the reference floor the case was previously
+//! 5.7e-10 to 3.6e-9, which is below the reference floor the case was previously
 //! credited with. The two zipup arms, `zipup_simplett` and `zipup_treetn`, agree
 //! with each other to the last reported digit and sit four to five orders of
-//! magnitude higher, 2.2e-5 to 1.1e-4. Every arm spends the whole budget, since
+//! magnitude higher, 2.0e-5 to 1.1e-4. Every arm spends the whole budget, since
 //! the tolerance no longer stops it early. So
 //! the split is algorithmic rather than engine-driven: single-pass zip-up
 //! truncation is what costs accuracy, and the two engines running it produce the
 //! same answer. What zipup buys is speed: it is the fastest arm at every r and
 //! stays between 0.015 s and 0.31 s across the sweep, while `naive` grows
-//! steeply, from 0.02 s at r = 6 to 0.4 s at r = 8, 5.3 s at r = 10 and about
-//! 13 s at r = 12 and 14, because it forms the full
+//! steeply, from 0.02 s at r = 6 to 0.4 s at r = 8, 5.3 s at r = 10 and 16 to
+//! 17 s at r = 12 and 14, because it forms the full
 //! contracted bond before truncating. `fit_treetn` reaches naive accuracy at a
 //! fraction of the naive cost, under 0.75 s at every r.
 //!
@@ -73,7 +73,7 @@
 //! around a second or less across the default range. The defaults (r = 6, 8,
 //! 10, 12, 14 with 3 timed runs, no warmup) size the whole case at roughly two
 //! minutes on the maintainer's Mac, nearly all of it naive at r = 10 to 14,
-//! which costs 5 to 13 s per run there. That arm is memory bound on a machine
+//! which costs 5 to 17 s per run there. That arm is memory bound on a machine
 //! with less headroom, where the same points cost 16 to 48 s per run, so the
 //! wall time of the whole case is a property of the machine as much as of the
 //! sweep (README known issue 10). Extend with for example

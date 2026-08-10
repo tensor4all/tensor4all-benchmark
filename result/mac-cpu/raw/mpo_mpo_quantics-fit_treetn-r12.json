@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "case": "mpo_mpo_quantics",
+  "algorithm": "fit_treetn",
+  "params": {
+    "alpha_range": [
+      0.5,
+      8.0
+    ],
+    "box_l": 6.0,
+    "contract_max_bond": 79,
+    "contract_tol": 1e-15,
+    "engine": "treetn",
+    "error_metric": "max_rel_vs_analytic",
+    "error_seed": 99,
+    "fit_nsweeps": 1,
+    "max_bond": 512,
+    "n_error_samples": 128,
+    "n_gauss": 8,
+    "r": 12,
+    "runs": 3,
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 0.669167583,
+  "wall_times_secs": [
+    0.6823835,
+    0.669167583,
+    0.661362583
+  ],
+  "max_error": 2.4021955322091496e-9,
+  "input_max_bond_dim": 79,
+  "output_max_bond_dim": 79,
+  "output_bond_dims": [
+    4,
+    16,
+    63,
+    79,
+    79,
+    79,
+    79,
+    68,
+    37,
+    15,
+    4
+  ]
+}

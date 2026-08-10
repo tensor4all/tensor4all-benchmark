@@ -45,10 +45,9 @@
 //! their exact rank is smaller. The `aci` arm additionally runs with
 //! `scale_tolerance` enabled (`AciTolerance::ScaleRelative`, recorded as
 //! `aci_scale_tolerance`) so that its pivot criterion is scale-relative and
-//! equally unreachable; at the pinned rev that means it always runs to
-//! `max_iters` when capped, since the saturation early exit lands in
-//! tensor4all-rs#591, which is not merged there, so the arm is slow until that
-//! change is picked up.
+//! equally unreachable; the pinned rev includes the rank-saturation early exit of
+//! tensor4all-rs#591, so a capped ACI stops once its pivots stop improving instead
+//! of running to `max_iters`, and the arm is the cheapest of the three.
 //!
 //! Arms: `zipup_treetn`, `fit_treetn` and `aci` only. The `naive` arm of case 3
 //! is excluded here: it forms the full `chi_in`-squared bond before truncating,

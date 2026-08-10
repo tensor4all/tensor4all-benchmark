@@ -33,9 +33,9 @@
 //! ScaleRelative`, recorded as `aci_scale_tolerance` in the params of its
 //! records) on top of the 1e-15 tolerance: the criterion is then scale-relative
 //! and unreachable, and the rank cap is left in charge. One consequence at the
-//! pinned rev: ACI will always run to `max_iters` when it is capped, since the
-//! saturation early exit lands in tensor4all-rs#591, which is not merged there.
-//! The arm is correspondingly slow until that change is picked up.
+//! pinned rev: the rank-saturation early exit of tensor4all-rs#591 is included,
+//! so ACI stops once the pivots stop improving rather than running to
+//! `max_iters` under a criterion that can never fire, and the arm is cheap again.
 //!
 //! `fit_treetn` runs at a fixed sweep count (`elementwise::FIT_NFULLSWEEPS`),
 //! shared with case 1 and recorded as `fit_nsweeps`: the fit cost is linear in
@@ -45,7 +45,7 @@
 //! revision (chi_in of 53 and 77): `naive`, `fit_treetn` and `aci` agree to the
 //! last reported digit at 3.6e-11 and about 6.1e-9, every one of them at the full
 //! chi_out. `zipup_treetn` collapses: it spends the same budget and still returns
-//! 6.2e-1 and 4.7e-1, that is, an answer with no correct digits. Its error also
+//! 6.2e-1 and 2.9e-1, that is, an answer with no correct digits. Its error also
 //! swings by a factor of two between runs of the same configuration, since chi_in
 //! moves by one or two and the truncation it forces is severe, so read it as
 //! order one rather than as a number. The separation is much sharper than in
@@ -56,10 +56,10 @@
 //! smoothly (1.8e-7 at 8 chi_in, 3.9e-8 unconstrained at chi_out = 837), so
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
-//! bond before truncating: 0.06 s at r = 6 and 2.7 s at r = 8, against 0.37 s
-//! for `fit_treetn`, 0.21 s for `aci` and 0.16 s for `zipup_treetn` at r = 8.
-//! `aci` is no longer the near-free arm it was under a reachable tolerance,
-//! because an unreachable criterion makes it run to its iteration limit.
+//! bond before truncating: 0.05 s at r = 6 and 3 s at r = 8, against 0.35 s
+//! for `fit_treetn` and 0.14 s for `zipup_treetn` at r = 8. `aci` is the cheapest
+//! arm at every r by an order of magnitude, 0.02 s at r = 8, now that the pinned
+//! rev carries the rank-saturation early exit.
 //! The quantics construction wobble of README known issue 5 moves chi_in, and
 //! with it the timings, by a little from run to run.
 

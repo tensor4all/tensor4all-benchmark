@@ -31,12 +31,13 @@
 //! which is below the reference floor the case was previously credited with. The
 //! two zipup arms, `zipup_simplett` and `zipup_treetn`, agree with each other to
 //! the last reported digit and sit four to five orders of magnitude higher,
-//! 1.1e-4 and 2.0e-5. Every arm spends the whole budget, since the tolerance no
+//! 1.1e-4 and 2.5e-5. Every arm spends the whole budget, since the tolerance no
 //! longer stops it early. So
 //! the split is algorithmic rather than engine-driven: single-pass zip-up
 //! truncation is what costs accuracy, and the two engines running it produce the
 //! same answer. What zipup buys is speed: it is the fastest arm at every r and
-//! stays flat near 0.2 s, while `naive` grows steeply because it forms the full
+//! is still near 0.2 s at r = 10, while `naive` grows steeply, from 0.02 s at
+//! r = 6 to 0.4 s at r = 8 and 5 s at r = 10, because it forms the full
 //! contracted bond before truncating. `fit_treetn` reaches naive accuracy at a
 //! fraction of the naive cost.
 //!
@@ -47,7 +48,7 @@
 //! only difference between them is the contraction method. That is the same
 //! engine case 1 uses for its elementwise fit.
 //! `tensor4all_simplett::mpo::contract_fit` is deliberately NOT benchmarked: at
-//! the pinned upstream rev (tensor4all-rs 7cfec22) its local update
+//! the pinned upstream rev (tensor4all-rs 1b9a517) its local update
 //! `update_two_site_core` is still a placeholder that leaves the core
 //! untouched, so that path degenerates to naive plus dead sweeps
 //! (tensor4all-rs#571).

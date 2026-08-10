@@ -33,7 +33,10 @@ NOTES = {
     # case name -> caveat emitted under the summary table
     "mpo_mpo_quantics": (
         "Note: every algorithm contracts at the same output budget, its "
-        "maximum bond dimension capped at the input rank chi, so the error "
+        "maximum bond dimension capped at the input rank chi, and the cap is "
+        "the only truncation control: the contraction tolerance is pinned "
+        "inert at contract_tol, so every arm spends the whole budget unless "
+        "its exact rank is smaller and the error "
         "column is the discriminator. naive and zipup_simplett run on the "
         "simplett engine, zipup_treetn and fit_treetn on treetn; both engines "
         "truncate relative to the largest singular value at the pinned "
@@ -46,7 +49,11 @@ NOTES = {
     ),
     "elementwise_gauss2d": (
         "Note: every algorithm forms the product at the same output budget, "
-        "its maximum bond dimension capped at the input rank chi, so the error "
+        "its maximum bond dimension capped at the input rank chi, and the cap "
+        "is the only truncation control: the product tolerance is pinned inert "
+        "at contract_tol and the aci arm runs with a scale-relative stopping "
+        "criterion, so every arm spends the whole budget unless its exact rank "
+        "is smaller and the error "
         "column is the discriminator. The exact elementwise product has rank up "
         "to chi squared, so this budget is tight: naive, fit_treetn and aci "
         "stay near the working tolerance while zipup_treetn spends the whole "
@@ -71,7 +78,8 @@ NOTES = {
         "the resolution per Gaussian stay roughly constant. The quantity of "
         "interest is the input rank chi_in as a function of N, reported in the "
         "instance table and the chi plot below. The elementwise product itself "
-        "runs at the same fixed output budget chi_out <= chi_in as case 3. The "
+        "runs at the same fixed output budget chi_out <= chi_in as case 3, "
+        "decided by the cap alone with an inert contract_tol. The "
         "naive arm of case 3 is excluded here: it forms the full chi_in-squared "
         "bond before truncating, which dominates the sweep at these ranks "
         "without adding a conclusion, since it tracks fit_treetn to the last "

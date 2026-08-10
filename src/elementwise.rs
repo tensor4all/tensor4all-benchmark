@@ -29,6 +29,25 @@ pub enum ElementwiseAlgo {
     Aci,
 }
 
+/// How the `aci` arm interprets the stopping tolerance it is handed.
+///
+/// The SVD-based arms take the tolerance as a singular value threshold relative
+/// to the largest singular value, so an inert tolerance such as `1e-15` simply
+/// never fires and the rank cap alone decides where to truncate. ACI instead
+/// compares a pivot error against the tolerance, and whether that comparison is
+/// absolute or scaled by the sampled output magnitude is a separate upstream
+/// switch. The fixed-budget cases (2, 3 and 4) want the same "tolerance is
+/// unreachable, the cap decides" regime for ACI as for the SVD arms, so they ask
+/// for [`AciTolerance::ScaleRelative`]; case 1, which is tolerance-driven by
+/// design, keeps the upstream default.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AciTolerance {
+    /// Absolute pivot error threshold, the upstream default.
+    Absolute,
+    /// Pivot error divided by the largest sampled output magnitude.
+    ScaleRelative,
+}
+
 impl ElementwiseAlgo {
     /// Which engine actually runs this arm, recorded in every case-3 record.
     ///
@@ -50,12 +69,13 @@ pub fn elementwise_product<T: BenchScalar>(
     b: &TensorTrain<T>,
     tol: f64,
     max_bond: usize,
+    aci_tol: AciTolerance,
 ) -> anyhow::Result<TensorTrain<T>> {
     match algo {
         ElementwiseAlgo::Naive => hadamard_naive(a, b, tol, max_bond),
         ElementwiseAlgo::Zipup => hadamard_treetn(a, b, tol, max_bond, false),
         ElementwiseAlgo::Fit => hadamard_treetn(a, b, tol, max_bond, true),
-        ElementwiseAlgo::Aci => hadamard_aci(a, b, tol, max_bond),
+        ElementwiseAlgo::Aci => hadamard_aci(a, b, tol, max_bond, aci_tol),
     }
 }
 
@@ -131,11 +151,13 @@ fn hadamard_aci<T: BenchScalar>(
     b: &TensorTrain<T>,
     tol: f64,
     max_bond: usize,
+    aci_tol: AciTolerance,
 ) -> anyhow::Result<TensorTrain<T>> {
     use tensor4all_aci::{elementwise, AciOptions};
     let opts = AciOptions::<T> {
         tolerance: tol,
         max_bond_dim: max_bond,
+        scale_tolerance: aci_tol == AciTolerance::ScaleRelative,
         ..AciOptions::default()
     };
     let res = elementwise(|xs: &[T]| xs[0] * xs[1], &[a.clone(), b.clone()], &opts)?;
@@ -319,7 +341,8 @@ mod tests {
             (ElementwiseAlgo::Fit, 1e-3),
             (ElementwiseAlgo::Aci, 1e-6),
         ] {
-            let out = elementwise_product(algo, &a, &b, 1e-10, 200).unwrap();
+            let out =
+                elementwise_product(algo, &a, &b, 1e-10, 200, AciTolerance::Absolute).unwrap();
             let err = max_error_vs_series(&out, &exact, r, 100, 5);
             println!("{algo:?}: max abs error {err:.3e} (bound {bound:.0e})");
             assert!(err < bound, "{algo:?}: err {err} exceeds {bound}");
@@ -329,18 +352,22 @@ mod tests {
     /// Case 3 at its own fixed output budget: every arm capped at `chi_in`, the
     /// larger input rank, and judged only on the error it returns for it.
     ///
+    /// The budget is the cap alone: the tolerance handed to the arms is the
+    /// runner's inert 1e-15 and the aci arm runs scale-relative, so every arm is
+    /// expected to spend the whole budget rather than stop at a tolerance.
+    ///
     /// The bounds are per arm because the arms are not comparable here. Measured
-    /// at the pinned revision on this instance (r = 8, 3 Gaussians, chi_in 61):
-    /// naive 1.4e-8 and fit 1.4e-8 at chi_out 49, aci 1.0e-7 at chi_out 43, all
-    /// near the 1e-8 working tolerance, while zipup returns 4.1e-1 having spent
-    /// the whole budget. Every bound carries about an order of magnitude of
-    /// margin, since the quantics TCI construction is not bit-reproducible and
-    /// chi_in moves by one between runs. The zipup bound is loose on purpose:
-    /// at this budget a single-pass truncation of an elementwise product has no
-    /// accuracy left to defend (the runner's default instance reaches 9.2e-1 at
-    /// r = 10), so what the bound guards is that the arm still returns a finite
-    /// result of roughly the right scale. This test also covers the real-scalar
-    /// (`f64`) path through all four arms, which case 1 does not exercise.
+    /// at the pinned revision on this instance (r = 8, 3 Gaussians, chi_in 62):
+    /// naive, fit and aci all land on 1.4e-8 at the full chi_out of 62, and zipup
+    /// returns 8.3e-1 for the same budget. Every bound carries about an order of
+    /// magnitude of margin, since the quantics TCI construction is not
+    /// bit-reproducible and chi_in moves by one between runs. The zipup bound is
+    /// loose on purpose: at this budget a single-pass truncation of an
+    /// elementwise product has no accuracy left to defend (the runner's default
+    /// instance reaches 9.2e-1 at r = 10), so what the bound guards is that the
+    /// arm still returns a finite result of roughly the right scale. This test
+    /// also covers the real-scalar (`f64`) path through all four arms, which case
+    /// 1 does not exercise.
     #[test]
     fn gauss2d_arms_meet_their_error_bounds_at_fixed_budget() {
         use crate::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
@@ -352,18 +379,36 @@ mod tests {
         let (gb, _) = to_quantics_fused_tt(&g, r, l, 1e-8, 512).unwrap();
         let chi_in = fa.rank().max(gb.rank());
 
-        for (algo, bound) in [
-            (ElementwiseAlgo::Naive, 1e-6),
-            (ElementwiseAlgo::Zipup, 2.0),
-            (ElementwiseAlgo::Fit, 1e-6),
-            (ElementwiseAlgo::Aci, 1e-6),
+        // The third element says whether the arm is expected to spend the whole
+        // budget. The three SVD-based arms keep everything the cap allows, since
+        // the tolerance can no longer stop them; aci is interpolation-based and
+        // may settle below the cap if its pivot search saturates first, so it is
+        // only held to the cap as an upper bound.
+        for (algo, bound, exhausts_budget) in [
+            (ElementwiseAlgo::Naive, 1e-6, true),
+            (ElementwiseAlgo::Zipup, 2.0, true),
+            (ElementwiseAlgo::Fit, 1e-6, true),
+            (ElementwiseAlgo::Aci, 1e-6, false),
         ] {
-            let out = elementwise_product(algo, &fa, &gb, 1e-8, chi_in).unwrap();
+            // The budget is the cap, so the tolerance is pinned inert, exactly as
+            // the runner does it.
+            let out =
+                elementwise_product(algo, &fa, &gb, 1e-15, chi_in, AciTolerance::ScaleRelative)
+                    .unwrap();
             assert!(
                 out.rank() <= chi_in,
                 "{algo:?}: chi_out {} exceeds the budget {chi_in}",
                 out.rank()
             );
+            if exhausts_budget {
+                assert_eq!(
+                    out.rank(),
+                    chi_in,
+                    "{algo:?}: chi_out {} fell short of the budget {chi_in}, so something \
+                     other than the cap truncated it",
+                    out.rank()
+                );
+            }
             let err = max_rel_error_vs_mixture_product(&out, &f, &g, r, l, 128, 99);
             println!(
                 "{algo:?}: rel err {err:.3e} (bound {bound:.0e}), chi_out {} of {chi_in}",
@@ -445,7 +490,8 @@ mod tests {
             ElementwiseAlgo::Fit,
             ElementwiseAlgo::Aci,
         ] {
-            let out = elementwise_product(algo, &a, &b, 1e-10, max_bond).unwrap();
+            let out =
+                elementwise_product(algo, &a, &b, 1e-10, max_bond, AciTolerance::Absolute).unwrap();
             let ld = out.link_dims();
             println!("{algo:?}: link dims {ld:?}");
             // Every arm must honour the rank cap it was handed.

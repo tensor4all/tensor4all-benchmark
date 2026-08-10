@@ -8,10 +8,15 @@
 //! exact and pointwise: `h(x, y) = f(x, y) * g(x, y)`, with no quadrature and
 //! no tail, so unlike case 2 this case has no reference error floor of its own.
 //!
-//! Fixed output budget, the same philosophy as case 2: every arm runs with its
-//! maximum bond dimension capped at `chi_in`, the larger of the two input
-//! ranks, so all arms pay the same output budget and the error column is the
-//! discriminator. `BENCH_MAX_BOND` caps only the input TCI construction.
+//! Fixed output budget decided by the rank cap alone, the same philosophy as
+//! case 2: every arm runs with its maximum bond dimension capped at `chi_in`,
+//! the larger of the two input ranks, and with an inert truncation tolerance, so
+//! all arms genuinely exhaust the same output budget unless their exact rank is
+//! smaller, and the error column is the discriminator. `BENCH_TOL` (default
+//! 1e-8) scopes only the input TCI construction, so it defines `chi_in` and the
+//! instance; `BENCH_CONTRACT_TOL` (default 1e-15) is what the arms receive and is
+//! recorded as `contract_tol`. `BENCH_MAX_BOND` caps only the input TCI
+//! construction.
 //!
 //! Arms, selectable with `BENCH_ALGOS`: `naive` (core-wise bond Kronecker
 //! product then an SVD sweep, written locally on simplett primitives, so the
@@ -22,38 +27,46 @@
 //! no elementwise product for tensor trains at the pinned revision, so unlike
 //! case 2 this case cannot compare the two engines on the same algorithm.
 //!
+//! The `aci` arm needs one extra setting to sit in the same regime as the
+//! SVD-based arms. Its stopping rule compares a pivot error against the
+//! tolerance, so it runs with `scale_tolerance` enabled (`AciTolerance::
+//! ScaleRelative`, recorded as `aci_scale_tolerance` in the params of its
+//! records) on top of the 1e-15 tolerance: the criterion is then scale-relative
+//! and unreachable, and the rank cap is left in charge. One consequence at the
+//! pinned rev: ACI will always run to `max_iters` when it is capped, since the
+//! saturation early exit lands in tensor4all-rs#591, which is not merged there.
+//! The arm is correspondingly slow until that change is picked up.
+//!
 //! `fit_treetn` runs at a fixed sweep count (`elementwise::FIT_NFULLSWEEPS`),
 //! shared with case 1 and recorded as `fit_nsweeps`: the fit cost is linear in
 //! the sweep count, so its wall time is only comparable at a stated count.
 //!
-//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
-//! revision (chi_in of 53, 76, 79): `naive` and `fit_treetn` agree to the last
-//! reported digit at 8.5e-9, 2.3e-8 and 1.1e-8, at the same chi_out of 39, 60
-//! and 62, well inside the budget. `aci` matches them or beats them (3.6e-11,
-//! 1.1e-8, 2.4e-8) and is by far the cheapest arm, 1 ms to 41 ms, because it
-//! never forms the product it is approximating. `zipup_treetn` collapses: it
-//! spends the whole budget and still returns 6.2e-1, 4.0e-1 and 5.3e-1, that
-//! is, an answer with no correct digits. Its error also swings by a factor of
-//! two between runs of the same configuration, since chi_in moves by one or
-//! two and the truncation it forces is severe, so read it as order one rather
-//! than as a number. The separation is much sharper than in case 2, where the
-//! same single-pass truncation cost only three to four orders of magnitude,
-//! because the exact elementwise product has rank up to chi_in squared and a
-//! budget of chi_in discards almost all of it, whereas naive and fit reach a
-//! near-optimal basis for the same budget. Raising the budget recovers zipup
+//! What the fixed budget measures, as observed at r = 6 and 8 with the pinned
+//! revision (chi_in of 53 and 77): `naive`, `fit_treetn` and `aci` agree to the
+//! last reported digit at 3.6e-11 and about 6.1e-9, every one of them at the full
+//! chi_out. `zipup_treetn` collapses: it spends the same budget and still returns
+//! 6.2e-1 and 4.7e-1, that is, an answer with no correct digits. Its error also
+//! swings by a factor of two between runs of the same configuration, since chi_in
+//! moves by one or two and the truncation it forces is severe, so read it as
+//! order one rather than as a number. The separation is much sharper than in
+//! case 2, where the same single-pass truncation cost only four to five orders of
+//! magnitude, because the exact elementwise product has rank up to chi_in squared
+//! and a budget of chi_in discards almost all of it, whereas naive and fit reach
+//! a near-optimal basis for the same budget. Raising the budget recovers zipup
 //! smoothly (1.8e-7 at 8 chi_in, 3.9e-8 unconstrained at chi_out = 837), so
 //! this is the price of the budget, not a broken arm.
 //! On cost, `naive` is again the expensive one, forming the full chi_in-squared
-//! bond before truncating: 0.05 s at r = 6, 3.7 s at r = 8, 5.8 s at r = 10,
-//! against 0.58 s for `fit_treetn` and 0.28 s for `zipup_treetn` at r = 10.
-//! These are the numbers of the committed `mac-cpu` sweep under
-//! `result/mac-cpu/`; the quantics construction wobble of README known issue 5
-//! moves chi_in, and with it the timings, by a little from run to run.
+//! bond before truncating: 0.06 s at r = 6 and 2.7 s at r = 8, against 0.37 s
+//! for `fit_treetn`, 0.21 s for `aci` and 0.16 s for `zipup_treetn` at r = 8.
+//! `aci` is no longer the near-free arm it was under a reachable tolerance,
+//! because an unreachable criterion makes it run to its iteration limit.
+//! The quantics construction wobble of README known issue 5 moves chi_in, and
+//! with it the timings, by a little from run to run.
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
     check_mixture_product_not_degenerate, elementwise_product, max_rel_error_vs_mixture_product,
-    ElementwiseAlgo, FIT_NFULLSWEEPS,
+    AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
 };
 use t4a_bench::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
 use t4a_bench::harness::time_median;
@@ -104,7 +117,13 @@ fn main() -> anyhow::Result<()> {
     let box_l: f64 = env_or("BENCH_BOX_L", 6.0);
     let alpha_lo: f64 = env_or("BENCH_ALPHA_LO", 0.5);
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
+    // Instance tolerance: this defines chi_in through the input TCI, and nothing
+    // else. It is what `RunRecord::tolerance` and the Julia-check metadata
+    // report, since both describe the inputs rather than the product.
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
+    // Product tolerance, pinned inert so the rank cap chi_in is the only binding
+    // truncation control for every arm.
+    let contract_tol: f64 = env_or("BENCH_CONTRACT_TOL", 1e-15);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
     let runs: usize = env_or("BENCH_RUNS", 3);
     let warmups: usize = env_or("BENCH_WARMUPS", 0);
@@ -168,7 +187,15 @@ fn main() -> anyhow::Result<()> {
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (h, timing) = time_median(warmups, runs, || {
-                elementwise_product(algo, &fa, &gb, tol, input_chi).expect("product failed")
+                elementwise_product(
+                    algo,
+                    &fa,
+                    &gb,
+                    contract_tol,
+                    input_chi,
+                    AciTolerance::ScaleRelative,
+                )
+                .expect("product failed")
             });
             let max_error =
                 max_rel_error_vs_mixture_product(&h, &f, &g, r, box_l, n_error_samples, error_seed);
@@ -181,6 +208,15 @@ fn main() -> anyhow::Result<()> {
                     "alpha_range": [alpha_lo, alpha_hi], "max_bond": max_bond,
                     // Output budget shared by every algorithm: the input rank.
                     "contract_max_bond": input_chi,
+                    // Truncation tolerance the arms actually ran with, pinned
+                    // inert so the cap above is what decides. The top-level
+                    // `tolerance` field is the instance tolerance instead.
+                    "contract_tol": contract_tol,
+                    // True on the aci arm, whose stopping criterion is then
+                    // scale-relative, so the inert tolerance above is
+                    // unreachable for it too. The other arms are SVD-based and
+                    // have no such switch.
+                    "aci_scale_tolerance": matches!(algo, ElementwiseAlgo::Aci),
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",

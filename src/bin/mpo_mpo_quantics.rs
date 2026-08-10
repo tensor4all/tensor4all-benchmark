@@ -8,29 +8,37 @@
 //! column instead of being folded into one. The only missing pair is simplett
 //! fit, excluded for the upstream stub reason stated below.
 //!
-//! Fixed output budget: the contraction is run with the maximum bond dimension
-//! capped at the input rank (`chi_out <= chi_in`, where `chi_in` is the larger
-//! of the two input MPO ranks), identically for every algorithm. All arms
-//! therefore pay the same output budget, and the error column, the residual
-//! against the analytic Gaussian integral recorded as `max_error` with
+//! Fixed output budget, decided by the rank cap alone: the contraction is run
+//! with the maximum bond dimension capped at the input rank (`chi_out <=
+//! chi_in`, where `chi_in` is the larger of the two input MPO ranks),
+//! identically for every algorithm, and the truncation tolerance handed to the
+//! contraction is pinned inert. `BENCH_TOL` (default 1e-8) now scopes only the
+//! input TCI construction in `to_quantics_mpo`, so it defines `chi_in` and thus
+//! the instance. `BENCH_CONTRACT_TOL` (default 1e-15) is what every arm
+//! receives as its truncation tolerance and is recorded as `contract_tol` in the
+//! params of every record. At 1e-15 that tolerance never fires, so `chi_in` is
+//! the only binding truncation control and the cases cannot be read ambiguously
+//! as measuring whichever of the two constraints happened to bind first. All
+//! arms therefore genuinely exhaust the same output budget unless their exact
+//! rank is smaller, and the error column, the residual against the analytic
+//! Gaussian integral recorded as `max_error` with
 //! `error_metric = "max_rel_vs_analytic"`, is the discriminator between them.
-//! Both engines now truncate relative to the largest singular value, so at the
-//! same nominal tolerance they discard the same singular values.
-//! `BENCH_MAX_BOND` keeps its role only as the cap for the input TCI
-//! construction in `to_quantics_mpo`.
+//! Both engines truncate relative to the largest singular value, so at the same
+//! nominal tolerance they discard the same singular values.
 //!
-//! What the fixed budget measures, as observed at r = 6, 8, 10 with the pinned
-//! rev: `naive` and `fit_treetn` land on the same error, around 1e-8, which is
-//! the reference floor of the case, at the same `chi_out` (59 to 61) well below
-//! the budget. The two zipup arms, `zipup_simplett` and `zipup_treetn`, agree
-//! with each other to the last reported digit and sit three to four orders of
-//! magnitude higher, around 1e-5 to 1e-4, at the full budget. So the split is
-//! algorithmic rather than engine-driven: single-pass zip-up truncation is what
-//! costs accuracy, and the two engines running it produce the same answer.
-//! What zipup buys is speed: it is the fastest arm at every r and stays flat
-//! near 0.2 s, while `naive` grows steeply (0.64 s at r = 8, 5.3 s at r = 10)
-//! because it forms the full contracted bond before truncating. `fit_treetn`
-//! reaches naive accuracy at a fraction of the naive cost.
+//! What the fixed budget measures, as observed at r = 6 and 8 with the pinned
+//! rev: `naive` and `fit_treetn` land on the same error, 5.7e-10 and 2.3e-9,
+//! which is below the reference floor the case was previously credited with. The
+//! two zipup arms, `zipup_simplett` and `zipup_treetn`, agree with each other to
+//! the last reported digit and sit four to five orders of magnitude higher,
+//! 1.1e-4 and 2.0e-5. Every arm spends the whole budget, since the tolerance no
+//! longer stops it early. So
+//! the split is algorithmic rather than engine-driven: single-pass zip-up
+//! truncation is what costs accuracy, and the two engines running it produce the
+//! same answer. What zipup buys is speed: it is the fastest arm at every r and
+//! stays flat near 0.2 s, while `naive` grows steeply because it forms the full
+//! contracted bond before truncating. `fit_treetn` reaches naive accuracy at a
+//! fraction of the naive cost.
 //!
 //! The `zipup_treetn` and `fit_treetn` columns run on the treetn engine,
 //! reached through `tensor4all_itensorlike::TensorTrain::contract` with
@@ -100,7 +108,13 @@ fn main() -> anyhow::Result<()> {
     let box_l: f64 = env_or("BENCH_BOX_L", 6.0);
     let alpha_lo: f64 = env_or("BENCH_ALPHA_LO", 0.5);
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
+    // Instance tolerance: this defines chi_in through the input TCI, and nothing
+    // else. It is what `RunRecord::tolerance` and the Julia-check metadata
+    // report, since both describe the inputs rather than the contraction.
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
+    // Contraction tolerance, pinned inert so the rank cap chi_in is the only
+    // binding truncation control for every arm.
+    let contract_tol: f64 = env_or("BENCH_CONTRACT_TOL", 1e-15);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
     // Since tensor4all-rs#574 the whole default sweep costs seconds, so three
     // timed runs are affordable and the reported median is more stable than a
@@ -163,7 +177,7 @@ fn main() -> anyhow::Result<()> {
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (h, timing) = time_median(warmups, runs, || {
-                mpo_contract(algo, &fa, &gb, tol, input_chi).expect("contraction failed")
+                mpo_contract(algo, &fa, &gb, contract_tol, input_chi).expect("contraction failed")
             });
             let max_error =
                 max_rel_error_vs_analytic(&h, dy, &f, &g, r, box_l, n_error_samples, error_seed);
@@ -176,6 +190,10 @@ fn main() -> anyhow::Result<()> {
                     "alpha_range": [alpha_lo, alpha_hi], "max_bond": max_bond,
                     // Output budget shared by every algorithm: the input rank.
                     "contract_max_bond": input_chi,
+                    // Truncation tolerance the arms actually ran with, pinned
+                    // inert so the cap above is what decides. The top-level
+                    // `tolerance` field is the instance tolerance instead.
+                    "contract_tol": contract_tol,
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",

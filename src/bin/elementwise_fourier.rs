@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
-    elementwise_product, max_error_vs_series, ElementwiseAlgo, FIT_NFULLSWEEPS,
+    elementwise_product, max_error_vs_series, AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
 };
 use t4a_bench::fourier::{compress_svd, FourierSeries};
 use t4a_bench::harness::time_median;
@@ -87,7 +87,13 @@ fn main() -> anyhow::Result<()> {
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (out, timing) = time_median(warmups, runs, || {
-                elementwise_product(algo, &a, &b, tol, max_bond).expect("algorithm failed")
+                // This case is tolerance-driven (the arXiv setup): one tolerance
+                // decides both the input compression and the product
+                // truncation, and the ACI arm keeps the upstream absolute
+                // stopping rule. The fixed-budget cases 2, 3 and 4 separate the
+                // two instead.
+                elementwise_product(algo, &a, &b, tol, max_bond, AciTolerance::Absolute)
+                    .expect("algorithm failed")
             });
             let max_error = max_error_vs_series(&out, &exact, r, n_error_samples, error_seed);
             // The gate detects wrong results, not precision. Truncation is

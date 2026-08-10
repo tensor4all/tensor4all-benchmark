@@ -37,6 +37,19 @@
 //! `h = f * g` at the fixed output budget `chi_out <= chi_in`, judged by the
 //! sampled max relative error against the exact pointwise product.
 //!
+//! As in cases 2 and 3, that budget is decided by the rank cap alone.
+//! `BENCH_TOL` (default 1e-8) scopes only the input TCI construction, so it
+//! defines `chi_in` and the instance, while `BENCH_CONTRACT_TOL` (default 1e-15)
+//! is the truncation tolerance every arm receives and is recorded as
+//! `contract_tol`. At 1e-15 it never fires, so the arms exhaust the budget unless
+//! their exact rank is smaller. The `aci` arm additionally runs with
+//! `scale_tolerance` enabled (`AciTolerance::ScaleRelative`, recorded as
+//! `aci_scale_tolerance`) so that its pivot criterion is scale-relative and
+//! equally unreachable; at the pinned rev that means it always runs to
+//! `max_iters` when capped, since the saturation early exit lands in
+//! tensor4all-rs#591, which is not merged there, so the arm is slow until that
+//! change is picked up.
+//!
 //! Arms: `zipup_treetn`, `fit_treetn` and `aci` only. The `naive` arm of case 3
 //! is excluded here: it forms the full `chi_in`-squared bond before truncating,
 //! and this case deliberately pushes `chi_in` to roughly twice the case-3 value,
@@ -50,7 +63,7 @@
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
     check_mixture_product_not_degenerate, elementwise_product, max_rel_error_vs_mixture_product,
-    ElementwiseAlgo, FIT_NFULLSWEEPS,
+    AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
 };
 use t4a_bench::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
 use t4a_bench::harness::time_median;
@@ -107,7 +120,13 @@ fn main() -> anyhow::Result<()> {
     let r0: usize = env_or("BENCH_R0", 10);
     let alpha_lo: f64 = env_or("BENCH_ALPHA_LO", 0.5);
     let alpha_hi: f64 = env_or("BENCH_ALPHA_HI", 8.0);
+    // Instance tolerance: this defines chi_in through the input TCI, and nothing
+    // else. It is what `RunRecord::tolerance` reports, since that describes the
+    // inputs rather than the product.
     let tol: f64 = env_or("BENCH_TOL", 1e-8);
+    // Product tolerance, pinned inert so the rank cap chi_in is the only binding
+    // truncation control for every arm.
+    let contract_tol: f64 = env_or("BENCH_CONTRACT_TOL", 1e-15);
     let max_bond: usize = env_or("BENCH_MAX_BOND", 512);
     let runs: usize = env_or("BENCH_RUNS", 3);
     let warmups: usize = env_or("BENCH_WARMUPS", 0);
@@ -158,7 +177,15 @@ fn main() -> anyhow::Result<()> {
         for algo_name in &algos {
             let algo = parse_algo(algo_name);
             let (h, timing) = time_median(warmups, runs, || {
-                elementwise_product(algo, &fa, &gb, tol, input_chi).expect("product failed")
+                elementwise_product(
+                    algo,
+                    &fa,
+                    &gb,
+                    contract_tol,
+                    input_chi,
+                    AciTolerance::ScaleRelative,
+                )
+                .expect("product failed")
             });
             let max_error =
                 max_rel_error_vs_mixture_product(&h, &f, &g, r, box_l, n_error_samples, error_seed);
@@ -172,6 +199,15 @@ fn main() -> anyhow::Result<()> {
                     "alpha_range": [alpha_lo, alpha_hi], "max_bond": max_bond,
                     // Output budget shared by every algorithm: the input rank.
                     "contract_max_bond": input_chi,
+                    // Truncation tolerance the arms actually ran with, pinned
+                    // inert so the cap above is what decides. The top-level
+                    // `tolerance` field is the instance tolerance instead.
+                    "contract_tol": contract_tol,
+                    // True on the aci arm, whose stopping criterion is then
+                    // scale-relative, so the inert tolerance above is
+                    // unreachable for it too. The other arms are SVD-based and
+                    // have no such switch.
+                    "aci_scale_tolerance": matches!(algo, ElementwiseAlgo::Aci),
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
                     "error_metric": "max_rel_vs_analytic",
@@ -223,7 +259,7 @@ fn main() -> anyhow::Result<()> {
 mod tests {
     use super::{box_and_bits, ZIPUP_SANITY};
     use t4a_bench::elementwise::{
-        elementwise_product, max_rel_error_vs_mixture_product, ElementwiseAlgo,
+        elementwise_product, max_rel_error_vs_mixture_product, AciTolerance, ElementwiseAlgo,
     };
     use t4a_bench::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
     use tensor4all_simplett::AbstractTensorTrain;
@@ -263,6 +299,11 @@ mod tests {
     /// The bounds are the runner's own: `BENCH_SANITY` (1e-2) for `fit_treetn`
     /// and `aci`, and the hardcoded `ZIPUP_SANITY` for `zipup_treetn`, whose
     /// error at this budget is genuinely of order one (README known issue 8).
+    /// The tolerance handed to the arms is the runner's inert 1e-15 and the aci
+    /// arm runs scale-relative, so the cap is what decides and the SVD-based arms
+    /// are expected to spend the whole budget. Measured at the pinned revision on
+    /// this instance (chi_in 76): zipup 1.8e-1, fit 6.7e-9 and aci 6.7e-9, all at
+    /// chi_out 76.
     /// This is a smoke test of the case-4 wiring, not a precision claim: the
     /// scaling answer comes from the runner, not from here.
     #[test]
@@ -275,17 +316,34 @@ mod tests {
         let (gb, _) = to_quantics_fused_tt(&g, r, l, 1e-8, 512).unwrap();
         let chi_in = fa.rank().max(gb.rank());
 
-        for (algo, bound) in [
-            (ElementwiseAlgo::Zipup, ZIPUP_SANITY),
-            (ElementwiseAlgo::Fit, 1e-2),
-            (ElementwiseAlgo::Aci, 1e-2),
+        // The third element says whether the arm is expected to spend the whole
+        // budget. The two SVD-based arms keep everything the cap allows, since the
+        // tolerance can no longer stop them; aci is interpolation-based and may
+        // settle below the cap, so it is only held to the cap as an upper bound.
+        for (algo, bound, exhausts_budget) in [
+            (ElementwiseAlgo::Zipup, ZIPUP_SANITY, true),
+            (ElementwiseAlgo::Fit, 1e-2, true),
+            (ElementwiseAlgo::Aci, 1e-2, false),
         ] {
-            let out = elementwise_product(algo, &fa, &gb, 1e-8, chi_in).unwrap();
+            // The budget is the cap, so the tolerance is pinned inert, exactly as
+            // the runner does it.
+            let out =
+                elementwise_product(algo, &fa, &gb, 1e-15, chi_in, AciTolerance::ScaleRelative)
+                    .unwrap();
             assert!(
                 out.rank() <= chi_in,
                 "{algo:?}: chi_out {} exceeds the budget {chi_in}",
                 out.rank()
             );
+            if exhausts_budget {
+                assert_eq!(
+                    out.rank(),
+                    chi_in,
+                    "{algo:?}: chi_out {} fell short of the budget {chi_in}, so something \
+                     other than the cap truncated it",
+                    out.rank()
+                );
+            }
             let err = max_rel_error_vs_mixture_product(&out, &f, &g, r, l, 128, 99);
             println!(
                 "{algo:?}: rel err {err:.3e} (bound {bound:.0e}), chi_out {} of {chi_in}",

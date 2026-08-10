@@ -42,21 +42,25 @@ rather than a hidden one; the two zipup arms are the same algorithm on the two e
 their difference isolates the engine. Each record carries the engine that ran it as
 `engine`. The one missing pair is simplett fit, excluded because its variational update is
 a stub upstream (known issue 1).
-The contraction output bond dimension is pinned to the input rank: every algorithm runs
-with its maximum bond dimension capped at `chi_in`, the larger of the two input MPO ranks,
-so all arms are compared at the same output budget. The reported error is then the
-discriminator, namely the residual of the contracted MPO against the analytic Gaussian
-integral. `BENCH_MAX_BOND` caps only the input TCI construction. As measured at `R` = 6, 8
-and 10 with the pinned revision, `naive` and `fit_treetn` land on the same error, around
-`1e-8`, which is the reference floor of the case (known issue 4), at the same `chi_out` of
-59 to 61, well below the budget they were allowed. The two zipup arms, `zipup_simplett` and
-`zipup_treetn`, agree with each other to the last reported digit and sit three to four
-orders of magnitude higher, around `1e-5` to `1e-4`, at the full budget. The split is
-therefore algorithmic rather than engine-driven: single-pass zip-up truncation is what
-costs accuracy, and both engines running it produce the same answer. What zip-up buys is
-speed, since it is the fastest arm at every `R` and stays flat near 0.2 s, while `naive`
-grows steeply (0.38 s at `R` = 8, 5.2 s at `R` = 10) because it forms the full contracted
-bond before truncating. `fit_treetn` reaches naive accuracy at a fraction of the naive cost.
+The contraction output bond dimension is pinned to the input rank, and the rank cap is the
+only thing that decides it: every algorithm runs with its maximum bond dimension capped at
+`chi_in`, the larger of the two input MPO ranks, and with a truncation tolerance pinned
+inert, so all arms are compared at the same output budget and each one genuinely exhausts
+it unless its exact rank is smaller. `BENCH_TOL` therefore scopes only the input TCI
+construction, where it fixes `chi_in` and thus the instance, while `BENCH_CONTRACT_TOL`,
+default `1e-15`, is what the arms receive and is recorded as `contract_tol` in the params of
+every record. This removes the ambiguity of which constraint binds: without it a
+tolerance-driven arm could stop early and report a `chi_out` below the budget, so the error
+column would compare arms at different effective ranks. `BENCH_MAX_BOND` also caps only the
+input TCI construction. As measured at `R` = 6 and 8 with the pinned revision, `naive` and
+`fit_treetn` land on the same error, `5.7e-10` and `2.3e-9`, and the two zipup arms,
+`zipup_simplett` and `zipup_treetn`, agree with each other to the last reported digit and
+sit four to five orders of magnitude higher, `1.1e-4` and `2.0e-5`. Every arm returns
+`chi_out` equal to the budget. The split is therefore algorithmic rather than engine-driven:
+single-pass zip-up truncation is what costs accuracy, and both engines running it produce
+the same answer. What zip-up buys is speed, since it is the fastest arm at every `R`, while
+`naive` grows steeply (0.56 s at `R` = 8) because it forms the full contracted bond before
+truncating. `fit_treetn` reaches naive accuracy at a fraction of the naive cost.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
 ### Case 3: elementwise product of 2D quantics Gaussian mixtures
@@ -74,26 +78,32 @@ primitives, recorded with `engine` = `local`), `zipup_treetn` and `fit_treetn` (
 `engine` = `aci`). There is no simplett arm, because simplett exposes no elementwise product
 for tensor trains at the pinned revision (known issue 7), so unlike case 2 this case cannot
 compare two engines on one algorithm.
-Like case 2, the output bond dimension is pinned to the input rank: every algorithm runs
-capped at `chi_in`, the larger of the two input ranks, so all arms are compared at the same
-output budget and the error is the discriminator. `BENCH_MAX_BOND` caps only the input TCI
-construction. As measured at `R` = 6, 8 and 10 with the pinned revision (`chi_in` of 53, 76
-and 79), `naive` and `fit_treetn` agree to the last reported digit at `8.5e-9`, `2.3e-8` and
-`1.1e-8`, at the same `chi_out` of 39, 60 and 62, well inside the budget. `aci` matches or
-beats them (`3.6e-11`, `1.1e-8`, `2.4e-8`) and is by far the cheapest arm, 1 ms to 41 ms,
-because it never forms the product it is approximating. `zipup_treetn` collapses: it spends
-the whole budget and still returns `6.2e-1`, `4.0e-1` and `5.3e-1`, an answer with no
+Like case 2, the output bond dimension is pinned to the input rank and the rank cap alone
+decides it: every algorithm runs capped at `chi_in`, the larger of the two input ranks, with
+the truncation tolerance pinned inert at `BENCH_CONTRACT_TOL`, default `1e-15`, and recorded
+as `contract_tol`. `BENCH_TOL` scopes only the input TCI construction, where it fixes
+`chi_in` and the instance, as does `BENCH_MAX_BOND`. All arms are therefore compared at the
+same output budget, each one exhausts it unless its exact rank is smaller, and the error is
+the discriminator. The `aci` arm additionally runs with `scale_tolerance` enabled, recorded
+as `aci_scale_tolerance`, so that its pivot criterion is scale-relative and equally
+unreachable and the cap is what decides for it too. As measured at `R` = 6 and 8 with the
+pinned revision (`chi_in` of 53 and 77), `naive`, `fit_treetn` and `aci` agree to the last
+reported digit at `3.6e-11` and about `6.1e-9`, all at the full `chi_out`. `zipup_treetn`
+collapses: it spends the same budget and returns `6.2e-1` and `4.7e-1`, an answer with no
 correct digits, and that number swings by a factor of two between runs of the same
 configuration, so read it as order one rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
-truncation cost only three to four orders of magnitude, because the exact elementwise
+truncation cost only four to five orders of magnitude, because the exact elementwise
 product has rank up to `chi_in` squared and a budget of `chi_in` discards nearly all of it,
 while naive and fit find a near-optimal basis for the same budget. Raising the budget
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
-again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6, 3.7 s at `R` = 8, 5.8 s at `R` = 10, against 0.58 s for `fit_treetn` and 0.28 s for
-`zipup_treetn` at `R` = 10.
+again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.06 s at
+`R` = 6 and 2.7 s at `R` = 8, against 0.37 s for `fit_treetn`, 0.21 s for `aci` and 0.16 s
+for `zipup_treetn` at `R` = 8. `aci` is no longer the near-free arm it was under a reachable
+tolerance: with an unreachable stopping criterion it runs to its iteration limit, which at
+the pinned revision has no saturation early exit (upstream
+[tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/issues/591)).
 
 One pitfall is worth naming, because the metric hides it. The relative error is normalized
 by the largest sampled `|f * g|`, and `f` and `g` are drawn independently, so if the
@@ -133,7 +143,9 @@ continuously, the spacing is constant only up to a factor of at most `sqrt(2)`. 
 `L0` = 6.0, `N0` = 8, `R0` = 10 make `N` = 8 exactly the case-3 instance.
 
 Everything else mirrors case 3: two independent mixtures, fused 2D quantics trains, and the
-elementwise product `h = f * g` at the fixed output budget `chi_out <= chi_in`, judged by the
+elementwise product `h = f * g` at the fixed output budget `chi_out <= chi_in`, decided by
+the rank cap alone with the truncation tolerance pinned inert at `BENCH_CONTRACT_TOL` and the
+`aci` arm running scale-relative, judged by the
 sampled max relative error against the exact pointwise product. The arms are `zipup_treetn`,
 `fit_treetn` and `aci` only. The case-3 `naive` arm is excluded from the defaults: it forms
 the full `chi_in`-squared bond before truncating, and this case deliberately pushes `chi_in`
@@ -155,11 +167,16 @@ without being reached, which is consistent with `sqrt(N)` acting as an upper bou
 finite-size effects have not yet saturated. Read the exponent as a measurement over a factor
 of 8 in `N` on one seed rather than as an asymptotic law. It is robust against the quantics
 construction wobble of known issue 5: perturbing all four `chi_in` values by plus or minus 2
-moves the fitted slope only within 0.25 to 0.30. On the arms themselves the case-3
-verdict survives at twice the rank: `fit_treetn` and `aci` stay near the working tolerance
-(worst `3.2e-8` and `7.3e-9`) while `zipup_treetn` returns an order-unity relative error at
-the full budget, and `aci` stops being the cheap arm as `chi_in` grows, rising from 41 ms at
-`N` = 8 to 1.63 s at `N` = 64 against 3.15 s for `fit_treetn`.
+moves the fitted slope only within 0.25 to 0.30. The scaling conclusion is untouched by the
+`chi_out`-driven change, since `chi_in` comes from the input TCI construction, which
+`BENCH_CONTRACT_TOL` does not reach. On the arms themselves the case-3
+verdict survives at twice the rank. Measured at `N` = 8 and 16 with the new semantics,
+`fit_treetn` and `aci` agree at `2.7e-8` and `1.4e-8` while `zipup_treetn` returns `5.8e-1`
+and `1.7e-1`, all three at the full `chi_out` of 78 and 103. `aci` is no longer the cheap
+arm: it costs 0.51 s at `N` = 8 and 1.13 s at `N` = 16, against 0.83 s and 1.86 s for
+`fit_treetn`, because an unreachable stopping criterion makes it run to its iteration limit.
+The `chi_in` figures and the fitted exponent above come from the committed `mac-cpu` sweep,
+whose arm columns predate this change.
 Runner: [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs),
 sweep over `N`.
 
@@ -172,7 +189,9 @@ sweep over `N`.
 
 The scaling plots sit next to these files, and `result/mac-cpu/run.yaml` records the
 machine, the repository revision, and the pinned tensor4all-rs revision that produced
-them.
+them. This sweep predates the change that made the fixed-budget cases `chi_out`-driven, so
+its `chi_out` columns can sit below the budget where the old tolerance stopped an arm early;
+the instances and the `chi_in` columns are unaffected.
 
 ## Running
 
@@ -229,11 +248,12 @@ a non-finite result. Case 4 applies the case-3 rule unchanged, `BENCH_SANITY` fo
 `fit_treetn` and `aci` and a hardcoded `5.0` for `zipup_treetn`, and additionally fails if
 any instance's `chi_in` reaches `BENCH_MAX_BOND`, since a rank pinned at the construction cap
 would measure the cap rather than the function. The gates are there to catch wrong results,
-not to certify precision.
+not to certify precision. All the gates are absolute and unchanged by the `chi_out`-driven
+truncation semantics; only the errors they screen moved.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.02 s at `R` = 6, 0.38 s at `R` = 8, 5.2 s at `R` = 10. Every other arm
+only expensive arm: 0.03 s at `R` = 6 and 0.56 s at `R` = 8. Every other arm
 stays under half a second across that range. Every algorithm truncates back to the same
 output budget `chi_out <= chi_in`, so the arms differ in accuracy at equal budget rather
 than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10 with 3
@@ -242,13 +262,20 @@ defaults because naive costs about 12.6 s there. For the heavy tail, extend expl
 example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, dropping `naive`,
 when you only want a quick signal.
 
-Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 3.7 s at `R` = 8 and 5.8 s at `R` = 10, and every other arm stays under a
-second. Its default sweep takes a little over a minute.
+Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.06 s
+at `R` = 6 and 2.7 s at `R` = 8, and every other arm stays under a
+second. Its default sweep takes a little over a minute. Its `aci` arm is slower than it used
+to be, since an unreachable stopping criterion makes it run to its iteration limit, which at
+the pinned revision has no saturation early exit (upstream
+[tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/issues/591)); at `R` = 8 it
+costs 0.21 s, against the few milliseconds to tens of milliseconds it took across the whole
+default sweep when the tolerance could stop it.
 
 Case 4 is the slow one, and its cost is dominated by the quantics TCI construction of the
 inputs rather than by the arms: at `N` = 64 the two input trains take a few minutes to build
-while the three arms together take about 6 s. That construction runs once per `N`, so
+while the three arms together take seconds (1.6 s at `N` = 8 and 3.6 s at `N` = 16 with the
+`chi_out`-driven semantics, of which `aci` is now a third rather than a rounding error). That
+construction runs once per `N`, so
 `BENCH_RUNS` barely moves the total. The default sweep `N` = 8, 16, 32, 64 takes about five
 minutes; `N` = 128 is left out because the construction cost roughly doubles again per step
 and the fitted exponent is already stable over the factor of 8 in the defaults. With case 4 added,
@@ -271,7 +298,8 @@ Environment knobs:
 | `BENCH_ALPHA_LO` | cases 2, 3 and 4 | `0.5` | lower bound of the Gaussian width parameter |
 | `BENCH_ALPHA_HI` | cases 2, 3 and 4 | `8.0` | upper bound of the Gaussian width parameter |
 | `BENCH_SANITY` | cases 2, 3 and 4 | `1e-2` | relative error gate. Case 2 applies it to every algorithm; cases 3 and 4 apply it to all but `zipup_treetn`, which is gated at a hardcoded `5.0` |
-| `BENCH_TOL` | all | `1e-8` | truncation tolerance passed to every algorithm |
+| `BENCH_TOL` | all | `1e-8` | instance tolerance. In case 1 it is the working tolerance of the whole case, both the input compression and the product. In cases 2, 3 and 4 it is scoped to the input TCI construction only, where it fixes `chi_in` and therefore the instance; the arms take `BENCH_CONTRACT_TOL` instead. It is what each record's top-level `tolerance` field and the Julia-check metadata report, since both describe the inputs |
+| `BENCH_CONTRACT_TOL` | cases 2, 3 and 4 | `1e-15` | truncation tolerance handed to every contraction or product arm, recorded as `contract_tol` in the params of each record. At the default it never fires, so the rank cap `chi_in` is the only binding truncation control and the fixed-budget cases are `chi_out`-driven by construction. Raise it if you want a tolerance-driven variant of those cases |
 | `BENCH_MAX_BOND` | all | `4096` (case 1), `512` (cases 2, 3 and 4) | bond dimension cap. In cases 2, 3 and 4 it caps only the input TCI construction, since the arms themselves run at the fixed output budget `chi_in`. Case 4 fails rather than reports if an instance reaches it, since `chi_in` is what that case measures |
 | `BENCH_RUNS` | all | `5` (case 1), `3` (cases 2, 3 and 4) | timed repetitions, the median is reported |
 | `BENCH_WARMUPS` | all | `1` (case 1), `0` (cases 2, 3 and 4) | untimed warmup repetitions |
@@ -334,11 +362,14 @@ the wrong instance.
    accuracy problem recorded in `tensor4all-itensorlike/tests/bug_fit_elementwise.rs` did
    not reproduce on the instances used here, so the arm is kept in the defaults, with a
    loosened sanity gate as a guard.
-4. **Case 2 has a reference error floor near `1e-8`.** The analytic reference integrates
+4. **Case 2 has a reference error floor.** The analytic reference integrates
    `y` over the whole real line, while the MPO contraction sums only over the box, so the
-   two differ by the tail outside the box. At the default box size that mismatch is a
-   relative error around `1e-8`. Error curves that plateau at that level are hitting the
-   reference, not a tensor network artifact.
+   two differ by the tail outside the box. Error curves that plateau at a level independent
+   of the algorithm are hitting the reference, not a tensor network artifact. The level was
+   quoted here as around `1e-8` from the tolerance-driven results; with the contraction now
+   `chi_out`-driven, `naive` and `fit_treetn` reach `5.7e-10` at `R` = 6 and `2.3e-9` at
+   `R` = 8, so at the default box size the floor sits below `1e-8` and the earlier figure was
+   the truncation error of those arms rather than the reference.
 5. **Quantics TCI construction is not bit-reproducible across runs** in cases 2, 3 and 4,
    even at a fixed seed: the input bond dimension can vary by one or two between runs of
    the same instance. Consecutive case-3 sweeps at identical code and seeds gave `chi_in`
@@ -365,7 +396,7 @@ the wrong instance.
    repository, as a core-wise bond Kronecker product plus an SVD sweep on simplett
    primitives, and is recorded with `engine` = `local` to keep that visible.
 8. **Case-3 `zipup_treetn` has no correct digits at the fixed output budget.** It returns a
-   relative error of order one, between `3e-1` and `9e-1` depending on `R` and on the run,
+   relative error of order one, between `1e-1` and `9e-1` depending on `R` and on the run,
    across the default sweep, having spent the whole
    `chi_in` budget. This is a property of the case, not a defect of the arm: the exact
    elementwise product has rank up to `chi_in` squared, and given more room the same arm
@@ -376,6 +407,14 @@ the wrong instance.
    precision measurement. Case 4 inherits all of this: it runs the same arm at the same fixed
    budget on the same kind of instance, at roughly twice the rank, and sees the same
    order-unity error.
+9. **ACI runs to its iteration limit when the cap binds.** The fixed-budget cases hand every
+   arm an unreachable tolerance so that the rank cap alone decides the truncation, and for
+   `aci` that means the stopping criterion never fires and the sweep continues to
+   `AciOptions::max_iters` even after the pivots have saturated. The early exit on saturation
+   lands in [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/issues/591),
+   which is not in the pinned revision, so the `aci` arm of cases 3 and 4 costs more wall
+   time than the algorithm needs. Its accuracy is unaffected. Picking up that change should
+   restore the arm's earlier cost without changing its result.
 
 ## License
 

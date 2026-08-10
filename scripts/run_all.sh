@@ -28,15 +28,34 @@ DIRTY="$(git -C "$ROOT" diff --quiet -- ':(exclude)result' \
   && git -C "$ROOT" diff --cached --quiet -- ':(exclude)result' \
   || echo "-dirty")"
 
+# Wall times are machine bound for the memory heavy arms (README known issue 10),
+# so the hardware that produced a sweep is part of the record, not decoration.
+if [ "$(uname -s)" = "Darwin" ]; then
+  CHIP="$(sysctl -n machdep.cpu.brand_string)"
+  MEM_GB="$(( $(sysctl -n hw.memsize) / 1073741824 ))"
+else
+  CHIP="$(lscpu 2>/dev/null | sed -n 's/^Model name: *//p' | head -1)"
+  CHIP="${CHIP:-unknown}"
+  MEM_GB="$(awk '/MemTotal/ {printf "%d", $2 / 1048576}' /proc/meminfo 2>/dev/null || echo unknown)"
+fi
+
+# No hostname: on a public repository a DHCP name leaks the operator's
+# institution and location over time, and the machine identity is better
+# carried by the profile name, the label below and the hardware fields.
+# Set BENCH_MACHINE to override the label.
 cat > "$OUT/run.yaml" <<EOF
 profile: $PROFILE
 date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
-host: $(hostname)
+machine: ${BENCH_MACHINE:-$PROFILE}
 os: $(uname -sm)
+chip: $CHIP
+memory_gb: $MEM_GB
 repo_rev: $(git -C "$ROOT" rev-parse HEAD)$DIRTY
 tensor4all_rs_rev: $(grep -m1 -o 'rev = "[a-f0-9]*"' "$ROOT/Cargo.toml" | cut -d'"' -f2)
 threads: ${RAYON_NUM_THREADS:-default}
 EOF
 
-uv run scripts/report.py "$OUT"
+# REPORT_PYTHON overrides the report runner on machines without uv, for example
+# REPORT_PYTHON="$HOME/miniforge3/envs/foo/bin/python". The default stays uv.
+${REPORT_PYTHON:-uv run} scripts/report.py "$OUT"
 echo "reports in $OUT"

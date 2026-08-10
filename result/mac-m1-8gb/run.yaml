@@ -1,0 +1,9 @@
+profile: mac-m1-8gb
+date: 2026-08-07T13:17:18Z
+machine: mac-m1-8gb
+os: Darwin arm64
+chip: Apple M1
+memory_gb: 8
+repo_rev: 266ff4c1d6757de046b592566c9bea62a0f2685a
+tensor4all_rs_rev: ae655a9ec08a0c3df8c25369b84be0d04e2a2bf3
+threads: default

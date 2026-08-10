@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "case": "elementwise_fourier",
+  "algorithm": "fit",
+  "params": {
+    "error_metric": "max_abs",
+    "error_seed": 999,
+    "fit_nfullsweeps": 2,
+    "k_max": 8,
+    "max_bond": 4096,
+    "n_error_samples": 256,
+    "r": 20,
+    "runs": 5,
+    "warmups": 1
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 0.027111334,
+  "wall_times_secs": [
+    0.026187084,
+    0.027079833,
+    0.028503917,
+    0.027111334,
+    0.02752025
+  ],
+  "max_error": 7.435455260018412e-8,
+  "input_max_bond_dim": 8,
+  "output_max_bond_dim": 8,
+  "output_bond_dims": [
+    2,
+    4,
+    8,
+    8,
+    7,
+    6,
+    5,
+    5,
+    4,
+    4,
+    3,
+    3,
+    3,
+    3,
+    3,
+    2,
+    2,
+    2,
+    2
+  ]
+}

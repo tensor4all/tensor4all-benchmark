@@ -52,16 +52,20 @@ default `1e-15`, is what the arms receive and is recorded as `contract_tol` in t
 every record. This removes the ambiguity of which constraint binds: without it a
 tolerance-driven arm could stop early and report a `chi_out` below the budget, so the error
 column would compare arms at different effective ranks. `BENCH_MAX_BOND` also caps only the
-input TCI construction. As measured at `R` = 6 and 8 with the pinned revision, `naive` and
-`fit_treetn` land on the same error, `5.7e-10` and `2.3e-9`, and the two zipup arms,
+input TCI construction. As measured over the default sweep `R` = 6, 8, 10, 12 and 14 with
+the pinned revision, `naive` and `fit_treetn` land on the same error, `5.7e-10` to
+`2.9e-9`, and the two zipup arms,
 `zipup_simplett` and `zipup_treetn`, agree with each other to the last reported digit and
-sit four to five orders of magnitude higher, `1.1e-4` and `2.5e-5`. Every arm returns
+sit four to five orders of magnitude higher, `2.2e-5` to `1.1e-4`. Every arm returns
 `chi_out` equal to the budget. The split is therefore algorithmic rather than engine-driven:
 single-pass zip-up truncation is what costs accuracy, and both engines running it produce
-the same answer. What zip-up buys is speed, since it is the fastest arm at every `R`, while
-`naive` grows steeply (0.4 s at `R` = 8 and 5 s at `R` = 10) because it forms the full
-contracted bond before truncating. `fit_treetn` reaches naive accuracy at a fraction of the
-naive cost.
+the same answer. What zip-up buys is speed, since it is the fastest arm at every `R` and
+stays between 0.015 s and 0.31 s, while `naive` grows steeply (0.4 s at `R` = 8, 5.3 s at
+`R` = 10, about 13 s at `R` = 12 and 14) because it forms the full
+contracted bond before truncating; at `R` >= 10 that arm is memory bound on a machine with
+less headroom, where the same points cost several times more (known issue 10).
+`fit_treetn` reaches naive accuracy at a fraction of the
+naive cost, under 0.75 s at every `R`.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
 ### Case 3: elementwise product of 2D quantics Gaussian mixtures
@@ -87,10 +91,13 @@ as `contract_tol`. `BENCH_TOL` scopes only the input TCI construction, where it 
 same output budget, each one exhausts it unless its exact rank is smaller, and the error is
 the discriminator. The `aci` arm additionally runs with `scale_tolerance` enabled, recorded
 as `aci_scale_tolerance`, so that its pivot criterion is scale-relative and equally
-unreachable and the cap is what decides for it too. As measured at `R` = 6 and 8 with the
-pinned revision (`chi_in` of 53 and 77), `naive`, `fit_treetn` and `aci` agree to the last
-reported digit at `3.6e-11` and about `6.1e-9`, all at the full `chi_out`. `zipup_treetn`
-collapses: it spends the same budget and returns `6.2e-1` and `2.9e-1`, an answer with no
+unreachable and the cap is what decides for it too. As measured over the default sweep
+`R` = 6, 8, 10, 12 and 14 with the pinned revision (`chi_in` of 53, 77 and then 78 once the
+quantics rank saturates), `naive`, `fit_treetn` and `aci` agree to the last
+reported digit or close to it, from `3.6e-11` at `R` = 6 to about `1.5e-8` at `R` = 12, all
+at the full `chi_out`. `zipup_treetn`
+collapses: it spends the same budget and returns `3.3e-1` to `6.2e-1` across the sweep, an
+answer with no
 correct digits, and that number swings by a factor of two between runs of the same
 configuration, so read it as order one rather than as a measurement. The separation is much
 sharper than in case 2, where the same single-pass
@@ -100,8 +107,9 @@ while naive and fit find a near-optimal basis for the same budget. Raising the b
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
 again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6 and 3 s at `R` = 8, against 0.35 s for `fit_treetn` and 0.14 s for `zipup_treetn` at
-`R` = 8. `aci` is the cheapest arm at every point of the sweep, 0.02 s at `R` = 8, five to
+`R` = 6, 3.2 s at `R` = 8 and 4 to 6 s at `R` = 10 to 14, against 1.3 s for `fit_treetn`
+and 0.38 s for `zipup_treetn` at `R` = 14. `aci` is the cheapest arm at every point of the
+sweep, 1 ms at `R` = 6 rising only to 73 ms at `R` = 14, five to
 fifteen times below `zipup_treetn`, because the pinned revision carries its early exit on
 rank saturation from
 [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/pull/591), so its sweep stops
@@ -185,16 +193,40 @@ sweep over `N`.
 
 ## Latest results
 
+One profile per physical machine, so numbers from different hardware never overwrite
+each other. Each profile was produced on its own machine, at the revision its own
+`run.yaml` records, together with the machine label, the chip, the memory and the pinned
+tensor4all-rs revision. A profile is therefore self-describing and is never regenerated on
+somebody else's hardware: the report rendering of each profile follows the files committed
+with it, so a profile taken before a change to `scripts/report.py` keeps the rendering it
+was published with until its own machine runs the sweep again. Compare wall times only
+within a profile, and read cross-profile time ratios as statements about hardware
+(known issue 10).
+
+`mac-cpu`, the maintainer's Mac, at the current pin and the full default sweeps, and the
+only profile that carries case 4. The quoted numbers in the case descriptions above come
+from this profile:
+
 - [`result/mac-cpu/elementwise_fourier.md`](result/mac-cpu/elementwise_fourier.md)
 - [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md)
 - [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md)
 - [`result/mac-cpu/elementwise_gauss2d_scaling.md`](result/mac-cpu/elementwise_gauss2d_scaling.md)
 
-The scaling plots sit next to these files, and `result/mac-cpu/run.yaml` records the
-machine, the repository revision, and the pinned tensor4all-rs revision that produced
-them. The committed sweep is current with both the `chi_out`-driven truncation semantics of
-the fixed-budget cases and the pinned upstream revision, so every `chi_out` column sits at
-the budget and every arm column is directly comparable.
+The scaling plots sit next to these files. This sweep is current with both the
+`chi_out`-driven truncation semantics of the fixed-budget cases and the pinned upstream
+revision, so every `chi_out` column sits at the budget and every arm column is directly
+comparable.
+
+`mac-m1-8gb`, an 8 GB Apple M1 MacBook Pro, contributed by a collaborator and kept exactly
+as it was committed, at the revision recorded in its own `run.yaml`. It predates the
+`chi_out`-driven truncation semantics and case 4, so its fixed-budget arms were still
+tolerance-driven and some report a `chi_out` below the budget. Read it as that machine's
+record of the sweep at that revision, and as the reference point for the memory-bound
+naive timings of known issue 10:
+
+- [`result/mac-m1-8gb/elementwise_fourier.md`](result/mac-m1-8gb/elementwise_fourier.md)
+- [`result/mac-m1-8gb/mpo_mpo_quantics.md`](result/mac-m1-8gb/mpo_mpo_quantics.md)
+- [`result/mac-m1-8gb/elementwise_gauss2d.md`](result/mac-m1-8gb/elementwise_gauss2d.md)
 
 ## Running
 
@@ -207,15 +239,23 @@ Prerequisites:
 - [uv](https://docs.astral.sh/uv/) for the report generator (matplotlib, numpy).
 - Julia (optional), only for the independent ITensors.jl correctness checks below.
 
-Full run and report for a machine profile:
+Full run and report for a machine profile. Name the profile after the machine, one
+profile per physical machine, for example:
 
 ```bash
-scripts/run_all.sh mac-cpu
+scripts/run_all.sh mac-m1-8gb
 ```
 
 This builds in release mode, runs all four cases with their default sweeps into
-`result/mac-cpu/raw/`, writes `result/mac-cpu/run.yaml`, and renders the Markdown reports
-and SVG plots.
+`result/<profile>/raw/`, writes `result/<profile>/run.yaml`, and renders the Markdown
+reports and SVG plots. `run.yaml` deliberately records no hostname, only a machine
+label (`BENCH_MACHINE`, defaulting to the profile name) plus the chip and memory size,
+since a hostname on a public repository can leak the operator's institution and
+location. It also stamps `repo_rev` with a `-dirty` suffix when the source tree carries
+uncommitted changes, so a sweep can never claim a clean revision it did not come from;
+everything under `result/` is excluded from that check, since the script has just
+rewritten it. On a machine without `uv`, point `REPORT_PYTHON` at any python that has
+matplotlib and numpy.
 
 Smoke run (small, fast, useful for checking the toolchain). Cases 2 and 3 write the same
 `instance-r<R>` file names, so give them different `EXPORT_HDF5` directories when both are
@@ -256,41 +296,49 @@ truncation semantics; only the errors they screen moved.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.02 s at `R` = 6, 0.4 s at `R` = 8 and 5 s at `R` = 10. Every other arm
-stays under half a second across that range. Every algorithm truncates back to the same
+only expensive arm: 0.02 s at `R` = 6, 0.4 s at `R` = 8, 5.3 s at `R` = 10 and about 13 s
+at `R` = 12 and 14. Every other arm
+stays under a second across that range. At `R` >= 10 the naive intermediates are large
+enough that on a machine with less memory headroom the same points cost several times more
+and vary with ambient memory pressure (known issue 10). Every algorithm truncates back to
+the same
 output budget `chi_out <= chi_in`, so the arms differ in accuracy at equal budget rather
-than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10 with 3
-timed runs) therefore takes well under a minute on a laptop. `R` = 12 is left out of the
-defaults because naive costs about 12.6 s there. For the heavy tail, extend explicitly, for
+than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10, 12, 14
+with 3 timed runs) is dominated by the naive runs at `R` = 12 and 14 and takes about two
+minutes on the maintainer's Mac, six on an 8 GB M1. For the heavy tail, extend explicitly,
+for
 example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, dropping `naive`,
 when you only want a quick signal.
 
 Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 3 s at `R` = 8 and 4 s at `R` = 10, and every other arm stays under a
-second. Its default sweep takes well under a minute. Its `aci` arm is the cheapest of the
-four at every `R`, a few milliseconds to tens of milliseconds across the whole default sweep
-and 0.02 s at `R` = 8, because the pinned revision includes the ACI rank-saturation early
+at `R` = 6, 3.2 s at `R` = 8 and 4 to 6 s at `R` = 10 to 14, and every other arm stays
+under one and a half seconds. Its default sweep takes about a minute. Its `aci` arm is the
+cheapest of the
+four at every `R`, 1 ms at `R` = 6 rising only to 73 ms at `R` = 14, because the pinned
+revision includes the ACI rank-saturation early
 exit of [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/pull/591), so the
 unreachable stopping criterion of the fixed-budget cases no longer makes it run to its
 iteration limit.
 
-Case 4 is the slowest of the four, but at the pinned revision the quantics TCI construction of
+Case 4 costs about as much as case 3, but at the pinned revision the quantics TCI
+construction of
 its inputs is no longer what dominates: at `N` = 64 the two input trains build in a few
 seconds, against about 5.5 s for one timed pass of the three arms (1.4 s for `zipup_treetn`,
 3.7 s for `fit_treetn`, 0.2 s for `aci`). Arm cost therefore scales with `BENCH_RUNS` while
 the construction runs once per `N`. The default sweep `N` = 8, 16, 32, 64 takes about a minute
 (measured 48 s); `N` = 128 is left out because the cost roughly doubles again per step and the
-fitted exponent is already stable over the factor of 8 in the defaults. With case 4 added,
-`scripts/run_all.sh` finishes in about two minutes for all four cases plus the reports, on top
-of the release build.
+fitted exponent is already stable over the factor of 8 in the defaults. All four cases plus
+the reports finish in about four and a half minutes on the maintainer's Mac, on top of the
+release build. On a slower or more memory-constrained machine the same defaults cost
+substantially more, most of the difference sitting in the two naive arms at `R` = 10 to 14.
 
 Environment knobs:
 
 | Variable | Applies to | Default | Meaning |
 | --- | --- | --- | --- |
-| `BENCH_KS` | case 1 | `4,8,16,32,64` | comma-separated Fourier mode counts `K` to sweep |
+| `BENCH_KS` | case 1 | `4,8,16,32,64,128` | comma-separated Fourier mode counts `K` to sweep |
 | `BENCH_R` | case 1 | `20` | number of quantics bits |
-| `BENCH_RS` | cases 2 and 3 | `6,8,10` | comma-separated bits per variable `R` to sweep |
+| `BENCH_RS` | cases 2 and 3 | `6,8,10,12,14` | comma-separated bits per variable `R` to sweep |
 | `BENCH_NGAUSS` | cases 2 and 3 | `8` | number of Gaussians per mixture |
 | `BENCH_BOX_L` | cases 2 and 3 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_NS` | case 4 | `8,16,32,64` | comma-separated Gaussian counts `N` to sweep. Case 4 derives `L` and `R` from `N`, so it ignores `BENCH_NGAUSS`, `BENCH_BOX_L` and `BENCH_RS` |
@@ -388,8 +436,11 @@ the wrong instance.
    `contract_naive`'s compression sweep now establishes a right-to-left QR gauge before
    truncating, which dropped its error by about three orders of magnitude so that naive
    matches the variational fit. All three are contained in the current pin `1b9a517`, as they
-   were in the earlier pin `7cfec22` where they first landed. Earlier numbers in this
-   repository's git history predate them and are not comparable.
+   were in the earlier pin `7cfec22` where they first landed, and the current pin adds
+   [tensor4all-rs#575](https://github.com/tensor4all/tensor4all-rs/pull/575), a treetci
+   convergence fix that stops input TCI construction early once the rank saturates at
+   `max_bond_dim`. Earlier numbers in this repository's git history predate these fixes and
+   are not comparable.
 7. **simplett has no elementwise product for tensor trains at the pinned revision.** It
    offers MPO-MPO contraction (`contract_naive`, `contract_zipup`, the stubbed
    `contract_fit`) but nothing that forms a Hadamard product of two tensor trains, so cases
@@ -420,7 +471,23 @@ the wrong instance.
    at the current pin `1b9a517`, and the fresh sweep confirms the fix: `aci` is now the
    cheapest arm at every point of cases 3 and 4, five to fifteen times below `zipup_treetn`,
    with the same errors as before. Numbers quoted in this repository's git history from before
-   the bump are not comparable on the `aci` column.
+   the bump are not comparable on the `aci` column. The `mac-m1-8gb` profile predates this
+   pin, so its `aci` column still shows the pre-fix cost.
+10. **`naive` wall times at `R` >= 10 are machine bound.** The naive arms form intermediates
+    of bond `chi_in` squared, which at chi around 80 press against the free memory of a
+    smaller machine, so their wall time depends on the hardware and on ambient memory
+    pressure rather than on the algorithm alone. On the 8 GB M1 of the `mac-m1-8gb` profile
+    the case-2 point at `R` = 10 measured about 28 s per run on a session with swap nearly
+    full and 16 s on the same machine right after a reboot, same code, same errors, same
+    `chi_out`; the committed sweep is the post-reboot one, taken on an otherwise idle
+    machine, where the spread across the three timed runs stays within about 5 percent at
+    `R` = 12 and 14 (22 percent at `R` = 10, whose first run pays the page-in). The
+    `mac-cpu` profile measures the same `R` = 10 point at 5.3 s. The cheap arms differ far
+    less. Errors and bond dimensions are unaffected everywhere, since the computation is
+    the same arithmetic either way. So compare naive timings only within one profile, run
+    official sweeps on an idle machine, and read cross-profile time ratios as hardware
+    statements. This is also why profiles are per machine and why `run.yaml` records the
+    chip and memory.
 
 ## License
 

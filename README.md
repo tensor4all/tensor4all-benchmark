@@ -54,18 +54,19 @@ tolerance-driven arm could stop early and report a `chi_out` below the budget, s
 column would compare arms at different effective ranks. `BENCH_MAX_BOND` also caps only the
 input TCI construction. As measured over the default sweep `R` = 6, 8, 10, 12 and 14 with
 the pinned revision, `naive` and `fit_treetn` land on the same error, `5.7e-10` to
-`3.6e-9`, and the two zipup arms,
+`3.5e-9`, and the two zipup arms,
 `zipup_simplett` and `zipup_treetn`, agree with each other to the last reported digit and
-sit four to five orders of magnitude higher, `2.0e-5` to `1.1e-4`. Every arm returns
+sit four to five orders of magnitude higher, `2.1e-5` to `1.1e-4`. Every arm returns
 `chi_out` equal to the budget. The split is therefore algorithmic rather than engine-driven:
 single-pass zip-up truncation is what costs accuracy, and both engines running it produce
 the same answer. What zip-up buys is speed, since it is the fastest arm at every `R` and
-stays between 0.015 s and 0.31 s, while `naive` grows steeply (0.4 s at `R` = 8, 5.3 s at
-`R` = 10, 16 to 17 s at `R` = 12 and 14) because it forms the full
-contracted bond before truncating; at `R` >= 10 that arm is memory bound on a machine with
-less headroom, where the same points cost several times more (known issue 10).
+stays between 0.009 s and 0.25 s, while `naive` grows steeply (1.1 s at `R` = 8, 32 s at
+`R` = 10, 89 to 91 s at `R` = 12 and 14) because it forms the full
+contracted bond before truncating; at `R` >= 10 that arm's intermediates are large enough
+that its wall time tracks the machine and the ambient memory pressure rather than the
+algorithm alone, so it is not comparable across profiles (known issue 10).
 `fit_treetn` reaches naive accuracy at a fraction of the
-naive cost, under 0.75 s at every `R`.
+naive cost, under 0.8 s at every `R`.
 Runner: [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs), sweep over `R`.
 
 ### Case 3: elementwise product of 2D quantics Gaussian mixtures
@@ -92,11 +93,11 @@ same output budget, each one exhausts it unless its exact rank is smaller, and t
 the discriminator. The `aci` arm additionally runs with `scale_tolerance` enabled, recorded
 as `aci_scale_tolerance`, so that its pivot criterion is scale-relative and equally
 unreachable and the cap is what decides for it too. As measured over the default sweep
-`R` = 6, 8, 10, 12 and 14 with the pinned revision (`chi_in` of 53 and then 76 to 79 once
+`R` = 6, 8, 10, 12 and 14 with the pinned revision (`chi_in` of 53 and then 76 to 80 once
 the quantics rank saturates), `naive`, `fit_treetn` and `aci` agree to the last
-reported digit or close to it, from `3.6e-11` at `R` = 6 to about `1.7e-8` at `R` = 12, all
+reported digit or close to it, from `3.6e-11` at `R` = 6 to about `1.5e-8` at `R` = 10, all
 at the full `chi_out`. `zipup_treetn`
-collapses: it spends the same budget and returns `2.3e-1` to `7.9e-1` across the sweep, an
+collapses: it spends the same budget and returns `1.3e-1` to `1.1` across the sweep, an
 answer with no
 correct digits, and that number swings by a factor of two between runs of the same
 configuration, so read it as order one rather than as a measurement. The separation is much
@@ -107,10 +108,10 @@ while naive and fit find a near-optimal basis for the same budget. Raising the b
 recovers zipup smoothly, to `1.8e-7` at 8 `chi_in` and `3.9e-8` unconstrained, so this is
 the price of the fixed budget rather than a broken arm (known issue 8). On cost, `naive` is
 again the expensive one, forming the full `chi_in`-squared bond before truncating: 0.05 s at
-`R` = 6, 3.3 s at `R` = 8 and 4 to 5 s at `R` = 10 to 14, against 1.3 s for `fit_treetn`
-and 0.38 s for `zipup_treetn` at `R` = 14. `aci` is the cheapest arm at every point of the
-sweep, 1 ms at `R` = 6 rising only to 75 ms at `R` = 14, five to
-fifteen times below `zipup_treetn`, because the pinned revision carries its early exit on
+`R` = 6, 3.9 s at `R` = 8 and 6 to 7.6 s at `R` = 10 to 14, against 1.1 s for `fit_treetn`
+and 0.35 s for `zipup_treetn` at `R` = 14. `aci` is the cheapest arm at every point of the
+sweep, 1 ms at `R` = 6 rising only to 61 ms at `R` = 14, six to
+fourteen times below `zipup_treetn`, because the pinned revision carries its early exit on
 rank saturation from
 [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/pull/591), so its sweep stops
 once the pivots stop improving instead of running to its iteration limit under the unreachable
@@ -169,8 +170,8 @@ timing. At the default `N` = 8 point `ref_scale` is `4.6e-1` against input scale
 and `0.85`, a ratio of `0.54`.
 
 As measured over the default sweep `N` = 8, 16, 32, 64 with the pinned revision, `chi_in` is
-78, 101, 117 and 140 at `L` = 6.000, 8.485, 12.000 and 16.971 and `R` = 10, 11, 11 and 12. A
-least-squares fit of `log(chi_in)` against `log(N)` gives `chi_in ~ N^0.27`, so over this
+78, 103, 117 and 145 at `L` = 6.000, 8.485, 12.000 and 16.971 and `R` = 10, 11, 11 and 12. A
+least-squares fit of `log(chi_in)` against `log(N)` gives `chi_in ~ N^0.29`, so over this
 range the growth is sublinear by a wide margin and even slower than `sqrt(N)`: an eightfold
 increase in the number of Gaussians costs less than a doubling of the rank. The linear
 hypothesis is comfortably excluded, and the `sqrt(N)` hypothesis is the closer of the two
@@ -178,17 +179,18 @@ without being reached, which is consistent with `sqrt(N)` acting as an upper bou
 finite-size effects have not yet saturated. Read the exponent as a measurement over a factor
 of 8 in `N` on one seed rather than as an asymptotic law. It is robust against the quantics
 construction wobble of known issue 5: perturbing all four `chi_in` values by plus or minus 2
-moves the fitted slope only within 0.26 to 0.30, and independent reruns that landed on
+moves the fitted slope only within 0.27 to 0.31, and independent reruns that landed on
 `chi_in` of 77, 103, 117, 141 and on 79, 104, 117, 143 fit to 0.28 and 0.27. The scaling conclusion is untouched by the
 `chi_out`-driven change, since `chi_in` comes from the input TCI construction, which
 `BENCH_CONTRACT_TOL` does not reach. On the arms themselves the case-3
 verdict survives at twice the rank. Measured at `N` = 8 and 16, `fit_treetn` and `aci` agree
-at about `6e-9` and `1.1e-8` while `zipup_treetn` returns `4.0e-1` and `4.4e-1`, all three at
-the full `chi_out` of 78 and 101. At `N` = 64 that arm passes `1`, at `1.11`, so the budget
-costs it the last of its accuracy as the rank grows. `aci` is the cheap arm here too, five
+at about `1.3e-8` and `1.0e-8` while `zipup_treetn` returns `1.9e-1` and `3.5e-1`, all three at
+the full `chi_out` of 78 and 103. Across the whole sweep that arm stays of order one, between
+`1.7e-1` and `5.7e-1`, with no monotone trend in `N`, so the budget costs it every correct
+digit at any rank in this range. `aci` is the cheap arm here too, eight to twelve
 times below `zipup_treetn`
-and an order of magnitude below `fit_treetn`: 0.05 s at `N` = 8 and 0.09 s at `N` = 16,
-against 0.8 s and 1.6 s for `fit_treetn`, since the pinned revision stops its sweep once the
+and more than an order of magnitude below `fit_treetn`: 0.03 s at `N` = 8 and 0.08 s at `N` = 16,
+against 0.8 s and 2.1 s for `fit_treetn`, since the pinned revision stops its sweep once the
 pivots saturate. Everything quoted above comes from the committed `mac-cpu` sweep.
 Runner: [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs),
 sweep over `N`.
@@ -203,9 +205,12 @@ somebody else's hardware: the report rendering of each profile follows the files
 with it, so a profile taken before a change to `scripts/report.py` keeps the rendering it
 was published with until its own machine runs the sweep again. Compare wall times only
 within a profile, and read cross-profile time ratios as statements about hardware
-(known issue 10).
+(known issue 10). `run.yaml` also records the thread count the sweep ran with, and profiles
+taken before the runner pinned `RAYON_NUM_THREADS=1` were recorded multi-threaded, which is
+one more reason not to compare timings across profiles.
 
-`mac-cpu`, the maintainer's Mac, at the current pin and the full default sweeps, and the
+`mac-cpu`, the maintainer's Mac, at the current pin and the full default sweeps, run
+single-threaded (`threads: 1`), and the
 only profile that carries case 4. The quoted numbers in the case descriptions above come
 from this profile:
 
@@ -222,7 +227,10 @@ comparable.
 `mac-m1-8gb`, an 8 GB Apple M1 MacBook Pro, contributed by a collaborator and kept exactly
 as it was committed, at the revision recorded in its own `run.yaml`. It predates the
 `chi_out`-driven truncation semantics and case 4, so its fixed-budget arms were still
-tolerance-driven and some report a `chi_out` below the budget. Read it as that machine's
+tolerance-driven and some report a `chi_out` below the budget. It also predates the
+single-threaded default and was recorded multi-threaded (`threads: default` in its
+`run.yaml`), so none of its wall times are comparable with the single-threaded `mac-cpu`
+ones. Read it as that machine's
 record of the sweep at that revision, and as the reference point for the memory-bound
 naive timings of known issue 10:
 
@@ -305,25 +313,26 @@ truncation semantics; only the errors they screen moved.
 
 Cost note: the quantics rank of the default case-2 mixture saturates around chi = 70 to 80.
 `naive` builds the full contracted bond of size chi squared before truncating and is the
-only expensive arm: 0.02 s at `R` = 6, 0.4 s at `R` = 8, 5.3 s at `R` = 10 and 16 to 17 s
+only expensive arm: 0.02 s at `R` = 6, 1.1 s at `R` = 8, 32 s at `R` = 10 and 89 to 91 s
 at `R` = 12 and 14. Every other arm
 stays under a second across that range. At `R` >= 10 the naive intermediates are large
-enough that on a machine with less memory headroom the same points cost several times more
-and vary with ambient memory pressure (known issue 10). Every algorithm truncates back to
+enough that the same points vary with the machine and with ambient memory pressure
+(known issue 10). Every algorithm truncates back to
 the same
 output budget `chi_out <= chi_in`, so the arms differ in accuracy at equal budget rather
 than in how far their ranks are allowed to grow. The default sweep (`R` = 6, 8, 10, 12, 14
-with 3 timed runs) is dominated by the naive runs at `R` = 12 and 14 and takes about two
-minutes on the maintainer's Mac, six on an 8 GB M1. For the heavy tail, extend explicitly,
+with 3 timed runs) is dominated by the naive runs at `R` = 12 and 14 and takes about eleven
+minutes single-threaded on the maintainer's Mac, and is by far the most expensive of the
+four cases. For the heavy tail, extend explicitly,
 for
 example `BENCH_RS=6,8,10,12,14,16 BENCH_RUNS=5`. Restrict `BENCH_ALGOS`, dropping `naive`,
 when you only want a quick signal.
 
 Case 3 has the same shape and the same expensive arm, at its own scale: naive costs 0.05 s
-at `R` = 6, 3.3 s at `R` = 8 and 4 to 5 s at `R` = 10 to 14, and every other arm stays
-under one and a half seconds. Its default sweep takes about a minute. Its `aci` arm is the
-cheapest of the
-four at every `R`, 1 ms at `R` = 6 rising only to 75 ms at `R` = 14, because the pinned
+at `R` = 6, 3.9 s at `R` = 8 and 6 to 7.6 s at `R` = 10 to 14, and every other arm stays
+under one and a half seconds. Its default sweep takes about a minute and a half. Its `aci`
+arm is the cheapest of the
+four at every `R`, 1 ms at `R` = 6 rising only to 61 ms at `R` = 14, because the pinned
 revision includes the ACI rank-saturation early
 exit of [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/pull/591), so the
 unreachable stopping criterion of the fixed-budget cases no longer makes it run to its
@@ -332,14 +341,18 @@ iteration limit.
 Case 4 costs about as much as case 3, but at the pinned revision the quantics TCI
 construction of
 its inputs is no longer what dominates: at `N` = 64 the two input trains build in a few
-seconds, against about 5.5 s for one timed pass of the three arms (1.4 s for `zipup_treetn`,
-3.7 s for `fit_treetn`, 0.2 s for `aci`). Arm cost therefore scales with `BENCH_RUNS` while
-the construction runs once per `N`. The default sweep `N` = 8, 16, 32, 64 takes about a minute
-(measured 48 s); `N` = 128 is left out because the cost roughly doubles again per step and the
+seconds, against about 10 s for one timed pass of the three arms (2.5 s for `zipup_treetn`,
+7.2 s for `fit_treetn`, 0.2 s for `aci`). Arm cost therefore scales with `BENCH_RUNS` while
+the construction runs once per `N`. The default sweep `N` = 8, 16, 32, 64 takes about a minute;
+`N` = 128 is left out because the cost roughly doubles again per step and the
 fitted exponent is already stable over the factor of 8 in the defaults. All four cases plus
-the reports finish in about four and a half minutes on the maintainer's Mac (measured 263 s),
+the reports finish in about fourteen minutes on the maintainer's Mac (measured 823 s),
 on top of the
-release build. On a slower or more memory-constrained machine the same defaults cost
+release build, with case 2 accounting for most of it. That figure is for the
+single-threaded default, `RAYON_NUM_THREADS=1`, which the runner pins so that wall times do
+not depend on the core count or on background load; export `RAYON_NUM_THREADS` yourself to
+run multi-threaded and the sweep is correspondingly faster. On a slower or more
+memory-constrained machine the same defaults cost
 substantially more, most of the difference sitting in the two naive arms at `R` = 10 to 14.
 
 Environment knobs:
@@ -459,7 +472,7 @@ the wrong instance.
    repository, as a core-wise bond Kronecker product plus an SVD sweep on simplett
    primitives, and is recorded with `engine` = `local` to keep that visible.
 8. **Case-3 `zipup_treetn` has no correct digits at the fixed output budget.** It returns a
-   relative error of order one, between `2e-1` and `1.1` depending on `R`, on `N` and on the
+   relative error of order one, between `1.3e-1` and `1.1` depending on `R`, on `N` and on the
    run, across the default sweeps of cases 3 and 4, having spent the whole
    `chi_in` budget. This is a property of the case, not a defect of the arm: the exact
    elementwise product has rank up to `chi_in` squared, and given more room the same arm
@@ -479,20 +492,23 @@ the wrong instance.
    affected. The early exit on rank saturation landed in
    [tensor4all-rs#591](https://github.com/tensor4all/tensor4all-rs/pull/591) and is included
    at the current pin `1b9a517`, and the fresh sweep confirms the fix: `aci` is now the
-   cheapest arm at every point of cases 3 and 4, five to fifteen times below `zipup_treetn`,
+   cheapest arm at every point of cases 3 and 4, six to fourteen times below `zipup_treetn`,
    with the same errors as before. Numbers quoted in this repository's git history from before
    the bump are not comparable on the `aci` column. The `mac-m1-8gb` profile predates this
    pin, so its `aci` column still shows the pre-fix cost.
 10. **`naive` wall times at `R` >= 10 are machine bound.** The naive arms form intermediates
     of bond `chi_in` squared, which at chi around 80 press against the free memory of a
     smaller machine, so their wall time depends on the hardware and on ambient memory
-    pressure rather than on the algorithm alone. On the 8 GB M1 of the `mac-m1-8gb` profile
-    the case-2 point at `R` = 10 measured about 28 s per run on a session with swap nearly
+    pressure rather than on the algorithm alone. The clearest evidence is a comparison on one
+    machine: on the 8 GB M1 of the `mac-m1-8gb` profile, both runs multi-threaded, the case-2
+    point at `R` = 10 measured about 28 s per run on a session with swap nearly
     full and 16 s on the same machine right after a reboot, same code, same errors, same
     `chi_out`; the committed sweep is the post-reboot one, taken on an otherwise idle
     machine, where the spread across the three timed runs stays within about 5 percent at
     `R` = 12 and 14 (22 percent at `R` = 10, whose first run pays the page-in). The
-    `mac-cpu` profile measures the same `R` = 10 point at 5.3 s. The cheap arms differ far
+    `mac-cpu` profile measures the same `R` = 10 point at about 32 s, but that number is
+    single-threaded on different hardware, so it says nothing about the two figures above.
+    The cheap arms differ far
     less. Errors and bond dimensions are unaffected everywhere, since the computation is
     the same arithmetic either way. So compare naive timings only within one profile, run
     official sweeps on an idle machine, and read cross-profile time ratios as hardware

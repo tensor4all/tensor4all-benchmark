@@ -8,6 +8,11 @@ mkdir -p "$OUT/raw"
 # cargo, uv and the relative report.py path below all resolve against the repo root.
 cd "$ROOT"
 
+# Wall times are only reproducible across runs if the thread count is pinned;
+# the rayon default (all logical cores) varies by machine and load. Export
+# RAYON_NUM_THREADS explicitly to override the single-thread default.
+export RAYON_NUM_THREADS="${RAYON_NUM_THREADS:-1}"
+
 cargo build --release
 
 echo "== running elementwise_fourier (full sweep, this takes a while)"
@@ -52,7 +57,7 @@ chip: $CHIP
 memory_gb: $MEM_GB
 repo_rev: $(git -C "$ROOT" rev-parse HEAD)$DIRTY
 tensor4all_rs_rev: $(grep -m1 -o 'rev = "[a-f0-9]*"' "$ROOT/Cargo.toml" | cut -d'"' -f2)
-threads: ${RAYON_NUM_THREADS:-default}
+threads: $RAYON_NUM_THREADS
 EOF
 
 # REPORT_PYTHON overrides the report runner on machines without uv, for example

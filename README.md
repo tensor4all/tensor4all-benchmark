@@ -256,8 +256,11 @@ since a hostname on a public repository can leak the operator's institution and
 location. It also stamps `repo_rev` with a `-dirty` suffix when the source tree carries
 uncommitted changes, so a sweep can never claim a clean revision it did not come from;
 everything under `result/` is excluded from that check, since the script has just
-rewritten it. On a machine without `uv`, point `REPORT_PYTHON` at any python that has
-matplotlib and numpy.
+rewritten it. The script pins `RAYON_NUM_THREADS=1` by default so wall times do not
+depend on the machine's core count or background load; export `RAYON_NUM_THREADS`
+yourself to run multi-threaded, and the value used is recorded in `run.yaml`. On a
+machine without `uv`, point `REPORT_PYTHON` at any python that has matplotlib and
+numpy.
 
 Smoke run (small, fast, useful for checking the toolchain). Cases 2 and 3 write the same
 `instance-r<R>` file names, so give them different `EXPORT_HDF5` directories when both are

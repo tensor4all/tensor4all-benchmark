@@ -11,12 +11,13 @@
 //!   is `L = s sqrt(N) / 2` and `R` is the smallest bit count whose grid step
 //!   `2L / 2^R` resolves the minor width to a quarter. That family is the point of
 //!   the case: measured at these settings its global rank grows like `N^0.5`, 45
-//!   at `N` = 8, 64 at 64, 88 at 128, 120 at 256, 182 at 512 and 256 at 1024,
-//!   where it is exactly the geometric bound of `R` = 9 (a bound-censored point:
-//!   the resolution rule moves to `R` = 10 at `N` = 2048 and the rank stays 256
-//!   under a bound of 1024). So a global representation keeps paying rank that
-//!   grows with `N` while a patched one is held at the cap by construction, and
-//!   that growth-rate contest is where patching has something to win.
+//!   at `N` = 8, 64 at 64, 88 at 128, 120 at 256, 182 at 512, then decelerating
+//!   toward saturation, 256 at 1024 and 2048 and 289 at 4096, all verified
+//!   converged in the tolerance and in `R` (that 256 equals the `R` = 9 geometric
+//!   bound is a coincidence). So a global representation pays a rank that grows
+//!   through the sweep and levels off at a density-set plateau, while a patched
+//!   one is held at the cap by construction; the contest is that plateau and the
+//!   growth toward it against the patch bookkeeping.
 //!
 //!   The isotropic control of the same family is one knob away,
 //!   `BENCH_ANISO_RHO_MAX=1`, which draws circular spikes of one common shape.
@@ -171,8 +172,8 @@ impl Family {
     /// sweep runs in about three minutes, of which the `N` = 512 point is two.
     ///
     /// `N` = 1024 is left out on cost alone, and it is an interesting point: there
-    /// the global rank reaches 256, exactly the geometric bound of `R` = 9, so the
-    /// measured rank is bound-censored at that resolution. It costs 302 s on its own, of
+    /// the global rank reaches 256, the start of the density-set plateau (verified
+    /// converged in tolerance and in `R`). It costs 302 s on its own, of
     /// which 242 s is `add_with_patching`, so it doubles the sweep and stays one
     /// `BENCH_NS` away.
     fn default_ns(self) -> &'static str {

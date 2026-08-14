@@ -230,11 +230,12 @@ The default is `aniso` because the smooth family gives the patching nothing to i
 smooth 2D mixture at constant density is easy everywhere, so subdividing it only pays the
 per-patch overhead, which is what the case-5 verdict on it says. Narrow spikes at a fixed
 spacing-to-width ratio are the opposite: the function is a field of small hard features whose
-global rank keeps climbing with `N` while a patched representation is held at its per-patch
-cap by construction. This is a contest of growth rates rather than a wall: the geometric
-bound `4^(R/2)` of the bit count also grows like `sqrt(N)` here, since the resolution rule
-raises `R` with the box, so the global representation never runs out of room permanently,
-it just keeps paying rank where the patched one pays patch count. Measured single-threaded
+global rank climbs through the sweep while a patched representation is held at its per-patch
+cap by construction. This is a contest of ranks rather than a wall: the geometric bound
+`4^(R/2)` of the bit count grows like `sqrt(N)` as the resolution rule raises `R` with the
+box, and the measured global rank does not even follow that, it decelerates toward a
+density-set plateau. The global representation never runs out of room, it pays a bounded
+but large rank where the patched one pays patch count. Measured single-threaded
 at the pinned revision and `rtol` = 1e-8, the global input rank `chi_in` of the aniso
 family is
 
@@ -244,11 +245,15 @@ family is
 | `chi_in`, aniso | 45 | 53 | 64 | 64 | 89 | 120 | 185 | 256 |
 | `chi_in`, isotropic control | 49 | | | 64 | 94 | 126 | 196 | 256 |
 
-which grows like `N^0.5` over the region where it grows at all, `N` = 64 to 512, and reaches
-256 at `N` = 1024, where 256 is exactly the geometric bound of `R` = 9, so that point is
-bound-censored rather than a converged rank. The censoring lifts with the box: at `N` = 2048
-the resolution rule moves to `R` = 10, whose bound is 1024, and the measured rank is 256
-with headroom to spare. The first row up to
+which grows like `N^0.5` over the middle of the range, `N` = 64 to 512, and then decelerates
+toward saturation: 256 at `N` = 1024 and 2048 and 289 at 4096, each verified converged (the
+TCI reaches the tolerance in 4 to 6 of its 200 allowed iterations, and raising the
+resolution rule from sigma/4 to sigma/16, hence `R` by two bits and the geometric bound to
+4096, leaves the ranks unchanged). That the `N` = 1024 value equals the `R` = 9 bound is a
+coincidence, not censoring. The saturation is what statistical homogeneity predicts: at
+constant density a larger box adds more of the same landscape, so the local structure
+diversity that sets the maximal bond is fixed by the density and the tolerance rather than
+by `N`. The first row up to
 `N` = 512 is the default sweep, the `N` = 1024 column and the second row are separate probe runs
 at the same settings; a rank here moves by a unit or two between two constructions of the same
 instance, since the input TCI is not bit-reproducible (88 against 89 at `N` = 128, 182 against

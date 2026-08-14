@@ -229,11 +229,14 @@ still be read against each other point for point.
 The default is `aniso` because the smooth family gives the patching nothing to isolate. A
 smooth 2D mixture at constant density is easy everywhere, so subdividing it only pays the
 per-patch overhead, which is what the case-5 verdict on it says. Narrow spikes at a fixed
-spacing-to-width ratio are the opposite: the function is a field of small hard features, and
-the global rank climbs until it hits the geometric bound of the bit count, where a global
-representation has run out of room while a patched one is held at its per-patch cap by
-construction. Measured single-threaded at the pinned revision and `rtol` = 1e-8, the global
-input rank `chi_in` of the aniso family is
+spacing-to-width ratio are the opposite: the function is a field of small hard features whose
+global rank keeps climbing with `N` while a patched representation is held at its per-patch
+cap by construction. This is a contest of growth rates rather than a wall: the geometric
+bound `4^(R/2)` of the bit count also grows like `sqrt(N)` here, since the resolution rule
+raises `R` with the box, so the global representation never runs out of room permanently,
+it just keeps paying rank where the patched one pays patch count. Measured single-threaded
+at the pinned revision and `rtol` = 1e-8, the global input rank `chi_in` of the aniso
+family is
 
 | `N` | 8 | 16 | 32 | 64 | 128 | 256 | 512 | 1024 |
 |---|---|---|---|---|---|---|---|---|
@@ -242,7 +245,10 @@ input rank `chi_in` of the aniso family is
 | `chi_in`, isotropic control | 49 | | | 64 | 94 | 126 | 196 | 256 |
 
 which grows like `N^0.5` over the region where it grows at all, `N` = 64 to 512, and reaches
-256 at `N` = 1024, where 256 is exactly the geometric bound of `R` = 9. The first row up to
+256 at `N` = 1024, where 256 is exactly the geometric bound of `R` = 9, so that point is
+bound-censored rather than a converged rank. The censoring lifts with the box: at `N` = 2048
+the resolution rule moves to `R` = 10, whose bound is 1024, and the measured rank is 256
+with headroom to spare. The first row up to
 `N` = 512 is the default sweep, the `N` = 1024 column and the second row are separate probe runs
 at the same settings; a rank here moves by a unit or two between two constructions of the same
 instance, since the input TCI is not bit-reproducible (88 against 89 at `N` = 128, 182 against

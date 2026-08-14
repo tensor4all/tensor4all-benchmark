@@ -17,7 +17,7 @@ Note: this case runs two instance families, recorded per arm as family and tabul
 
 # Family: aniso
 
-N anisotropic narrow spikes: minor width sigma fixed, aspect ratio log-uniform in [1, rho_max] and orientation uniform in [0, pi) drawn per spike, mean spacing held at a fixed number of minor widths so the box grows like sqrt(N) and R resolves sigma to a quarter step. This is the family the case defaults to: a field of small hard features whose global rank climbs like N^0.5 and reaches the geometric bound of R at N = 1024, so a global representation runs out of room while a patched one is held at its per-patch cap by construction. The isotropic control of the same family, rho_max = 1, grows the same way, so the rank comes from the density of narrow features rather than from the anisotropy.
+N anisotropic narrow spikes: minor width sigma fixed, aspect ratio log-uniform in [1, rho_max] and orientation uniform in [0, pi) drawn per spike, mean spacing held at a fixed number of minor widths so the box grows like sqrt(N) and R resolves sigma to a quarter step. This is the family the case defaults to: a field of small hard features whose global rank climbs like N^0.5 while a patched representation is held at its per-patch cap by construction; the geometric bound of the bit count also grows like sqrt(N) as R follows the box, so this is a contest of growth rates rather than a wall. The isotropic control of the same family, rho_max = 1, grows the same way, so the rank comes from the density of narrow features rather than from the anisotropy.
 
 
 ## Instances

@@ -21,8 +21,12 @@ echo "== running elementwise_gauss2d (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d
 echo "== running elementwise_gauss2d_scaling (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d_scaling
-echo "== running elementwise_gauss2d_patched (full sweep, this takes a while)"
+echo "== running elementwise_gauss2d_patched aniso (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d_patched
+# The smooth family is part of the recorded case-5 story (the family where
+# patching costs rather than saves), so the profile carries both.
+echo "== running elementwise_gauss2d_patched smooth (full sweep, this takes a while)"
+BENCH_FAMILY=smooth OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d_patched
 echo "== running mpo_mpo_quantics (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin mpo_mpo_quantics
 

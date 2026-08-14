@@ -6,13 +6,14 @@ license = "MIT"
 publish = false
 
 [dependencies]
-tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-simplett" }
-tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-aci" }
-tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-treetn" }
-tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-itensorlike" }
-tensor4all-quanticstci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-quanticstci" }
-tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-hdf5" }
-tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "1b9a517aeca81b0a28a32da7843197427312844b", package = "tensor4all-core" }
+tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-simplett" }
+tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-aci" }
+tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-treetn" }
+tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-itensorlike" }
+tensor4all-partitionedtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-partitionedtt" }
+tensor4all-quanticstci = { git ="https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-quanticstci" }
+tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-hdf5" }
+tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34", package = "tensor4all-core" }
 num-complex = "0.4"
 rand = "0.9"
 rand_chacha = "0.9"

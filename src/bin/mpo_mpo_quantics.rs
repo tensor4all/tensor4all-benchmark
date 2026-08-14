@@ -49,7 +49,7 @@
 //! only difference between them is the contraction method. That is the same
 //! engine case 1 uses for its elementwise fit.
 //! `tensor4all_simplett::mpo::contract_fit` is deliberately NOT benchmarked: at
-//! the pinned upstream rev (tensor4all-rs 1b9a517) its local update
+//! the pinned upstream rev (tensor4all-rs c9ecb7f) its local update
 //! `update_two_site_core` is still a placeholder that leaves the core
 //! untouched, so that path degenerates to naive plus dead sweeps
 //! (tensor4all-rs#571).
@@ -83,7 +83,9 @@
 use std::path::PathBuf;
 use t4a_bench::gaussian::{to_quantics_mpo, GaussianMixture2D};
 use t4a_bench::harness::time_median;
-use t4a_bench::mpo_contract::{max_rel_error_vs_analytic, mpo_contract, MpoAlgo, FIT_NSWEEPS};
+use t4a_bench::mpo_contract::{
+    max_rel_error_vs_analytic, mpo_contract, mpo_n_params, MpoAlgo, FIT_NSWEEPS,
+};
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
 
 fn env_or<T: std::str::FromStr>(key: &str, default: T) -> T {
@@ -215,6 +217,11 @@ fn main() -> anyhow::Result<()> {
                 input_max_bond_dim: input_chi,
                 output_max_bond_dim: h.rank(),
                 output_bond_dims: h.link_dims(),
+                n_params: Some(mpo_n_params(&h)),
+                n_patches: None,
+                max_patch_bond: None,
+                rtol: None,
+                input_build_secs: None,
             };
             write_record(
                 &out_dir,

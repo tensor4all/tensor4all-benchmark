@@ -21,6 +21,8 @@ echo "== running elementwise_gauss2d (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d
 echo "== running elementwise_gauss2d_scaling (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d_scaling
+echo "== running elementwise_gauss2d_patched (full sweep, this takes a while)"
+OUT_DIR="$OUT/raw" cargo run --release --bin elementwise_gauss2d_patched
 echo "== running mpo_mpo_quantics (full sweep, this takes a while)"
 OUT_DIR="$OUT/raw" cargo run --release --bin mpo_mpo_quantics
 

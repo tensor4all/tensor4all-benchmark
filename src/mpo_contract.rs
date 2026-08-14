@@ -4,7 +4,7 @@
 //! `b`'s first, so with `f(x,y)` and `g(y,z)` as quantics MPOs, `contract(f, g)`
 //! sums over the `y` grid and yields `h(x,z)`.
 
-use tensor4all_core::{DynIndex, IndexLike, SvdTruncationPolicy, TensorDynLen};
+use tensor4all_core::{DynIndex, IdxTensor, IndexLike, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain};
 use tensor4all_simplett::mpo::{
     contract_naive, contract_zipup, tensor4_from_data, ContractionOptions, Tensor4Ops, MPO,
@@ -52,6 +52,19 @@ impl MpoAlgo {
     }
 }
 
+/// Number of stored parameters of an MPO, the sum of its core sizes.
+///
+/// The MPO counterpart of [`crate::elementwise::tt_n_params`], recorded so that
+/// every case reports the size of its output in the same units.
+pub fn mpo_n_params(m: &MPO<f64>) -> usize {
+    (0..m.len())
+        .map(|i| {
+            let core = m.site_tensor(i);
+            core.left_dim() * core.site_dim_1() * core.site_dim_2() * core.right_dim()
+        })
+        .sum()
+}
+
 /// Contract two MPOs over their shared site index with the given algorithm.
 pub fn mpo_contract(
     algo: MpoAlgo,
@@ -62,7 +75,7 @@ pub fn mpo_contract(
 ) -> anyhow::Result<MPO<f64>> {
     let opts = ContractionOptions {
         tolerance: tol,
-        max_bond_dim: max_bond,
+        max_bond_dim: Some(max_bond),
         ..ContractionOptions::default()
     };
     let out = match algo {
@@ -87,7 +100,7 @@ fn contract_zipup_treetn(
     max_bond: usize,
 ) -> anyhow::Result<MPO<f64>> {
     let opts = ContractOptions::zipup()
-        .with_max_rank(max_bond)
+        .with_max_bond_dim(max_bond)
         .with_svd_policy(SvdTruncationPolicy::new(tol));
     contract_via_bridge(a, b, &opts)
 }
@@ -108,7 +121,7 @@ fn contract_fit_treetn(
     max_bond: usize,
 ) -> anyhow::Result<MPO<f64>> {
     let opts = ContractOptions::fit()
-        .with_max_rank(max_bond)
+        .with_max_bond_dim(max_bond)
         .with_svd_policy(SvdTruncationPolicy::new(tol))
         .with_nsweeps(FIT_NSWEEPS);
     contract_via_bridge(a, b, &opts)
@@ -159,7 +172,7 @@ fn contract_via_bridge(
 ///
 /// MPO cores are `Tensor4` with shape `(left, site1, site2, right)` in
 /// column-major order (upstream `mpo/types.rs`), and
-/// `TensorDynLen::from_dense` reads column-major data with the *first* index
+/// `IdxTensor::from_dense` reads column-major data with the *first* index
 /// varying fastest, so the index list is given in that same order. Boundary
 /// links are dimension 1 in every `MPO` (checked by `MPO::new`), so they are
 /// dropped rather than carried as dummy indices: `TensorTrain::new` requires
@@ -196,7 +209,7 @@ fn mpo_to_tensortrain(
         if i + 1 < n {
             indices.push(links[i].clone());
         }
-        tensors.push(TensorDynLen::from_dense(indices, core.to_col_major_vec())?);
+        tensors.push(IdxTensor::from_dense(indices, core.to_col_major_vec())?);
     }
 
     TensorTrain::new(tensors).map_err(|e| anyhow::anyhow!("bridge: TensorTrain::new failed: {e}"))

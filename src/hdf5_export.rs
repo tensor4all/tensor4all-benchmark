@@ -1,11 +1,11 @@
 //! ITensorMPS.jl-compatible HDF5 export for benchmark inputs.
 //!
-//! The bridge is `simplett::TensorTrain` -> `treetn::TreeTN` ->
+//! The bridge is `simplett::SimpleTensorTrain` -> `treetn::TreeTN` ->
 //! `itensorlike::TensorTrain` -> `tensor4all_hdf5::{save_mps, append_mps}`,
 //! which writes the `MPS` v1 schema that ITensorMPS.jl reads.
 
 use tensor4all_core::TensorElement;
-use tensor4all_simplett::{TTScalar, TensorTrain};
+use tensor4all_simplett::{SimpleTensorTrain, TTScalar};
 use tensor4all_treetn::tensor_train_to_treetn;
 
 /// Write `tt` into `path` under group `name` as an ITensorMPS.jl `MPS`.
@@ -19,7 +19,7 @@ use tensor4all_treetn::tensor_train_to_treetn;
 pub fn save_tt_as_mps<T>(
     path: &str,
     name: &str,
-    tt: &TensorTrain<T>,
+    tt: &SimpleTensorTrain<T>,
     append: bool,
 ) -> anyhow::Result<()>
 where
@@ -45,7 +45,7 @@ mod tests {
 
     /// HDF5 `MPS` -> `itensorlike` -> `treetn` -> `simplett`, the inverse of
     /// the export bridge, so the loaded tensors can be evaluated pointwise.
-    fn load_tt<T>(path: &str, name: &str) -> TensorTrain<T>
+    fn load_tt<T>(path: &str, name: &str) -> SimpleTensorTrain<T>
     where
         T: tensor4all_simplett::TTScalar + TensorElement + Clone,
     {
@@ -74,7 +74,7 @@ mod tests {
 
         let loaded = tensor4all_hdf5::load_mps(path_str, "f").unwrap();
         assert_eq!(loaded.len(), r);
-        assert_eq!(loaded.maxbonddim(), tt.rank());
+        assert_eq!(loaded.max_bond_dim(), tt.rank());
 
         let back = load_tt::<f64>(path_str, "f");
         for &(i, j) in &[(0u64, 0u64), (37, 20), (63, 1), (32, 32)] {
@@ -112,8 +112,8 @@ mod tests {
 
         assert_eq!(loaded_f.len(), r);
         assert_eq!(loaded_g.len(), r);
-        assert_eq!(loaded_f.maxbonddim(), a.rank());
-        assert_eq!(loaded_g.maxbonddim(), b.rank());
+        assert_eq!(loaded_f.max_bond_dim(), a.rank());
+        assert_eq!(loaded_g.max_bond_dim(), b.rank());
 
         // Structure is not enough: check the stored amplitudes against the
         // analytic series at sampled grid points.

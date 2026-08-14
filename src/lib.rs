@@ -4,5 +4,6 @@ pub mod gaussian;
 pub mod harness;
 pub mod hdf5_export;
 pub mod mpo_contract;
+pub mod patched;
 pub mod record;
 pub mod scalar;

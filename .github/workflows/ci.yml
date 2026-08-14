@@ -37,6 +37,20 @@ jobs:
           BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
           OUT_DIR=/tmp/smoke
           cargo run --release --bin elementwise_gauss2d_scaling
+      - name: smoke elementwise gauss2d patched
+        # Both instance families, since they share only the harness: the default
+        # aniso one, whose N = 8 point is a fraction of a second, and the smooth
+        # one with R0 lowered so the patched construction stays cheap there, since
+        # at the default R0 one N already builds hundreds of patches. No
+        # EXPORT_HDF5, as for case 4.
+        run: >
+          BENCH_NS=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
+          OUT_DIR=/tmp/smoke
+          cargo run --release --bin elementwise_gauss2d_patched
+          &&
+          BENCH_FAMILY=smooth BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0
+          BENCH_SANITY=1e-1 OUT_DIR=/tmp/smoke
+          cargo run --release --bin elementwise_gauss2d_patched
       - uses: julia-actions/setup-julia@v2
         with:
           version: "1"

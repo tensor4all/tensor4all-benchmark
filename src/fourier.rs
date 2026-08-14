@@ -13,7 +13,7 @@ use num_complex::Complex64;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
-use tensor4all_simplett::{tensor3_from_data, TensorTrain};
+use tensor4all_simplett::{tensor3_from_data, SimpleTensorTrain};
 
 use crate::scalar::BenchScalar;
 
@@ -59,7 +59,7 @@ impl FourierSeries {
     }
 
     /// Exact QTT with bond dimension K+1, R sites of dim 2, MSB first.
-    pub fn to_qtt(&self, r: usize) -> anyhow::Result<TensorTrain<Complex64>> {
+    pub fn to_qtt(&self, r: usize) -> anyhow::Result<SimpleTensorTrain<Complex64>> {
         anyhow::ensure!(r >= 2, "need r >= 2");
         let m = self.coeffs.len(); // K+1
         let phase = |k: usize, s: usize, n: usize| -> Complex64 {
@@ -93,17 +93,17 @@ impl FourierSeries {
             }
         }
         cores.push(tensor3_from_data(dl, m, 2, 1)?);
-        Ok(TensorTrain::new(cores)?)
+        Ok(SimpleTensorTrain::new(cores)?)
     }
 }
 
 /// SVD-compress `tt` in place, for any scalar the benchmark runs on.
 ///
 /// The body lives in [`crate::scalar::BenchScalar`] because the upstream bound
-/// on `TensorTrain::compress` names a trait this crate cannot reach; see that
+/// on `SimpleTensorTrain::compress` names a trait this crate cannot reach; see that
 /// module for why.
 pub fn compress_svd<T: BenchScalar>(
-    tt: &mut TensorTrain<T>,
+    tt: &mut SimpleTensorTrain<T>,
     tol: f64,
     max_bond: usize,
 ) -> anyhow::Result<()> {

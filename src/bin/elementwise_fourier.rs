@@ -3,7 +3,8 @@
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
-    elementwise_product, max_error_vs_series, AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
+    elementwise_product, max_error_vs_series, tt_n_params, AciTolerance, ElementwiseAlgo,
+    FIT_NFULLSWEEPS,
 };
 use t4a_bench::fourier::{compress_svd, FourierSeries};
 use t4a_bench::harness::time_median;
@@ -126,6 +127,11 @@ fn main() -> anyhow::Result<()> {
                 input_max_bond_dim: input_chi,
                 output_max_bond_dim: out.rank(),
                 output_bond_dims: out.link_dims(),
+                n_params: Some(tt_n_params(&out)),
+                n_patches: None,
+                max_patch_bond: None,
+                rtol: None,
+                input_build_secs: None,
             };
             write_record(
                 &out_dir,

@@ -1115,8 +1115,8 @@ dependencies = [
 
 [[package]]
 name = "quanticsgrids"
-version = "0.1.0"
-source = "git+https://github.com/tensor4all/quanticsgrids-rs?rev=a76b8fb#a76b8fb71f9492c2a636bd3b1de4b5ff03a6d28a"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/quanticsgrids-rs?rev=8214b72#8214b72aef2cc42167226c0b8e43ef14eba44a6f"
 dependencies = [
  "thiserror 2.0.20",
 ]
@@ -1480,6 +1480,7 @@ dependencies = [
  "tensor4all-core",
  "tensor4all-hdf5",
  "tensor4all-itensorlike",
+ "tensor4all-partitionedtt",
  "tensor4all-quanticstci",
  "tensor4all-simplett",
  "tensor4all-treetn",
@@ -1623,7 +1624,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-aci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "num-complex",
  "rand 0.9.5",
@@ -1638,7 +1639,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-core"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "dyn-clone",
@@ -1662,7 +1663,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-hdf5"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "hdf5-metno",
@@ -1671,12 +1672,14 @@ dependencies = [
  "num-complex",
  "tensor4all-core",
  "tensor4all-itensorlike",
+ "tensor4all-treetn",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "tensor4all-itensorlike"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1688,9 +1691,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "tensor4all-partitionedtt"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
+dependencies = [
+ "anyhow",
+ "num-complex",
+ "num-traits",
+ "rand 0.9.5",
+ "tensor4all-core",
+ "tensor4all-itensorlike",
+ "tensor4all-simplett",
+ "tensor4all-tcicore",
+ "tensor4all-tensorbackend",
+ "tensor4all-tensorci",
+ "tensor4all-treetn",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "tensor4all-quanticstci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1700,14 +1722,16 @@ dependencies = [
  "tensor4all-core",
  "tensor4all-simplett",
  "tensor4all-tcicore",
+ "tensor4all-tensorbackend",
  "tensor4all-treetci",
  "tensor4all-treetn",
+ "thiserror 2.0.20",
 ]
 
 [[package]]
 name = "tensor4all-simplett"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1725,7 +1749,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-tcicore"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1741,7 +1765,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorbackend"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1759,9 +1783,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tensor4all-tensorci"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
+dependencies = [
+ "anyhow",
+ "num-complex",
+ "num-traits",
+ "rand 0.9.5",
+ "tensor4all-simplett",
+ "tensor4all-tcicore",
+ "tensor4all-tensorbackend",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "tensor4all-treetci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1779,7 +1818,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-treetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=1b9a517aeca81b0a28a32da7843197427312844b#1b9a517aeca81b0a28a32da7843197427312844b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34#c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34"
 dependencies = [
  "anyhow",
  "dyn-clone",

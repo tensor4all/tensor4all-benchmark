@@ -73,7 +73,7 @@
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
     check_mixture_product_not_degenerate, elementwise_product, max_rel_error_vs_mixture_product,
-    AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
+    tt_n_params, AciTolerance, ElementwiseAlgo, FIT_NFULLSWEEPS,
 };
 use t4a_bench::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
 use t4a_bench::harness::time_median;
@@ -246,6 +246,11 @@ fn main() -> anyhow::Result<()> {
                 input_max_bond_dim: input_chi,
                 output_max_bond_dim: h.rank(),
                 output_bond_dims: h.link_dims(),
+                n_params: Some(tt_n_params(&h)),
+                n_patches: None,
+                max_patch_bond: None,
+                rtol: None,
+                input_build_secs: None,
             };
             write_record(&out_dir, &format!("{CASE}-{algo_name}-r{r}"), &rec)?;
             eprintln!(

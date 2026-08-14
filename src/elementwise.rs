@@ -9,10 +9,10 @@
 //! (`Complex64` for case 1, `f64` for case 3).
 
 use num_complex::Complex64;
-use tensor4all_simplett::{tensor3_from_data, AbstractTensorTrain, Tensor3Ops, TensorTrain};
+use tensor4all_simplett::{tensor3_from_data, AbstractTensorTrain, SimpleTensorTrain, Tensor3Ops};
 
 use crate::fourier::{compress_svd, FourierSeries};
-use crate::gaussian::{grid_coord, GaussianMixture2D};
+use crate::gaussian::{grid_coord, Field2D, GaussianMixture2D};
 use crate::harness::{index_to_bits, sample_grid_indices};
 use crate::scalar::BenchScalar;
 
@@ -35,16 +35,24 @@ pub enum ElementwiseAlgo {
 /// to the largest singular value, so an inert tolerance such as `1e-15` simply
 /// never fires and the rank cap alone decides where to truncate. ACI instead
 /// compares a pivot error against the tolerance, and whether that comparison is
-/// absolute or scaled by the sampled output magnitude is a separate upstream
-/// switch. The fixed-budget cases (2, 3 and 4) want the same "tolerance is
-/// unreachable, the cap decides" regime for ACI as for the SVD arms, so they ask
-/// for [`AciTolerance::ScaleRelative`]; case 1, which is tolerance-driven by
-/// design, keeps the upstream default.
+/// absolute or scaled by the sampled output magnitude of the bond is a separate
+/// upstream switch, `AciOptions::scale_tolerance`, whose upstream default is
+/// scale-relative since tensor4all-rs#619. This enum makes the choice explicit
+/// at every call site rather than inheriting that default, because the two
+/// families of cases want opposite things. The fixed-budget cases (2, 3 and 4)
+/// want the same "tolerance is unreachable, the cap decides" regime for ACI as
+/// for the SVD arms, so they ask for [`AciTolerance::ScaleRelative`]. Cases 1
+/// and 5 are tolerance-driven and judged by one error that is normalized
+/// globally, so they ask for [`AciTolerance::Absolute`]: a per-bond
+/// normalization would hold each region to its own scale, which is not the
+/// quantity either case reports (see the case-5 tolerance discussion in the
+/// README).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AciTolerance {
-    /// Absolute pivot error threshold, the upstream default.
+    /// Absolute pivot error threshold.
     Absolute,
-    /// Pivot error divided by the largest sampled output magnitude.
+    /// Pivot error divided by the largest sampled output magnitude of the bond,
+    /// which is the upstream default.
     ScaleRelative,
 }
 
@@ -65,12 +73,12 @@ impl ElementwiseAlgo {
 
 pub fn elementwise_product<T: BenchScalar>(
     algo: ElementwiseAlgo,
-    a: &TensorTrain<T>,
-    b: &TensorTrain<T>,
+    a: &SimpleTensorTrain<T>,
+    b: &SimpleTensorTrain<T>,
     tol: f64,
     max_bond: usize,
     aci_tol: AciTolerance,
-) -> anyhow::Result<TensorTrain<T>> {
+) -> anyhow::Result<SimpleTensorTrain<T>> {
     match algo {
         ElementwiseAlgo::Naive => hadamard_naive(a, b, tol, max_bond),
         ElementwiseAlgo::Zipup => hadamard_treetn(a, b, tol, max_bond, false),
@@ -82,11 +90,11 @@ pub fn elementwise_product<T: BenchScalar>(
 /// Core-wise Hadamard (bond Kronecker product) followed by SVD compression.
 /// This is the O(chi^4) baseline.
 fn hadamard_naive<T: BenchScalar>(
-    a: &TensorTrain<T>,
-    b: &TensorTrain<T>,
+    a: &SimpleTensorTrain<T>,
+    b: &SimpleTensorTrain<T>,
     tol: f64,
     max_bond: usize,
-) -> anyhow::Result<TensorTrain<T>> {
+) -> anyhow::Result<SimpleTensorTrain<T>> {
     anyhow::ensure!(a.len() == b.len(), "site count mismatch");
     let mut cores = Vec::with_capacity(a.len());
     for (ca, cb) in a.site_tensors().iter().zip(b.site_tensors()) {
@@ -108,7 +116,7 @@ fn hadamard_naive<T: BenchScalar>(
         }
         cores.push(tensor3_from_data(data, la * lb, s, ra * rb)?);
     }
-    let mut tt = TensorTrain::new(cores)?;
+    let mut tt = SimpleTensorTrain::new(cores)?;
     compress_svd(&mut tt, tol, max_bond)?;
     Ok(tt)
 }
@@ -116,12 +124,12 @@ fn hadamard_naive<T: BenchScalar>(
 /// `tensor4all_treetn::hadamard` on the bridged TreeTNs, with either the
 /// one-pass zipup or the variational fit contraction.
 fn hadamard_treetn<T: BenchScalar>(
-    a: &TensorTrain<T>,
-    b: &TensorTrain<T>,
+    a: &SimpleTensorTrain<T>,
+    b: &SimpleTensorTrain<T>,
     tol: f64,
     max_bond: usize,
     fit: bool,
-) -> anyhow::Result<TensorTrain<T>> {
+) -> anyhow::Result<SimpleTensorTrain<T>> {
     use tensor4all_core::SvdTruncationPolicy;
     use tensor4all_treetn::contraction::{ContractionMethod, ContractionOptions};
     use tensor4all_treetn::{hadamard, tensor_train_to_treetn, treetn_to_tensor_train};
@@ -135,28 +143,28 @@ fn hadamard_treetn<T: BenchScalar>(
         ContractionMethod::Zipup
     };
     let mut opts = ContractionOptions::new(method)
-        .with_max_rank(max_bond)
+        .with_max_bond_dim(max_bond)
         .with_svd_policy(SvdTruncationPolicy::new(tol));
     if fit {
         opts = opts.with_nfullsweeps(FIT_NFULLSWEEPS);
     }
     let out = hadamard(&ta, &tb, &pairs, &0, opts)
         .map_err(|e| anyhow::anyhow!("hadamard failed: {e:?}"))?;
-    treetn_to_tensor_train::<T>(out)
+    Ok(treetn_to_tensor_train::<T>(out)?)
 }
 
 /// Adaptive cross interpolation of the pointwise product function.
 fn hadamard_aci<T: BenchScalar>(
-    a: &TensorTrain<T>,
-    b: &TensorTrain<T>,
+    a: &SimpleTensorTrain<T>,
+    b: &SimpleTensorTrain<T>,
     tol: f64,
     max_bond: usize,
     aci_tol: AciTolerance,
-) -> anyhow::Result<TensorTrain<T>> {
+) -> anyhow::Result<SimpleTensorTrain<T>> {
     use tensor4all_aci::{elementwise, AciOptions};
     let opts = AciOptions::<T> {
         tolerance: tol,
-        max_bond_dim: max_bond,
+        max_bond_dim: Some(max_bond),
         scale_tolerance: aci_tol == AciTolerance::ScaleRelative,
         ..AciOptions::default()
     };
@@ -164,9 +172,22 @@ fn hadamard_aci<T: BenchScalar>(
     Ok(res.tensor_train)
 }
 
+/// Number of stored parameters of a tensor train, the sum of its core sizes.
+///
+/// This is the honest size metric when two representations of the same function
+/// are not both single trains: a rank is only comparable between trains of the
+/// same length, while a parameter count is comparable between a global train and
+/// a set of patch trains (see [`crate::patched::total_params`]).
+pub fn tt_n_params<T: BenchScalar>(tt: &SimpleTensorTrain<T>) -> usize {
+    tt.site_tensors()
+        .iter()
+        .map(|core| core.left_dim() * core.site_dim() * core.right_dim())
+        .sum()
+}
+
 /// Max abs error against the exact product series at sampled grid points.
 pub fn max_error_vs_series(
-    tt: &TensorTrain<Complex64>,
+    tt: &SimpleTensorTrain<Complex64>,
     exact: &FourierSeries,
     r: usize,
     n_samples: usize,
@@ -191,9 +212,24 @@ pub fn max_error_vs_series(
 /// matches case 2: the largest sampled `|reference|`, so the two cases report
 /// the same kind of number under `error_metric = "max_rel_vs_analytic"`.
 pub fn max_rel_error_vs_mixture_product(
-    h: &TensorTrain<f64>,
+    h: &SimpleTensorTrain<f64>,
     f: &GaussianMixture2D,
     g: &GaussianMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    max_rel_error_vs_product(h, f, g, r, box_l, n_samples, seed)
+}
+
+/// [`max_rel_error_vs_mixture_product`] for any pair of [`Field2D`] instances, so
+/// that the two case-5 families share one error metric. Same sampling, same
+/// normalization, same reported `error_metric`.
+pub fn max_rel_error_vs_product<A: Field2D, B: Field2D>(
+    h: &SimpleTensorTrain<f64>,
+    f: &A,
+    g: &B,
     r: usize,
     box_l: f64,
     n_samples: usize,
@@ -261,6 +297,18 @@ pub fn mixture_product_scales(
     n_samples: usize,
     seed: u64,
 ) -> MixtureProductScales {
+    product_scales(f, g, r, box_l, n_samples, seed)
+}
+
+/// [`mixture_product_scales`] for any pair of [`Field2D`] instances.
+pub fn product_scales<A: Field2D, B: Field2D>(
+    f: &A,
+    g: &B,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> MixtureProductScales {
     let xs = sample_grid_indices(r, n_samples, seed);
     let ys = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
     let mut s = MixtureProductScales {
@@ -291,7 +339,23 @@ pub fn check_mixture_product_not_degenerate(
     n_samples: usize,
     seed: u64,
 ) -> anyhow::Result<MixtureProductScales> {
-    let s = mixture_product_scales(f, g, r, box_l, n_samples, seed);
+    check_product_not_degenerate(f, g, r, box_l, n_samples, seed)
+}
+
+/// [`check_mixture_product_not_degenerate`] for any pair of [`Field2D`]
+/// instances, at the same threshold. The anisotropic spike family of case 5 holds
+/// its spacing-to-width ratio fixed as `N` grows, which is exactly what keeps this
+/// guard passing there: the sampled product stays at about half of
+/// `max|f| max|g|` at every `N`.
+pub fn check_product_not_degenerate<A: Field2D, B: Field2D>(
+    f: &A,
+    g: &B,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> anyhow::Result<MixtureProductScales> {
+    let s = product_scales(f, g, r, box_l, n_samples, seed);
     anyhow::ensure!(
         !s.is_degenerate(),
         "degenerate instance at r={r}, box_l={box_l}: the two mixtures barely overlap, so the \
@@ -318,8 +382,8 @@ mod tests {
         r: usize,
         k: usize,
     ) -> (
-        TensorTrain<Complex64>,
-        TensorTrain<Complex64>,
+        SimpleTensorTrain<Complex64>,
+        SimpleTensorTrain<Complex64>,
         FourierSeries,
     ) {
         let f = FourierSeries::random(k, 10);
@@ -470,7 +534,7 @@ mod tests {
         let (a, b, _exact) = setup(r, 6);
         let idx = sample_grid_indices(r, 20, 7);
 
-        let eval = |tt: &TensorTrain<Complex64>| -> Vec<Complex64> {
+        let eval = |tt: &SimpleTensorTrain<Complex64>| -> Vec<Complex64> {
             idx.iter()
                 .map(|&i| tt.evaluate(&index_to_bits(i, r)).unwrap())
                 .collect()

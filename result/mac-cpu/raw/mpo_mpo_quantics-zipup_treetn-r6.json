@@ -23,13 +23,13 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.013178583,
+  "wall_time_median_secs": 0.019677833,
   "wall_times_secs": [
-    0.013479708,
-    0.012863583,
-    0.013178583
+    0.020472916,
+    0.019677833,
+    0.0193685
   ],
-  "max_error": 0.00010539578698913416,
+  "max_error": 0.00010539578698969932,
   "input_max_bond_dim": 53,
   "output_max_bond_dim": 53,
   "output_bond_dims": [
@@ -38,5 +38,6 @@
     53,
     53,
     16
-  ]
+  ],
+  "n_params": 18356
 }

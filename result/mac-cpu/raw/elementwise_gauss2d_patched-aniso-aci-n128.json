@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "case": "elementwise_gauss2d_patched",
+  "algorithm": "aci",
+  "params": {
+    "aci_scale_tolerance": false,
+    "aci_tolerance": "absolute",
+    "aniso_rho_max": 8.0,
+    "aniso_sigma_minor": 0.05,
+    "aniso_spacing_widths": 3.0,
+    "arm_kind": "global",
+    "box_l": 0.8485281374238572,
+    "contract_max_bond": 512,
+    "contract_tol": 1e-8,
+    "engine": "aci",
+    "error_metric": "max_rel_vs_analytic",
+    "error_seed": 99,
+    "family": "aniso",
+    "fit_nsweeps": 2,
+    "input_n_params": 92552,
+    "input_path": "norm",
+    "input_scale_f": 5.532482279799953,
+    "input_scale_g": 6.147544980719687,
+    "max_bond": 512,
+    "n_error_samples": 128,
+    "n_gauss": 128,
+    "r": 8,
+    "ref_scale": 19.657334849705343,
+    "runs": 1,
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 0.076999875,
+  "wall_times_secs": [
+    0.076999875
+  ],
+  "max_error": 5.78027802345711e-9,
+  "input_max_bond_dim": 88,
+  "output_max_bond_dim": 182,
+  "output_bond_dims": [
+    4,
+    16,
+    64,
+    182,
+    58,
+    16,
+    4
+  ],
+  "n_params": 97168,
+  "rtol": 1e-8,
+  "input_build_secs": 0.455598208
+}

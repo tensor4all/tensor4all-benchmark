@@ -9,7 +9,7 @@
       8.0
     ],
     "box_l": 6.0,
-    "contract_max_bond": 78,
+    "contract_max_bond": 79,
     "contract_tol": 1e-15,
     "engine": "local",
     "error_metric": "max_rel_vs_analytic",
@@ -27,26 +27,27 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 7.284000541,
+  "wall_time_median_secs": 12.477829375,
   "wall_times_secs": [
-    7.580722791,
-    7.284000541,
-    7.279637292
+    12.313886459,
+    12.477829375,
+    14.079890166
   ],
-  "max_error": 1.0520740597935392e-8,
-  "input_max_bond_dim": 78,
-  "output_max_bond_dim": 78,
+  "max_error": 2.4767421507421206e-8,
+  "input_max_bond_dim": 79,
+  "output_max_bond_dim": 79,
   "output_bond_dims": [
     4,
     15,
     57,
-    78,
-    78,
-    78,
-    78,
-    78,
+    79,
+    79,
+    79,
+    79,
+    79,
     64,
     16,
     4
-  ]
+  ],
+  "n_params": 146136
 }

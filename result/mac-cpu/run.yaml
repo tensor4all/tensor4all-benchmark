@@ -1,9 +1,9 @@
 profile: mac-cpu
-date: 2026-08-11T07:36:54Z
+date: 2026-08-14T09:05:48Z
 machine: mac-cpu
 os: Darwin arm64
 chip: Apple M5 Max
 memory_gb: 128
-repo_rev: 42955c44d859bbd9e464f95ef971a7dc25435d0f
-tensor4all_rs_rev: 1b9a517aeca81b0a28a32da7843197427312844b
+repo_rev: 92102f8b504e03f943f7d1799509c9674c7a1ade
+tensor4all_rs_rev: c9ecb7f0d4eec4bbf6db51dc7648a4b2d84b4f34
 threads: 1

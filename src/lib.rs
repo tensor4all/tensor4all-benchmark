@@ -5,5 +5,6 @@ pub mod harness;
 pub mod hdf5_export;
 pub mod mpo_contract;
 pub mod patched;
+pub mod patched_mpo;
 pub mod record;
 pub mod scalar;

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "case": "mpo_mpo_aniso_patched",
+  "algorithm": "patched_fit_treetn",
+  "params": {
+    "box_l": 3.394112549695429,
+    "box_padding": 1.0,
+    "contraction_svd_policy": "relative_squared_discarded_tail_sum",
+    "error_metric": "max_rel_vs_quantics_grid_reference",
+    "error_seed": 99,
+    "fit_nfullsweeps": 1,
+    "global_contract_max_bond": 128,
+    "inner_l": 3.394112549695429,
+    "input_cache_hit": true,
+    "input_cache_key": "aniso-mpo-v1-n2048-r10-extra0-spacing4008000000000000-padding3ff0000000000000-inner400b27247aff1491-box400b27247aff1491-sigma3fa999999999999a-rho4020000000000000-rtol3e45798ee2308c3a-cap128-seed0",
+    "input_cache_load_secs": 0.028256491,
+    "input_patch_cap": 128,
+    "input_patch_counts": [
+      1,
+      1
+    ],
+    "input_patch_max_bonds": [
+      128,
+      128
+    ],
+    "input_tci_cap": 128,
+    "n_error_samples": 128,
+    "n_gauss": 2048,
+    "patched_contract_max_bond": 128,
+    "r": 10,
+    "r_extra": 0,
+    "rho_max": 8.0,
+    "runs": 2,
+    "sigma": 0.05,
+    "spacing": 3.0,
+    "split_strategy": "sequential_y_first",
+    "warmups": 0
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 3.321234724,
+  "wall_times_secs": [
+    3.321234724,
+    3.292352661
+  ],
+  "max_error": 0.0003454900427644558,
+  "input_max_bond_dim": 128,
+  "output_max_bond_dim": 78,
+  "output_bond_dims": [
+    4,
+    16,
+    64,
+    78,
+    30,
+    15,
+    9,
+    6,
+    3
+  ],
+  "n_patches": 1,
+  "max_patch_bond": 78,
+  "rtol": 1e-8,
+  "input_build_secs": 1.185248102
+}

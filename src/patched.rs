@@ -511,7 +511,7 @@ pub fn patched_elementwise_with_stats(
                     pair_t0.elapsed().as_secs_f64()
                 );
             }
-            patches.push(SubDomainTT::new(tt, merged));
+            patches.push(SubDomainTT::new(tt, merged)?);
         }
     }
     stats.n_pairs = patches.len();
@@ -827,7 +827,7 @@ pub fn eval_patched(
             .cloned()
             .zip(fused.iter().copied())
             .collect::<Vec<_>>(),
-    );
+    )?;
     match restrict_to_free(subdomain.data(), sites, &full, &[])? {
         Restricted::Scalar(value) => Ok(value),
         Restricted::Train(_) => anyhow::bail!("a fully fixed restriction kept free sites"),
@@ -1205,7 +1205,7 @@ mod tests {
 
         // One subdomain over the whole domain, so a full projector turns the
         // restriction into an evaluation of the bridged train itself.
-        let whole = PartitionedTT::from_subdomain(SubDomainTT::from_tt(bridged));
+        let whole = PartitionedTT::from_subdomain(SubDomainTT::from_tt(bridged)).unwrap();
         for &(ix, iy) in &[(0u64, 0u64), (5, 27), (31, 1), (16, 16)] {
             let xb = index_to_bits(ix, r);
             let yb = index_to_bits(iy, r);

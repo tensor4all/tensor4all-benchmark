@@ -160,6 +160,20 @@ impl AnisoMixture2D {
             })
             .sum()
     }
+
+    /// First derivatives with respect to the first and second coordinates.
+    pub fn gradient(&self, x: f64, y: f64) -> (f64, f64) {
+        (0..self.weights.len()).fold((0.0, 0.0), |(gx, gy), i| {
+            let (cx, cy) = self.centers[i];
+            let (a, b, c) = self.quad[i];
+            let (dx, dy) = (x - cx, y - cy);
+            let value = self.weights[i] * (-(a * dx * dx + 2.0 * b * dx * dy + c * dy * dy)).exp();
+            (
+                gx - 2.0 * (a * dx + b * dy) * value,
+                gy - 2.0 * (b * dx + c * dy) * value,
+            )
+        })
+    }
 }
 
 impl Field2D for AnisoMixture2D {
@@ -186,6 +200,83 @@ pub fn analytic_contraction(f: &GaussianMixture2D, g: &GaussianMixture2D, x: f64
         }
     }
     s
+}
+
+/// Closed form of `int f(x,y) g(y,z) dy` for anisotropic mixtures.
+pub fn analytic_contraction_aniso(f: &AnisoMixture2D, g: &AnisoMixture2D, x: f64, z: f64) -> f64 {
+    analytic_contraction_aniso_with(f, g, x, z, |quadratic, linear, constant| {
+        (std::f64::consts::PI / quadratic).sqrt()
+            * (-(constant - linear * linear / quadratic)).exp()
+    })
+}
+
+/// Closed form of `int f(x,y) g(y,z) dy` over `[-box_l, box_l]`.
+pub fn analytic_contraction_aniso_box(
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    x: f64,
+    z: f64,
+    box_l: f64,
+) -> f64 {
+    analytic_contraction_aniso_with(f, g, x, z, |quadratic, linear, constant| {
+        let root = quadratic.sqrt();
+        let center = -linear / quadratic;
+        let bounded = libm::erf(root * (box_l - center)) - libm::erf(root * (-box_l - center));
+        0.5 * (std::f64::consts::PI / quadratic).sqrt()
+            * (-(constant - linear * linear / quadratic)).exp()
+            * bounded
+    })
+}
+
+/// Euler-Maclaurin reference for the left-endpoint quantics grid sum times its step.
+pub fn discrete_contraction_aniso_reference(
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    x: f64,
+    z: f64,
+    r: usize,
+    box_l: f64,
+) -> f64 {
+    let step = 2.0 * box_l / (1u64 << r) as f64;
+    let boundary = |y: f64| {
+        let fv = f.eval(x, y);
+        let gv = g.eval(y, z);
+        let fy = f.gradient(x, y).1;
+        let gy = g.gradient(y, z).0;
+        (fv * gv, fy * gv + fv * gy)
+    };
+    let (left, left_derivative) = boundary(-box_l);
+    let (right, right_derivative) = boundary(box_l);
+    analytic_contraction_aniso_box(f, g, x, z, box_l)
+        + 0.5 * step * (left - right)
+        + step * step * (right_derivative - left_derivative) / 12.0
+}
+
+fn analytic_contraction_aniso_with(
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    x: f64,
+    z: f64,
+    integral: impl Fn(f64, f64, f64) -> f64,
+) -> f64 {
+    let mut sum = 0.0;
+    for i in 0..f.weights.len() {
+        let (fcx, fcy) = f.centers[i];
+        let (fa, fb, fc) = f.quad[i];
+        let dx = x - fcx;
+        for j in 0..g.weights.len() {
+            let (gcy, gcz) = g.centers[j];
+            let (ga, gb, gc) = g.quad[j];
+            let dz = z - gcz;
+            let quadratic = fc + ga;
+            let linear = fb * dx - fc * fcy + gb * dz - ga * gcy;
+            let constant = fa * dx * dx - 2.0 * fb * dx * fcy + fc * fcy * fcy + ga * gcy * gcy
+                - 2.0 * gb * gcy * dz
+                + gc * dz * dz;
+            sum += f.weights[i] * g.weights[j] * integral(quadratic, linear, constant);
+        }
+    }
+    sum
 }
 
 /// Coordinate of grid index `i`: `-L + i * 2L/2^R` (the grid is `[-L, L)`).
@@ -242,7 +333,18 @@ pub fn to_quantics_mpo(
     tol: f64,
     max_bond: usize,
 ) -> anyhow::Result<(MPO<f64>, f64)> {
-    let (tt, step) = to_quantics_fused_tt(mix, r, box_l, tol, max_bond)?;
+    to_quantics_mpo_field(mix, r, box_l, tol, max_bond)
+}
+
+/// [`to_quantics_mpo`] for any [`Field2D`].
+pub fn to_quantics_mpo_field<M: Field2D>(
+    mix: &M,
+    r: usize,
+    box_l: f64,
+    tol: f64,
+    max_bond: usize,
+) -> anyhow::Result<(MPO<f64>, f64)> {
+    let (tt, step) = to_quantics_fused_tt_field(mix, r, box_l, tol, max_bond)?;
     let mut cores4 = Vec::with_capacity(tt.len());
     for c in tt.site_tensors() {
         let (l, s, rd) = (c.left_dim(), c.site_dim(), c.right_dim());
@@ -273,26 +375,60 @@ pub fn to_quantics_mpo(
 mod tests {
     use super::*;
 
+    fn quadrature(f: impl Fn(f64) -> f64, lo: f64, hi: f64, intervals: usize) -> f64 {
+        let step = (hi - lo) / intervals as f64;
+        (0..=intervals)
+            .map(|i| {
+                let weight = if i == 0 || i == intervals { 0.5 } else { 1.0 };
+                weight * f(lo + i as f64 * step) * step
+            })
+            .sum()
+    }
+
     #[test]
     fn analytic_contraction_matches_quadrature() {
         let f = GaussianMixture2D::random(3, 4.0, (0.5, 2.0), 1);
         let g = GaussianMixture2D::random(2, 4.0, (0.5, 2.0), 2);
         let (x, z) = (0.3, -0.7);
-        // trapezoid quadrature over y in [-8, 8]
-        let n = 20_000;
-        let (lo, hi) = (-8.0, 8.0);
-        let h = (hi - lo) / n as f64;
-        let mut s = 0.0;
-        for i in 0..=n {
-            let y = lo + i as f64 * h;
-            let w = if i == 0 || i == n { 0.5 } else { 1.0 };
-            s += w * f.eval(x, y) * g.eval(y, z) * h;
-        }
-        let a = analytic_contraction(&f, &g, x, z);
-        assert!(
-            (s - a).abs() < 1e-8 * a.abs().max(1.0),
-            "quad {s} vs analytic {a}"
-        );
+        let numeric = quadrature(|y| f.eval(x, y) * g.eval(y, z), -8.0, 8.0, 20_000);
+        let analytic = analytic_contraction(&f, &g, x, z);
+        assert!((numeric - analytic).abs() < 1e-8 * analytic.abs().max(1.0));
+    }
+
+    #[test]
+    fn anisotropic_analytic_contraction_matches_quadrature() {
+        let f = AnisoMixture2D::random(3, 4.0, 0.3, 4.0, 1);
+        let g = AnisoMixture2D::random(2, 4.0, 0.3, 4.0, 2);
+        let (x, z) = (0.3, -0.7);
+        let numeric = quadrature(|y| f.eval(x, y) * g.eval(y, z), -12.0, 12.0, 40_000);
+        let analytic = analytic_contraction_aniso(&f, &g, x, z);
+        assert!((numeric - analytic).abs() < 1e-8 * analytic.abs().max(1.0));
+    }
+
+    #[test]
+    fn bounded_anisotropic_contraction_matches_quadrature() {
+        let f = AnisoMixture2D::random(3, 1.0, 0.3, 4.0, 1);
+        let g = AnisoMixture2D::random(2, 1.0, 0.3, 4.0, 2);
+        let (x, z, box_l) = (0.3, -0.7, 1.0);
+        let numeric = quadrature(|y| f.eval(x, y) * g.eval(y, z), -box_l, box_l, 40_000);
+        let analytic = analytic_contraction_aniso_box(&f, &g, x, z, box_l);
+        assert!((numeric - analytic).abs() < 1e-8 * analytic.abs().max(1.0));
+    }
+
+    #[test]
+    fn anisotropic_grid_reference_matches_the_explicit_sum() {
+        let f = AnisoMixture2D::random(3, 1.0, 0.3, 4.0, 1);
+        let g = AnisoMixture2D::random(2, 1.0, 0.3, 4.0, 2);
+        let (x, z, r, box_l) = (0.3, -0.7, 10, 1.0);
+        let step = 2.0 * box_l / (1u64 << r) as f64;
+        let direct = (0..1u64 << r)
+            .map(|i| {
+                let y = -box_l + i as f64 * step;
+                f.eval(x, y) * g.eval(y, z) * step
+            })
+            .sum::<f64>();
+        let reference = discrete_contraction_aniso_reference(&f, &g, x, z, r, box_l);
+        assert!((direct - reference).abs() < 1e-10 * direct.abs().max(1.0));
     }
 
     /// The rotated quadratic form, against a value computed by hand.

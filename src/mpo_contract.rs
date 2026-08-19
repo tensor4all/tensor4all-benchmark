@@ -10,7 +10,10 @@ use tensor4all_simplett::mpo::{
     contract_naive, contract_zipup, tensor4_from_data, ContractionOptions, Tensor4Ops, MPO,
 };
 
-use crate::gaussian::{analytic_contraction, grid_coord, GaussianMixture2D};
+use crate::gaussian::{
+    analytic_contraction, analytic_contraction_aniso, analytic_contraction_aniso_box,
+    discrete_contraction_aniso_reference, grid_coord, AnisoMixture2D, GaussianMixture2D,
+};
 use crate::harness::{index_to_bits, sample_grid_indices};
 
 /// Number of full variational sweeps used by the `fit_treetn` arm.
@@ -179,7 +182,7 @@ fn contract_via_bridge(
 /// adjacent sites to share exactly one index and identifies links purely by
 /// shared index id, and a leading or trailing extent-1 axis does not change
 /// the column-major layout.
-fn mpo_to_tensortrain(
+pub fn mpo_to_tensortrain(
     m: &MPO<f64>,
     site1: &[DynIndex],
     site2: &[DynIndex],
@@ -220,7 +223,7 @@ fn mpo_to_tensortrain(
 /// The contraction preserves the external site index objects, so each result
 /// core is permuted into `(left, site1, site2, right)` and read out as
 /// column-major data, which is what `tensor4_from_data` expects.
-fn tensortrain_to_mpo(
+pub fn tensortrain_to_mpo(
     tt: &TensorTrain,
     site1: &[DynIndex],
     site2: &[DynIndex],
@@ -272,6 +275,71 @@ pub fn max_rel_error_vs_analytic(
     n_samples: usize,
     seed: u64,
 ) -> f64 {
+    max_rel_error_vs_reference(h, dy, r, box_l, n_samples, seed, |x, z| {
+        analytic_contraction(f, g, x, z)
+    })
+}
+
+/// Relative sampled error against the anisotropic closed-form contraction.
+#[allow(clippy::too_many_arguments)]
+pub fn max_rel_error_vs_aniso_analytic(
+    h: &MPO<f64>,
+    dy: f64,
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    max_rel_error_vs_reference(h, dy, r, box_l, n_samples, seed, |x, z| {
+        analytic_contraction_aniso(f, g, x, z)
+    })
+}
+
+/// Relative sampled error against the finite-box anisotropic contraction.
+#[allow(clippy::too_many_arguments)]
+pub fn max_rel_error_vs_aniso_box(
+    h: &MPO<f64>,
+    dy: f64,
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    max_rel_error_vs_reference(h, dy, r, box_l, n_samples, seed, |x, z| {
+        analytic_contraction_aniso_box(f, g, x, z, box_l)
+    })
+}
+
+/// Relative sampled error against the quantics grid-sum reference.
+#[allow(clippy::too_many_arguments)]
+pub fn max_rel_error_vs_aniso_grid(
+    h: &MPO<f64>,
+    dy: f64,
+    f: &AnisoMixture2D,
+    g: &AnisoMixture2D,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    max_rel_error_vs_reference(h, dy, r, box_l, n_samples, seed, |x, z| {
+        discrete_contraction_aniso_reference(f, g, x, z, r, box_l)
+    })
+}
+
+fn max_rel_error_vs_reference(
+    h: &MPO<f64>,
+    dy: f64,
+    r: usize,
+    box_l: f64,
+    n_samples: usize,
+    seed: u64,
+    reference: impl Fn(f64, f64) -> f64,
+) -> f64 {
     let xs = sample_grid_indices(r, n_samples, seed);
     let zs = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
     let mut max_abs = 0.0f64;
@@ -287,11 +355,60 @@ pub fn max_rel_error_vs_analytic(
             idx.push(zb[n]);
         }
         let got = h.evaluate(&idx).unwrap() * dy;
-        let want = analytic_contraction(f, g, x, z);
+        let want = reference(x, z);
         max_abs = max_abs.max((got - want).abs());
         max_ref = max_ref.max(want.abs());
     }
     max_abs / max_ref.max(f64::MIN_POSITIVE)
+}
+
+/// Maximum absolute difference between two MPOs at sampled `(x, z)` grid points.
+pub fn max_sampled_mpo_diff(
+    left: &MPO<f64>,
+    right: &MPO<f64>,
+    r: usize,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    sampled_mpo_diff_and_scale(left, right, r, n_samples, seed).0
+}
+
+/// Sampled maximum difference divided by the largest sampled magnitude.
+pub fn max_sampled_mpo_relative_diff(
+    left: &MPO<f64>,
+    right: &MPO<f64>,
+    r: usize,
+    n_samples: usize,
+    seed: u64,
+) -> f64 {
+    let (difference, scale) = sampled_mpo_diff_and_scale(left, right, r, n_samples, seed);
+    difference / scale.max(f64::MIN_POSITIVE)
+}
+
+fn sampled_mpo_diff_and_scale(
+    left: &MPO<f64>,
+    right: &MPO<f64>,
+    r: usize,
+    n_samples: usize,
+    seed: u64,
+) -> (f64, f64) {
+    let xs = sample_grid_indices(r, n_samples, seed);
+    let zs = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
+    xs.iter()
+        .zip(&zs)
+        .fold((0.0_f64, 0.0_f64), |(difference, scale), (&ix, &iz)| {
+            let xb = index_to_bits(ix, r);
+            let zb = index_to_bits(iz, r);
+            let indices = (0..r)
+                .flat_map(|site| [xb[site], zb[site]])
+                .collect::<Vec<_>>();
+            let left_value = left.evaluate(&indices).unwrap();
+            let right_value = right.evaluate(&indices).unwrap();
+            (
+                difference.max((left_value - right_value).abs()),
+                scale.max(left_value.abs()).max(right_value.abs()),
+            )
+        })
 }
 
 #[cfg(test)]
@@ -418,6 +535,33 @@ mod tests {
         assert!(
             diff < 1e-6 * scale.max(1.0),
             "zipup arms disagree: max diff {diff:e} on scale {scale:e}"
+        );
+    }
+
+    #[test]
+    fn partitioned_tt_and_chain_treetn_match_each_other() {
+        use crate::patched_mpo::PatchedMpoPair;
+
+        let (r, l, patch_cap) = (6, 6.0, 36);
+        let f = GaussianMixture2D::random(3, l, (0.5, 2.0), 40);
+        let g = GaussianMixture2D::random(3, l, (0.5, 2.0), 41);
+        let (left, _dy) = to_quantics_mpo(&f, r, l, 1e-8, 128).unwrap();
+        let (right, _) = to_quantics_mpo(&g, r, l, 1e-8, 128).unwrap();
+        let patched = PatchedMpoPair::new(&left, &right, 1e-8, patch_cap).unwrap();
+        let input_chi = patched.input_max_bond();
+        assert!(input_chi > patch_cap);
+        assert!(patched.input_patch_counts().0 > 1);
+
+        let tt = patched.contract_fit_tt(1e-10, input_chi).unwrap();
+        let tree = patched.contract_fit_treetn(1e-10, input_chi).unwrap();
+        let cross_diff = max_sampled_mpo_diff(&tt.mpo, &tree.mpo, r, 64, 42);
+
+        assert_eq!(tt.n_patches, tree.n_patches);
+        assert_eq!(tt.max_patch_bond, tree.max_patch_bond);
+        assert!(tt.max_patch_bond <= input_chi);
+        assert!(
+            cross_diff < 1e-8,
+            "partitioned outputs differ by {cross_diff:e}"
         );
     }
 }

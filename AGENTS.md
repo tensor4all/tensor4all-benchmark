@@ -36,6 +36,26 @@ times of the memory heavy arms differ by factors between machines (README known
 issue 10). Never put a hostname in a result file, the machine label and the
 hardware fields in `run.yaml` carry the identity.
 
+## Expensive benchmark inputs are cached
+
+Every runner with nontrivial deterministic input construction must cache that
+input and reuse it across algorithm comparisons and reruns. Input generation,
+cache loading, format conversion and patch preparation stay outside timed
+regions.
+
+- Use one shared ignored cache directory, `.cache/inputs/` by default.
+- Include every input-defining parameter, seed and an explicit input schema
+  version in the cache key. Bump the schema when generation semantics change.
+- Write cache entries atomically and treat an existing entry as immutable.
+- Validate loaded shapes, ranks, dtypes and shared index identities before use.
+- Record the cache key, hit or miss, load time and build time in each result.
+- Provide explicit refresh and cache-directory environment knobs. Never silently
+  accept a corrupt or incompatible entry.
+- Cache inputs only, never algorithm outputs or timed intermediates.
+- Tests whose subject is input generation or serialization must force a rebuild;
+  ordinary unit tests remain isolated and must not depend on persistent cache
+  state.
+
 ## Upstream is pinned
 
 `Cargo.toml` pins every `tensor4all-rs` crate to one `rev`. Bump it deliberately,

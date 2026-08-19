@@ -1,0 +1,13 @@
+profile: linux-epyc-7713p
+date: 2026-08-19T10:30:32Z
+machine: linux-epyc-7713p
+os: Linux x86_64
+chip: AMD EPYC 7713P 64-Core Processor
+memory_gb: 995
+repo_rev: add289e57c9b090a10d048892746d8e396255682
+working_tree: verify/partitioned-mpo-correctness
+tensor4all_rs_rev: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
+threads: 1
+cpu_affinity: 62
+runs: 2
+warmups: 0

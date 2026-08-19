@@ -1,4 +1,5 @@
 /target
+/.cache/
 Cargo.lock.orig
 __pycache__/
 .venv/

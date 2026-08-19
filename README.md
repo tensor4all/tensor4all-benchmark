@@ -15,7 +15,8 @@ revision that produced it. The pinned `tensor4all-rs` revision lives in `Cargo.t
 | 2. `mpo_mpo_quantics` | Contraction of two 2D quantics Gaussian-mixture MPOs over their shared variable, swept over bits per variable `R`, against the closed-form Gaussian integral | [description](#case-2-mpo-mpo-contraction-of-2d-quantics-gaussian-mixtures) | [`src/bin/mpo_mpo_quantics.rs`](src/bin/mpo_mpo_quantics.rs) | [`result/mac-cpu/mpo_mpo_quantics.md`](result/mac-cpu/mpo_mpo_quantics.md) | [time](result/mac-cpu/mpo_mpo_quantics-time.svg), [error](result/mac-cpu/mpo_mpo_quantics-error.svg) |
 | 3. `elementwise_gauss2d` | Elementwise product of two 2D quantics Gaussian mixtures at a fixed output budget, swept over bits per variable `R`, against the exact pointwise product | [description](#case-3-elementwise-product-of-2d-quantics-gaussian-mixtures) | [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs) | [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md) | [time](result/mac-cpu/elementwise_gauss2d-time.svg), [error](result/mac-cpu/elementwise_gauss2d-error.svg) |
 | 4. `elementwise_gauss2d_scaling` | Density-constant scaling study of case 3: how the quantics input rank `chi_in` grows with the number of Gaussians `N` when the box area grows proportionally to `N` | [description](#case-4-density-constant-scaling-of-the-quantics-rank) | [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs) | [`result/mac-cpu/elementwise_gauss2d_scaling.md`](result/mac-cpu/elementwise_gauss2d_scaling.md) | [chi](result/mac-cpu/elementwise_gauss2d_scaling-chi.svg), [time](result/mac-cpu/elementwise_gauss2d_scaling-time.svg), [error](result/mac-cpu/elementwise_gauss2d_scaling-error.svg) |
-| 5. `elementwise_gauss2d_patched` | Patched (domain decomposed) elementwise product, controlled by a global relative tolerance instead of a fixed output budget, comparing patched and global representations at equal accuracy on size and time, over two instance families: anisotropic narrow spikes by default and case 4's smooth Gaussians on request | [description](#case-5-patched-elementwise-product-at-equal-accuracy) | [`src/bin/elementwise_gauss2d_patched.rs`](src/bin/elementwise_gauss2d_patched.rs) | not yet recorded in any profile | not yet recorded in any profile |
+| 5. `elementwise_gauss2d_patched` | Patched (domain decomposed) elementwise product, controlled by a global relative tolerance instead of a fixed output budget, comparing patched and global representations at equal accuracy on size and time, over two instance families: anisotropic narrow spikes by default and case 4's smooth Gaussians on request | [description](#case-5-patched-elementwise-product-at-equal-accuracy) | [`src/bin/elementwise_gauss2d_patched.rs`](src/bin/elementwise_gauss2d_patched.rs) | [`result/mac-cpu/elementwise_gauss2d_patched.md`](result/mac-cpu/elementwise_gauss2d_patched.md) | [time](result/mac-cpu/elementwise_gauss2d_patched-time.svg), [error](result/mac-cpu/elementwise_gauss2d_patched-error.svg), [parameters](result/mac-cpu/elementwise_gauss2d_patched-params-aniso.svg) |
+| 6. `mpo_mpo_aniso_patched` | Fit contraction of anisotropic Gaussian MPOs, comparing the global baseline with patched chain TreeTN | [description](#case-6-patched-mpo-mpo-fit-contraction) | [`src/bin/mpo_mpo_aniso_patched.rs`](src/bin/mpo_mpo_aniso_patched.rs) | [`result/linux-epyc-7713p/mpo_mpo_aniso_patched.md`](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md) | [results table](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md#results) |
 
 ## Benchmark cases
 
@@ -510,6 +511,55 @@ it stays one `BENCH_NS` away.
 Runner: [`src/bin/elementwise_gauss2d_patched.rs`](src/bin/elementwise_gauss2d_patched.rs),
 sweep over `N`.
 
+### Case 6: patched MPO-MPO fit contraction
+
+This case reuses case 5's constant-density anisotropic Gaussian family for
+`F(x,y)` and `G(y,z)`. Each function is built once as a quantics MPO. The same
+cores and the same shared `y` index objects are copied into
+`tensor4all-partitionedtreetn`, using a linear chain and its last site as the
+explicit center. Both inputs are split with `add_with_patching`, sequentially
+over the shared `y` bits first, and the patched output is computed with
+`contract_adaptive` using one full fit sweep. A global `fit_treetn` arm
+contracts the same unpatched MPOs with the same output cap and sweep count.
+Only the two contraction calls are timed. Input interpolation, HDF5 cache
+loading, bridging, patching and output format conversion are outside the timed
+region. Deterministic global input trains are cached under `.cache/inputs/` and
+reused across reruns; patched inputs are always rebuilt from the cached global
+trains. Set `BENCH_INPUT_CACHE_REFRESH=1` to rebuild an entry or
+`BENCH_INPUT_CACHE_DIR` to move the cache. A focused test retains the legacy TT
+comparison that established numerical equivalence.
+
+The default `N = 512` instance targets the practical global-rank range discussed
+for case 5. The default per-patch cap is 128; cap 64 is intentionally excluded
+from future case-6 measurements. The committed `N = 2048` crossover sweep is
+linked in the [top-level case table](#cases-at-a-glance): patched fit is slower
+at input χ 192, faster at χ 224, and 1.60× faster at χ 256 on the recorded
+single-core profile. The global output cap is the measured pre-patching
+`chi_in`; every local and merged patched contraction is capped at
+`BENCH_PATCH_MAX_BOND`. The global arm shows the effect of patching. Naive and
+zip-up arms are excluded:
+naive scales too steeply at this rank, while the purpose here is the patched fit
+path.
+
+Accuracy is checked against the finite quantics `y` grid, not against an
+unbounded integral. Each anisotropic Gaussian pair is integrated in closed form
+on the box and corrected to the left-endpoint grid sum with the first two
+Euler-Maclaurin endpoint terms. A unit test compares this reference with the
+explicit grid sum.
+
+Run single-threaded on one chosen CPU core, for example core 7:
+
+```bash
+RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+OUT_DIR=/tmp/mpo-mpo-aniso-patched \
+taskset -c 7 cargo run --release --bin mpo_mpo_aniso_patched
+```
+
+Runner: [`src/bin/mpo_mpo_aniso_patched.rs`](src/bin/mpo_mpo_aniso_patched.rs),
+one default point at `N = 512`. This exploratory case is standalone and is not
+included in `scripts/run_all.sh`.
+
 ## Latest results
 
 One profile per physical machine, so numbers from different hardware never overwrite
@@ -726,18 +776,24 @@ Environment knobs:
 | `BENCH_KS` | case 1 | `4,8,16,32,64,128` | comma-separated Fourier mode counts `K` to sweep |
 | `BENCH_R` | case 1 | `20` | number of quantics bits |
 | `BENCH_RS` | cases 2 and 3 | `6,8,10,12,14` | comma-separated bits per variable `R` to sweep |
-| `BENCH_NGAUSS` | cases 2 and 3 | `8` | number of Gaussians per mixture |
+| `BENCH_NGAUSS` | cases 2, 3 and 6 | `8` (cases 2 and 3), `512` (case 6) | number of Gaussians or anisotropic spikes per mixture |
+| `BENCH_INPUT_CACHE_DIR` | case 6 | `.cache/inputs` | directory for deterministic global input MPS cache entries |
+| `BENCH_INPUT_CACHE_REFRESH` | case 6 | unset | when set, rebuild and atomically replace the selected input cache entry |
 | `BENCH_BOX_L` | cases 2 and 3 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_NS` | cases 4 and 5 | `8,16,32,64` (case 4, and case 5 on the `smooth` family), `8,16,32,64,128,256,512` (case 5 on the default `aniso` family) | comma-separated Gaussian or spike counts `N` to sweep. Both cases derive `L` and `R` from `N`, so they ignore `BENCH_NGAUSS`, `BENCH_BOX_L` and `BENCH_RS` |
 | `BENCH_FAMILY` | case 5 | `aniso` | which instance family to sweep. `aniso` is `N` anisotropic narrow spikes at a fixed spacing-to-width ratio, the family the case is written for; `smooth` is case 4's isotropic Gaussians at constant density, unchanged, and it also switches `BENCH_NS` to case 4's four points. Recorded in the params of every record as `family`, and part of every record's filename, so one profile can hold both |
-| `BENCH_ANISO_SIGMA` | case 5, `aniso` family | `0.05` | minor width of every spike, in box units. This is the length the grid has to resolve: `R` is chosen so a grid step is at most a quarter of it |
-| `BENCH_ANISO_RHO_MAX` | case 5, `aniso` family | `8.0` | upper end of the aspect ratio, drawn log-uniform in `[1, BENCH_ANISO_RHO_MAX]` per spike. Setting it to `1` is legal and is the isotropic control: circular spikes of one common shape, everything else unchanged |
-| `BENCH_ANISO_SPACING` | case 5, `aniso` family | `3.0` | mean spacing between spikes, in minor widths, held fixed as `N` grows. It fixes both the box, `L = BENCH_ANISO_SPACING * sigma * sqrt(N) / 2`, and the overlap of the two mixtures, which is what keeps the product non degenerate |
+| `BENCH_ANISO_SIGMA` | case 5 `aniso` family and case 6 | `0.05` | minor width of every spike, in box units. This is the length the grid has to resolve: `R` is chosen so a grid step is at most a quarter of it |
+| `BENCH_ANISO_RHO_MAX` | case 5 `aniso` family and case 6 | `8.0` | upper end of the aspect ratio, drawn log-uniform in `[1, BENCH_ANISO_RHO_MAX]` per spike. Setting it to `1` is legal and is the isotropic control: circular spikes of one common shape, everything else unchanged |
+| `BENCH_ANISO_SPACING` | case 5 `aniso` family and case 6 | `3.0` | mean spacing between spikes, in minor widths, held fixed as `N` grows. It fixes both the box, `L = BENCH_ANISO_SPACING * sigma * sqrt(N) / 2`, and the overlap of the two mixtures |
+| `BENCH_BOX_PADDING` | case 6 | `1.0` | multiplier applied to the case-5 box after drawing the spikes. Keep at 1 for the identical family; larger values add an empty integration margin |
+| `BENCH_R_EXTRA` | case 6 | `0` | extra quantics bits beyond case 5's quarter-minor-width resolution |
+| `BENCH_MAX_INPUT_CHI` | case 6 | `256` | safety ceiling checked before patch construction or fit; the runner stops instead of starting a contraction above this rank |
+| `BENCH_ERROR_SAMPLES` | case 6 | `128` | sampled `(x,z)` points used for the grid-reference error |
 | `BENCH_L0` | cases 4 and 5 (`smooth` family) | `6.0` | reference box half-width, the `L` at `N` = `BENCH_N0` |
 | `BENCH_N0` | cases 4 and 5 (`smooth` family) | `8` | reference Gaussian count, the `N` at which `L` = `BENCH_L0` and `R` = `BENCH_R0` |
 | `BENCH_R0` | cases 4 and 5 (`smooth` family) | `10` | reference bits per variable, the `R` at `N` = `BENCH_N0`. Lower it for a cheap probe of the whole sweep |
-| `BENCH_RTOL` | case 5 | `1e-8` | the one accuracy knob of case 5: the absolute-per-patch input TCI tolerance of the patched arms, the tolerance of the global baseline inputs, the absolute pivot budget of both `aci` arms, and the global output budget of both products. Every arm is compared at this one value |
-| `BENCH_PATCH_MAX_BOND` | case 5 | `64` | per-patch rank cap of the patched input construction. A subdomain that does not fit under it is split again, so this is what decides how deep the patch tree goes: a smaller value means more, smaller patches |
+| `BENCH_RTOL` | cases 5 and 6 | `1e-8` | case 5's one accuracy knob: the absolute-per-patch input TCI tolerance, global baseline input tolerance, absolute pivot budget of both `aci` arms, and global output budget of both products. Case 6 uses it for global patching, output truncation, and the fit SVD policy |
+| `BENCH_PATCH_MAX_BOND` | cases 5 and 6 | `64` (case 5), `128` (case 6) | per-patch rank cap of the patched input construction. A subdomain that does not fit under it is split again; case 6 no longer measures cap 64 |
 | `BENCH_PATCH_INPUT` | case 5 | `norm` | which construction produces the patched inputs. `norm` builds one global train per input, exactly as case 4 does, and splits it with `partitionedtt::add_with_patching`, whose decisions come from Frobenius norms alone. `tci` runs `partitionedtt::adaptiveinterpolate` instead, which never forms a global train and splits a patch whose own TCI does not converge under the cap; it is the construction the case is eventually written for, it works at the current pin (known issue 11 records the upstream fix), and it is not the default because for the same cap it splits far harder and returns a much larger representation. Recorded as `input_path` |
 | `BENCH_PATCH_SPLIT` | case 5 | `gain` | how the `norm` path picks the site to split. `gain` is the upstream `ExactParameterGain`: it forms and budget-truncates the children of every candidate site and keeps the cheapest. `sequential` takes the first unprojected site of the patch order instead, so the splitting runs strictly coarse to fine and a patch is a single quadrant. Ignored by the `tci` path, whose splitting is sequential by construction. Recorded as `split_strategy` |
 | `BENCH_PATCH_MAX_ITER` | case 5, `tci` path | `20` | half-sweep limit of each patch's own TCI run on the `tci` path, the upstream default. It exists as a knob because a run that stops at its limit is not converged and its patch is split whatever its rank was, which would make the patch tree a measurement of the limit; measured, it does not bind, and raising it to 200 changed neither the patch counts nor the patch ranks at six times the build cost. Ignored by the default `norm` path, which runs no TCI, and recorded as `patch_max_iter` either way |
@@ -746,14 +802,14 @@ Environment knobs:
 | `BENCH_BASELINES` | case 5 | `1` | whether to also measure the two global arms at the same `rtol`. Each has its own `N` ceiling whatever this says, since they are two cost classes: on the `smooth` family both stop at `N` = 64, and on `aniso` the interpolating `aci` arm runs everywhere while the uncapped global fit stops at `N` = 1024, the last point measured to stay under two minutes for it |
 | `BENCH_ALPHA_LO` | cases 2, 3, 4 and 5 (`smooth` family) | `0.5` | lower bound of the Gaussian width parameter |
 | `BENCH_ALPHA_HI` | cases 2, 3, 4 and 5 (`smooth` family) | `8.0` | upper bound of the Gaussian width parameter |
-| `BENCH_SANITY` | cases 2, 3, 4 and 5 | `1e-2` | relative error gate. Cases 2 and 5 apply it to every algorithm; cases 3 and 4 apply it to all but `zipup_treetn`, which is gated at a hardcoded `5.0` |
+| `BENCH_SANITY` | cases 2, 3, 4, 5 and 6 | `1e-2` (cases 2 to 5), `1e-4` (case 6) | relative error gate. Cases 2 and 5 apply it to every algorithm; cases 3 and 4 apply it to all but `zipup_treetn`, which is gated at a hardcoded `5.0`; case 6 applies it to both global and patched grid-reference errors |
 | `BENCH_TOL` | cases 1, 2, 3 and 4 | `1e-8` | instance tolerance. In case 1 it is the working tolerance of the whole case, both the input compression and the product. In cases 2, 3 and 4 it is scoped to the input TCI construction only, where it fixes `chi_in` and therefore the instance; the arms take `BENCH_CONTRACT_TOL` instead. It is what each record's top-level `tolerance` field and the Julia-check metadata report, since both describe the inputs. Case 5 has no separate instance tolerance: `BENCH_RTOL` is its one knob and is what its records report |
 | `BENCH_CONTRACT_TOL` | cases 2, 3 and 4 | `1e-15` | truncation tolerance handed to every contraction or product arm, recorded as `contract_tol` in the params of each record. At the default it never fires, so the rank cap `chi_in` is the only binding truncation control and the fixed-budget cases are `chi_out`-driven by construction. Raise it if you want a tolerance-driven variant of those cases |
-| `BENCH_MAX_BOND` | all | `4096` (case 1), `512` (cases 2, 3, 4 and 5) | bond dimension cap. In cases 2, 3 and 4 it caps only the input TCI construction, since the arms themselves run at the fixed output budget `chi_in`. Case 4 fails rather than reports if an instance reaches it, since `chi_in` is what that case measures. In case 5 it caps the global input trains, which are the global baselines' inputs and, on the default `norm` path, also the trains the patches are split out of; the patched counterpart is `BENCH_PATCH_MAX_BOND`. Reaching it is likewise a failure, since a cap-limited train is no longer tolerance-driven |
-| `BENCH_RUNS` | all | `5` (case 1), `3` (cases 2, 3 and 4), `1` (case 5) | timed repetitions, the median is reported. Case 5 defaults to a single pass because it is the most expensive case per point while its run to run spread is a few percent, smaller than the spread between two constructions of the same instance |
-| `BENCH_WARMUPS` | all | `1` (case 1), `0` (cases 2, 3, 4 and 5) | untimed warmup repetitions |
+| `BENCH_MAX_BOND` | all | `4096` (case 1), `512` (cases 2 to 5), `384` (case 6) | bond cap for input construction. In cases 2 to 4 it caps only input TCI; case 4 fails if it binds. In case 5 it caps both global baseline inputs and the global trains split by the default `norm` path, and binding is likewise a failure because the train is no longer tolerance-driven. Case 6 records cap-limited crossover points explicitly and separately stops when measured rank exceeds `BENCH_MAX_INPUT_CHI` |
+| `BENCH_RUNS` | all | `5` (case 1), `3` (cases 2, 3 and 4), `1` (cases 5 and 6) | timed repetitions, the median is reported |
+| `BENCH_WARMUPS` | all | `1` (case 1), `0` (cases 2 to 6) | untimed warmup repetitions |
 | `BENCH_SEED` | all | `0` | base seed for instance generation |
-| `BENCH_ALGOS` | all | `naive,zipup,fit,aci` (case 1), `naive,zipup_simplett,zipup_treetn,fit_treetn` (case 2), `naive,zipup_treetn,fit_treetn,aci` (case 3), `zipup_treetn,fit_treetn,aci` (case 4), `patched_fit_treetn,patched_naive,patched_aci` (case 5, whose fourth arm `patched_zipup_treetn` is excluded from the defaults on cost and the global baselines are controlled by `BENCH_BASELINES` instead) | comma-separated algorithms to run |
+| `BENCH_ALGOS` | cases 1 to 5 | `naive,zipup,fit,aci` (case 1), `naive,zipup_simplett,zipup_treetn,fit_treetn` (case 2), `naive,zipup_treetn,fit_treetn,aci` (case 3), `zipup_treetn,fit_treetn,aci` (case 4), `patched_fit_treetn,patched_naive,patched_aci` (case 5) | comma-separated algorithms to run. Case 6 always runs one global and one patched fit arm |
 | `OUT_DIR` | all | `result/dev/raw` | directory for the `RunRecord` JSON files |
 | `EXPORT_HDF5` | cases 1, 2 and 3 | unset | directory for ITensors-compatible HDF5 instance dumps, plus their JSON metadata. Set it to enable the Julia checks. An empty value counts as unset. Cases 2 and 3 use the same file names, so give them separate directories. Cases 4 and 5 export nothing and ignore it |
 

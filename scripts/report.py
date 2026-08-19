@@ -30,6 +30,11 @@ X_SYMBOL = {
     "elementwise_gauss2d_patched": "N",
 }
 
+# Case 6 has an intentionally hand-maintained crossover table because its x
+# points are selected by input TCI caps and every committed run records a failed
+# accuracy gate. Do not replace that context with the generic scaling report.
+HAND_MAINTAINED_CASES = {"mpo_mpo_aniso_patched"}
+
 ERROR_LABEL = {
     # case name -> what `max_error` in the records actually measures
     "elementwise_fourier": "max abs error",
@@ -444,6 +449,12 @@ def main():
     if not cases:
         sys.exit(f"no records under {profile_dir}/raw")
     for case, algos in cases.items():
+        if case in HAND_MAINTAINED_CASES:
+            report = profile_dir / f"{case}.md"
+            if not report.is_file():
+                sys.exit(f"missing hand-maintained report {report}")
+            print(f"kept hand-maintained {report}")
+            continue
         render_case(case, algos, profile_dir)
 
 

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "case": "elementwise_fourier",
+  "algorithm": "naive",
+  "params": {
+    "error_metric": "sampled_relative_l2",
+    "error_seed": 999,
+    "fit_nfullsweeps": 2,
+    "internal_tolerance_metric": "relative_l2_svd",
+    "k_max": 32,
+    "max_bond": 4096,
+    "n_error_samples": 256,
+    "r": 20,
+    "runs": 5,
+    "warmups": 1
+  },
+  "seed": 0,
+  "tolerance": 1e-8,
+  "wall_time_median_secs": 0.006426213,
+  "wall_times_secs": [
+    0.00633493,
+    0.006335649,
+    0.006426213,
+    0.006443683,
+    0.006434993
+  ],
+  "max_error": 1.8063460329673993e-8,
+  "input_max_bond_dim": 11,
+  "output_max_bond_dim": 13,
+  "output_bond_dims": [
+    2,
+    4,
+    8,
+    13,
+    10,
+    8,
+    7,
+    6,
+    5,
+    5,
+    4,
+    4,
+    3,
+    3,
+    3,
+    3,
+    2,
+    2,
+    2
+  ],
+  "n_params": 1200
+}

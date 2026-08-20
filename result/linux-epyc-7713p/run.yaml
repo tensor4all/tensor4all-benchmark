@@ -1,0 +1,9 @@
+profile: linux-epyc-7713p
+date_utc: 2026-08-20T06:18:24Z
+os: Linux
+chip: AMD EPYC 7713P 64-Core Processor
+memory_gb: 995.5
+repo_rev: 63a6345444662f7b85b919bdf525a37ec1d82d86
+tensor4all_rs_rev: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
+threads: 1
+cpu_affinity: 0

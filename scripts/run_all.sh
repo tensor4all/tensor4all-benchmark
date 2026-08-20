@@ -19,6 +19,11 @@ export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 export OUT_DIR="$raw"
+cases=${BENCH_CASES:-all}
+if [[ $cases != all && $cases != mpo ]]; then
+  echo "BENCH_CASES must be 'all' or 'mpo'" >&2
+  exit 2
+fi
 
 run() {
   if command -v taskset >/dev/null 2>&1; then
@@ -49,7 +54,9 @@ threads: 1
 cpu_affinity: $core
 EOF
 
-run cargo run --release --locked --bin elementwise_fourier
-run cargo run --release --locked --bin elementwise_gauss2d_patched
+if [[ $cases == all ]]; then
+  run cargo run --release --locked --bin elementwise_fourier
+  run cargo run --release --locked --bin elementwise_gauss2d_patched
+fi
 run cargo run --release --locked --bin mpo_mpo_aniso_patched
 python3 scripts/report.py "$out"

@@ -45,7 +45,7 @@ Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. A complete single
 BENCH_CPU_CORE=0 scripts/run_all.sh linux-epyc-7713p
 ```
 
-The script pins Rayon and common BLAS implementations to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`.
+The script pins Rayon and common BLAS implementations to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`. Set `BENCH_CASES=mpo` to generate an MPO-contraction-only profile.
 
 For a probe run:
 

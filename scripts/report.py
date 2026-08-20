@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render and validate the three maintained benchmark cases."""
+"""Render and validate a complete or case-focused benchmark profile."""
 
 import json
 import sys
@@ -31,8 +31,10 @@ def main(profile: Path) -> None:
         assert record["case"] in EXPECTED, record["case"]
         assert record["algorithm"] in EXPECTED[record["case"]], record["algorithm"]
         grouped[record["case"]].append(record)
-    assert set(grouped) == set(EXPECTED), set(grouped)
+    assert set(grouped) <= set(EXPECTED), set(grouped)
     for case, arms in EXPECTED.items():
+        if case not in grouped:
+            continue
         assert {record["algorithm"] for record in grouped[case]} == arms
         by_instance = defaultdict(list)
         for record in grouped[case]:
@@ -40,7 +42,9 @@ def main(profile: Path) -> None:
             by_instance[key].append(record["algorithm"])
         for key, actual in by_instance.items():
             assert Counter(actual) == Counter(arms), (case, key, actual)
-    for record in grouped["gaussian_elementwise"] + grouped["gaussian_mpo_contraction"]:
+    for record in grouped.get("gaussian_elementwise", []) + grouped.get(
+        "gaussian_mpo_contraction", []
+    ):
         params = record["params"]
         assert params["patch_cap"] == 128
         assert params["input_l2_rtol"] == 1e-6
@@ -55,20 +59,25 @@ def main(profile: Path) -> None:
         "The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.",
         "",
         "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use whole-mixture global TCI at fixed `R = 16`, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
-        "",
-        "## Case 1: Fourier elementwise",
-        "",
-        "| input χ | K | arm | time (s) | sampled relative L2 | output χ | parameters |",
-        "|---:|---:|---|---:|---:|---:|---:|",
     ]
-    for record in sorted(grouped["elementwise_fourier"], key=lambda item: (item["input_max_bond_dim"], item["params"]["k_max"], item["algorithm"])):
-        lines.append(
-            f"| {record['input_max_bond_dim']} | {record['params']['k_max']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} |"
-        )
+    if "elementwise_fourier" in grouped:
+        lines += [
+            "",
+            "## Case 1: Fourier elementwise",
+            "",
+            "| input χ | K | arm | time (s) | sampled relative L2 | output χ | parameters |",
+            "|---:|---:|---|---:|---:|---:|---:|",
+        ]
+        for record in sorted(grouped["elementwise_fourier"], key=lambda item: (item["input_max_bond_dim"], item["params"]["k_max"], item["algorithm"])):
+            lines.append(
+                f"| {record['input_max_bond_dim']} | {record['params']['k_max']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} |"
+            )
     for case, title in [
         ("gaussian_elementwise", "Case 2: Gaussian elementwise, global versus patched"),
         ("gaussian_mpo_contraction", "Case 3: Gaussian MPO-MPO contraction, global versus patched"),
     ]:
+        if case not in grouped:
+            continue
         lines += [
             "",
             f"## {title}",

@@ -1,13 +1,21 @@
 //! 2D Gaussian mixtures: analytic y-integral and quantics MPO construction.
 
+use std::collections::HashMap;
+
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use tensor4all_interpolativeqtt::{
+    direct_product_core_tensors, interpolate_multi_scale, interpolate_multi_scale_nd,
+    InterpolativeQttOptions,
+};
 use tensor4all_quanticstci::{
     quanticscrossinterpolate, DiscretizedGrid, QtciOptions, UnfoldingScheme,
 };
 use tensor4all_simplett::mpo::{tensor4_from_data, MPO};
-use tensor4all_simplett::{AbstractTensorTrain, SimpleTensorTrain, Tensor3Ops};
+use tensor4all_simplett::{
+    AbstractTensorTrain, CompressionMethod, CompressionOptions, SimpleTensorTrain, Tensor3Ops,
+};
 
 /// A scalar function of two variables that a benchmark case can compress.
 ///
@@ -20,6 +28,199 @@ use tensor4all_simplett::{AbstractTensorTrain, SimpleTensorTrain, Tensor3Ops};
 pub trait Field2D: Clone + 'static {
     /// Value at `(x, y)`.
     fn eval(&self, x: f64, y: f64) -> f64;
+}
+
+/// Construct one axis-aligned Gaussian as a quantics MPO.
+///
+/// Each one-variable factor is built by multiscale interpolative QTT with its
+/// center marked as the interval that must remain refined. The factors are then
+/// combined core-wise, without another interpolation or approximation.
+///
+/// This construction assumes `r` is large enough to resolve both Gaussian
+/// widths on `[-box_l, box_l)`. It does not attempt to detect an under-resolved
+/// grid.
+pub fn axis_aligned_gaussian_mpo(
+    r: usize,
+    box_l: f64,
+    center: (f64, f64),
+    alpha: (f64, f64),
+    weight: f64,
+    polynomial_degree: usize,
+    tolerance: f64,
+) -> anyhow::Result<MPO<f64>> {
+    anyhow::ensure!(r >= 2, "an interpolative QTT needs at least two bits");
+    anyhow::ensure!(box_l.is_finite() && box_l > 0.0, "invalid box size");
+    anyhow::ensure!(
+        center.0.abs() < box_l && center.1.abs() < box_l,
+        "Gaussian center is outside the box"
+    );
+    anyhow::ensure!(
+        alpha.0.is_finite() && alpha.0 > 0.0 && alpha.1.is_finite() && alpha.1 > 0.0,
+        "invalid Gaussian width"
+    );
+    anyhow::ensure!(weight.is_finite(), "invalid Gaussian weight");
+    anyhow::ensure!(
+        tolerance.is_finite() && tolerance >= 0.0,
+        "invalid interpolation tolerance"
+    );
+
+    let options = InterpolativeQttOptions::default().with_tolerance(tolerance);
+    let x = interpolate_multi_scale(
+        |value| weight * (-alpha.0 * (value - center.0).powi(2)).exp(),
+        -box_l,
+        box_l,
+        r,
+        polynomial_degree,
+        &[center.0],
+        &options,
+    )?;
+    let y = interpolate_multi_scale(
+        |value| (-alpha.1 * (value - center.1).powi(2)).exp(),
+        -box_l,
+        box_l,
+        r,
+        polynomial_degree,
+        &[center.1],
+        &options,
+    )?;
+
+    let tensors = x
+        .site_tensors()
+        .iter()
+        .zip(y.site_tensors())
+        .map(|(x_core, y_core)| {
+            let fused = direct_product_core_tensors(&[x_core.clone(), y_core.clone()])?;
+            let mut data =
+                Vec::with_capacity(fused.left_dim() * fused.site_dim() * fused.right_dim());
+            for right in 0..fused.right_dim() {
+                for y_bit in 0..2 {
+                    for x_bit in 0..2 {
+                        for left in 0..fused.left_dim() {
+                            data.push(*fused.get3(left, x_bit + 2 * y_bit, right));
+                        }
+                    }
+                }
+            }
+            tensor4_from_data(data, fused.left_dim(), 2, 2, fused.right_dim())
+                .map_err(anyhow::Error::from)
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    MPO::new(tensors).map_err(anyhow::Error::from)
+}
+
+fn rotated_gaussian_qtt(
+    r: usize,
+    box_l: f64,
+    center: (f64, f64),
+    quad: (f64, f64, f64),
+    weight: f64,
+    polynomial_degree: usize,
+    tolerance: f64,
+) -> anyhow::Result<SimpleTensorTrain<f64>> {
+    anyhow::ensure!(r >= 2, "an interpolative QTT needs at least two bits");
+    anyhow::ensure!(box_l.is_finite() && box_l > 0.0, "invalid box size");
+    anyhow::ensure!(
+        center.0.abs() < box_l && center.1.abs() < box_l,
+        "Gaussian center is outside the box"
+    );
+    let (a, b, c) = quad;
+    let discriminant = ((a - c).powi(2) + 4.0 * b * b).sqrt();
+    let lambda_major = 0.5 * (a + c - discriminant);
+    let lambda_minor = 0.5 * (a + c + discriminant);
+    anyhow::ensure!(
+        lambda_major.is_finite() && lambda_major > 0.0 && lambda_minor.is_finite(),
+        "Gaussian quadratic form is not positive definite"
+    );
+    anyhow::ensure!(weight.is_finite(), "invalid Gaussian weight");
+    anyhow::ensure!(
+        tolerance.is_finite() && tolerance >= 0.0,
+        "invalid interpolation tolerance"
+    );
+
+    let mut major = if b.abs() > f64::EPSILON * a.abs().max(c.abs()) {
+        (b, lambda_major - a)
+    } else if a <= c {
+        (1.0, 0.0)
+    } else {
+        (0.0, 1.0)
+    };
+    let norm = major.0.hypot(major.1);
+    major.0 /= norm;
+    major.1 /= norm;
+    let sigma_major = (2.0 * lambda_major).sqrt().recip();
+    let sigma_minor = (2.0 * lambda_minor).sqrt().recip();
+    let unsafe_spacing = 0.5 * sigma_minor;
+    let n = (4.0 * sigma_major / unsafe_spacing).ceil() as isize;
+    let cusp_locations = (-n..=n)
+        .filter_map(|i| {
+            let distance = i as f64 * unsafe_spacing;
+            let point = [center.0 + distance * major.0, center.1 + distance * major.1];
+            (point[0].abs() < box_l && point[1].abs() < box_l).then(|| point.to_vec())
+        })
+        .collect::<Vec<_>>();
+    let options = InterpolativeQttOptions::default().with_tolerance(tolerance);
+    interpolate_multi_scale_nd(
+        |xy| {
+            let (dx, dy) = (xy[0] - center.0, xy[1] - center.1);
+            weight * (-(a * dx * dx + 2.0 * b * dx * dy + c * dy * dy)).exp()
+        },
+        &[-box_l, -box_l],
+        &[box_l, box_l],
+        r,
+        polynomial_degree,
+        &cusp_locations,
+        &options,
+    )
+    .map_err(anyhow::Error::from)
+}
+
+fn fused_qtt_to_mpo(qtt: &SimpleTensorTrain<f64>) -> anyhow::Result<MPO<f64>> {
+    let tensors = qtt
+        .site_tensors()
+        .iter()
+        .map(|core| {
+            anyhow::ensure!(core.site_dim() == 4, "expected fused site dimension 4");
+            let mut data = Vec::with_capacity(core.left_dim() * 4 * core.right_dim());
+            for right in 0..core.right_dim() {
+                for y_bit in 0..2 {
+                    for x_bit in 0..2 {
+                        for left in 0..core.left_dim() {
+                            data.push(*core.get3(left, x_bit + 2 * y_bit, right));
+                        }
+                    }
+                }
+            }
+            tensor4_from_data(data, core.left_dim(), 2, 2, core.right_dim())
+                .map_err(anyhow::Error::from)
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    MPO::new(tensors).map_err(anyhow::Error::from)
+}
+
+/// Construct one rotated anisotropic Gaussian as a multiscale quantics MPO.
+///
+/// Unsafe interpolation points are spaced by half the minor-axis standard
+/// deviation along the major axis through the center. This keeps every box
+/// intersecting the narrow ridge refined without making the entire 2D box unsafe.
+/// `r` must be large enough to resolve the minor width.
+pub fn rotated_gaussian_mpo(
+    r: usize,
+    box_l: f64,
+    center: (f64, f64),
+    quad: (f64, f64, f64),
+    weight: f64,
+    polynomial_degree: usize,
+    tolerance: f64,
+) -> anyhow::Result<MPO<f64>> {
+    fused_qtt_to_mpo(&rotated_gaussian_qtt(
+        r,
+        box_l,
+        center,
+        quad,
+        weight,
+        polynomial_degree,
+        tolerance,
+    )?)
 }
 
 /// A sum of isotropic 2D Gaussians `w_i exp(-a_i ((x-cx_i)^2 + (y-cy_i)^2))`.
@@ -105,6 +306,58 @@ pub struct AnisoMixture2D {
 }
 
 impl AnisoMixture2D {
+    /// Construct this mixture by adding individually interpolated Gaussian QTTs.
+    ///
+    /// The sum is SVD-compressed after every addition with the supplied relative
+    /// per-bond tolerance; the benchmark records this separately from its final
+    /// global relative-L2 truncation.
+    pub fn to_multiscale_mpo(
+        &self,
+        r: usize,
+        box_l: f64,
+        polynomial_degree: usize,
+        interpolation_tolerance: f64,
+        addition_tolerance: f64,
+    ) -> anyhow::Result<MPO<f64>> {
+        anyhow::ensure!(
+            self.weights.len() == self.quad.len() && self.weights.len() == self.centers.len(),
+            "anisotropic mixture arrays have different lengths"
+        );
+        anyhow::ensure!(!self.weights.is_empty(), "anisotropic mixture is empty");
+        anyhow::ensure!(
+            addition_tolerance.is_finite() && addition_tolerance >= 0.0,
+            "invalid addition tolerance"
+        );
+        let compression = CompressionOptions {
+            method: CompressionMethod::SVD,
+            tolerance: addition_tolerance,
+            max_bond_dim: None,
+            normalize_error: true,
+        };
+        let mut sum = rotated_gaussian_qtt(
+            r,
+            box_l,
+            self.centers[0],
+            self.quad[0],
+            self.weights[0],
+            polynomial_degree,
+            interpolation_tolerance,
+        )?;
+        for i in 1..self.weights.len() {
+            sum = sum.add(&rotated_gaussian_qtt(
+                r,
+                box_l,
+                self.centers[i],
+                self.quad[i],
+                self.weights[i],
+                polynomial_degree,
+                interpolation_tolerance,
+            )?)?;
+            sum.compress(&compression)?;
+        }
+        fused_qtt_to_mpo(&sum)
+    }
+
     /// Draw `n` anisotropic spikes on the box `[-box_l, box_l)^2`.
     ///
     /// Weights are `U[0.5, 1.5]`, the aspect ratio `rho` is log-uniform in
@@ -179,6 +432,124 @@ impl AnisoMixture2D {
 impl Field2D for AnisoMixture2D {
     fn eval(&self, x: f64, y: f64) -> f64 {
         AnisoMixture2D::eval(self, x, y)
+    }
+}
+
+/// Spatially indexed evaluator with a rigorous global absolute tail bound.
+///
+/// Components whose center is farther than their major-axis cutoff radius are
+/// omitted. The common exponent threshold is chosen so the sum of all omitted
+/// positive Gaussian tails is at most `absolute_tolerance` at every point.
+#[derive(Clone, Debug)]
+pub struct LocalizedAnisoField {
+    mixture: AnisoMixture2D,
+    absolute_tolerance: f64,
+    bin_width: f64,
+    cutoff_squared: Vec<f64>,
+    bins: HashMap<(i64, i64), Vec<usize>>,
+}
+
+impl LocalizedAnisoField {
+    /// Build a spatial index without changing the underlying random mixture.
+    pub fn new(mixture: AnisoMixture2D, absolute_tolerance: f64) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            absolute_tolerance.is_finite() && absolute_tolerance > 0.0,
+            "localized evaluator tolerance must be positive and finite"
+        );
+        anyhow::ensure!(
+            mixture.weights.len() == mixture.quad.len()
+                && mixture.weights.len() == mixture.centers.len()
+                && !mixture.weights.is_empty(),
+            "invalid anisotropic mixture"
+        );
+        anyhow::ensure!(
+            mixture
+                .weights
+                .iter()
+                .all(|weight| weight.is_finite() && *weight >= 0.0),
+            "localized evaluator requires finite non-negative weights"
+        );
+        anyhow::ensure!(
+            mixture
+                .centers
+                .iter()
+                .all(|(x, y)| x.is_finite() && y.is_finite()),
+            "localized evaluator requires finite centers"
+        );
+        let total_weight = mixture.weights.iter().sum::<f64>();
+        anyhow::ensure!(
+            total_weight.is_finite() && total_weight > absolute_tolerance,
+            "localized evaluator tolerance must be smaller than total weight"
+        );
+        let exponent_cutoff = (total_weight / absolute_tolerance).ln();
+        let cutoff_squared = mixture
+            .quad
+            .iter()
+            .map(|&(a, b, c)| {
+                let discriminant = ((a - c).powi(2) + 4.0 * b * b).sqrt();
+                let lambda_min = 0.5 * (a + c - discriminant);
+                anyhow::ensure!(lambda_min.is_finite() && lambda_min > 0.0);
+                Ok(exponent_cutoff / lambda_min)
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let bin_width = cutoff_squared
+            .iter()
+            .copied()
+            .fold(0.0_f64, f64::max)
+            .sqrt();
+        let mut bins = HashMap::<(i64, i64), Vec<usize>>::new();
+        for (i, &(x, y)) in mixture.centers.iter().enumerate() {
+            bins.entry(Self::bin_key(x, y, bin_width))
+                .or_default()
+                .push(i);
+        }
+        Ok(Self {
+            mixture,
+            absolute_tolerance,
+            bin_width,
+            cutoff_squared,
+            bins,
+        })
+    }
+
+    fn bin_key(x: f64, y: f64, bin_width: f64) -> (i64, i64) {
+        (
+            (x / bin_width).floor() as i64,
+            (y / bin_width).floor() as i64,
+        )
+    }
+
+    /// Guaranteed pointwise absolute error bound relative to exact evaluation.
+    pub fn absolute_tolerance(&self) -> f64 {
+        self.absolute_tolerance
+    }
+
+    /// Evaluate using only components whose tail can exceed the global budget.
+    pub fn eval(&self, x: f64, y: f64) -> f64 {
+        let (bx, by) = Self::bin_key(x, y, self.bin_width);
+        let mut value = 0.0;
+        for dx_bin in -1..=1 {
+            for dy_bin in -1..=1 {
+                if let Some(indices) = self.bins.get(&(bx + dx_bin, by + dy_bin)) {
+                    for &i in indices {
+                        let (cx, cy) = self.mixture.centers[i];
+                        let (dx, dy) = (x - cx, y - cy);
+                        if dx * dx + dy * dy <= self.cutoff_squared[i] {
+                            let (a, b, c) = self.mixture.quad[i];
+                            value += self.mixture.weights[i]
+                                * (-(a * dx * dx + 2.0 * b * dx * dy + c * dy * dy)).exp();
+                        }
+                    }
+                }
+            }
+        }
+        value
+    }
+}
+
+impl Field2D for LocalizedAnisoField {
+    fn eval(&self, x: f64, y: f64) -> f64 {
+        LocalizedAnisoField::eval(self, x, y)
     }
 }
 
@@ -308,18 +679,36 @@ pub fn to_quantics_fused_tt_field<M: Field2D>(
     tol: f64,
     max_bond: usize,
 ) -> anyhow::Result<(SimpleTensorTrain<f64>, f64)> {
+    to_quantics_fused_tt_field_with_pivots(mix, r, box_l, tol, max_bond, None)
+}
+
+fn to_quantics_fused_tt_field_with_pivots<M: Field2D>(
+    mix: &M,
+    r: usize,
+    box_l: f64,
+    tol: f64,
+    max_bond: usize,
+    initial_pivots: Option<Vec<Vec<usize>>>,
+) -> anyhow::Result<(SimpleTensorTrain<f64>, f64)> {
     let grid = DiscretizedGrid::builder(&[r, r])
         .with_lower_bound(&[-box_l, -box_l])
         .with_upper_bound(&[box_l, box_l])
         .with_unfolding_scheme(UnfoldingScheme::Fused)
         .build()?;
     let m = mix.clone();
-    let opts = QtciOptions::default()
+    let mut opts = QtciOptions::default()
         .with_tolerance(tol)
         .with_max_bond_dim(max_bond)
         .with_unfoldingscheme(UnfoldingScheme::Fused);
-    let (qtci, _ranks, _errs) =
-        quanticscrossinterpolate(&grid, move |xy: &[f64]| m.eval(xy[0], xy[1]), None, opts)?;
+    if initial_pivots.is_some() {
+        opts = opts.with_nrandominitpivot(0);
+    }
+    let (qtci, _ranks, _errs) = quanticscrossinterpolate(
+        &grid,
+        move |xy: &[f64]| m.eval(xy[0], xy[1]),
+        initial_pivots,
+        opts,
+    )?;
     let step = 2.0 * box_l / (1u64 << r) as f64;
     Ok((qtci.tensor_train(), step))
 }
@@ -345,35 +734,31 @@ pub fn to_quantics_mpo_field<M: Field2D>(
     max_bond: usize,
 ) -> anyhow::Result<(MPO<f64>, f64)> {
     let (tt, step) = to_quantics_fused_tt_field(mix, r, box_l, tol, max_bond)?;
-    let mut cores4 = Vec::with_capacity(tt.len());
-    for c in tt.site_tensors() {
-        let (l, s, rd) = (c.left_dim(), c.site_dim(), c.right_dim());
-        anyhow::ensure!(s == 4, "expected fused site dim 4, got {s}");
-        // Fused local index is `s = s1 + 2*s2` with s1 the bit of variable 1 (x)
-        // as the least significant digit. Verified both against the quanticsgrids
-        // source (add_fused_indices pushes variables in reverse order, so the last
-        // variable lands at pos_in_site 0 and gets place value 2^(len-1) = 2) and
-        // empirically by `quantics_mpo_evaluates_to_function_values`.
-        // Task 8's Julia mirror must use the same order.
-        let mut data = vec![0.0f64; l * 4 * rd];
-        for rr in 0..rd {
-            for s2 in 0..2 {
-                for s1 in 0..2 {
-                    for ll in 0..l {
-                        let fused = s1 + 2 * s2;
-                        data[ll + l * (s1 + 2 * (s2 + 2 * rr))] = *c.get3(ll, fused, rr);
-                    }
-                }
-            }
-        }
-        cores4.push(tensor4_from_data(data, l, 2, 2, rd)?);
-    }
-    Ok((MPO::new(cores4)?, step))
+    Ok((fused_qtt_to_mpo(&tt)?, step))
+}
+
+/// Deterministic [`to_quantics_mpo_field`] variant using explicit zero-based grid pivots.
+///
+/// Random initial pivots are disabled when this entry point is used, so identical
+/// inputs and pivots produce cacheable input tensors.
+pub fn to_quantics_mpo_field_with_pivots<M: Field2D>(
+    mix: &M,
+    r: usize,
+    box_l: f64,
+    tol: f64,
+    max_bond: usize,
+    initial_pivots: Vec<Vec<usize>>,
+) -> anyhow::Result<(MPO<f64>, f64)> {
+    anyhow::ensure!(!initial_pivots.is_empty(), "initial pivot list is empty");
+    let (tt, step) =
+        to_quantics_fused_tt_field_with_pivots(mix, r, box_l, tol, max_bond, Some(initial_pivots))?;
+    Ok((fused_qtt_to_mpo(&tt)?, step))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::harness::index_to_bits;
 
     fn quadrature(f: impl Fn(f64) -> f64, lo: f64, hi: f64, intervals: usize) -> f64 {
         let step = (hi - lo) / intervals as f64;
@@ -383,6 +768,198 @@ mod tests {
                 weight * f(lo + i as f64 * step) * step
             })
             .sum()
+    }
+
+    #[test]
+    fn multiscale_axis_aligned_gaussian_mpo_matches_grid_values() {
+        let (r, box_l) = (8, 1.0);
+        let center = (0.17, -0.23);
+        let alpha = (8.0, 20.0);
+        let weight = 1.3;
+        let mpo = axis_aligned_gaussian_mpo(r, box_l, center, alpha, weight, 12, 1e-12).unwrap();
+        let step = 2.0 * box_l / (1usize << r) as f64;
+        for (ix, iy) in [(0, 0), (23, 197), (128, 128), (150, 98), (255, 255)] {
+            let x = -box_l + ix as f64 * step;
+            let y = -box_l + iy as f64 * step;
+            let indices = index_to_bits(ix, r)
+                .into_iter()
+                .zip(index_to_bits(iy, r))
+                .flat_map(|(x_bit, y_bit)| [x_bit, y_bit])
+                .collect::<Vec<_>>();
+            let got = mpo.evaluate(&indices).unwrap();
+            let expected = weight
+                * (-alpha.0 * (x - center.0).powi(2) - alpha.1 * (y - center.1).powi(2)).exp();
+            assert!(
+                (got - expected).abs() < 2e-8,
+                "({x}, {y}): {got} != {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn multiscale_gaussian_mpo_stays_accurate_as_r_increases() {
+        let box_l = 1.0;
+        let center = (0.173, -0.227);
+        let alpha = (32.0, 200.0);
+        let weight = 1.3;
+        let sigma_min = 1.0 / (2.0_f64 * alpha.1).sqrt();
+
+        for r in [8, 10, 12] {
+            let step = 2.0 * box_l / (1usize << r) as f64;
+            assert!(
+                step <= sigma_min / 4.0,
+                "R={r} does not resolve the narrow width"
+            );
+            let mpo =
+                axis_aligned_gaussian_mpo(r, box_l, center, alpha, weight, 24, 1e-12).unwrap();
+            let grid_size = 1usize << r;
+            let mut max_error = 0.0_f64;
+            for sample in 0..128 {
+                let ix = (73 * sample + 11) % grid_size;
+                let iy = (151 * sample + 29) % grid_size;
+                let x = -box_l + ix as f64 * step;
+                let y = -box_l + iy as f64 * step;
+                let indices = index_to_bits(ix as u64, r)
+                    .into_iter()
+                    .zip(index_to_bits(iy as u64, r))
+                    .flat_map(|(x_bit, y_bit)| [x_bit, y_bit])
+                    .collect::<Vec<_>>();
+                let got = mpo.evaluate(&indices).unwrap();
+                let expected = weight
+                    * (-alpha.0 * (x - center.0).powi(2) - alpha.1 * (y - center.1).powi(2)).exp();
+                max_error = max_error.max((got - expected).abs());
+            }
+            eprintln!("R={r} rank={} max_error={max_error:.3e}", mpo.rank());
+            assert!(
+                max_error < 5e-8,
+                "R={r}, rank={}, max error={max_error:.3e}",
+                mpo.rank()
+            );
+            assert!(
+                mpo.rank() <= 400,
+                "R={r} unexpectedly increased rank to {}",
+                mpo.rank()
+            );
+        }
+    }
+
+    #[test]
+    fn multiscale_rotated_gaussian_mpo_resolves_a_narrow_ridge() {
+        let (r, box_l) = (10, 1.0);
+        let center = (0.07, -0.09);
+        let (sigma_minor, rho, angle) = (0.05_f64, 8.0_f64, std::f64::consts::FRAC_PI_4);
+        let lambda_minor = 1.0 / (2.0 * sigma_minor.powi(2));
+        let lambda_major = lambda_minor / rho.powi(2);
+        let (sin, cos) = angle.sin_cos();
+        let quad = (
+            lambda_major * cos * cos + lambda_minor * sin * sin,
+            (lambda_major - lambda_minor) * sin * cos,
+            lambda_major * sin * sin + lambda_minor * cos * cos,
+        );
+        let mpo = rotated_gaussian_mpo(r, box_l, center, quad, 1.3, 28, 1e-12).unwrap();
+        let step = 2.0 * box_l / (1usize << r) as f64;
+        let mut max_error = 0.0_f64;
+        {
+            let mut check_point = |ix: usize, iy: usize| {
+                let x = -box_l + ix as f64 * step;
+                let y = -box_l + iy as f64 * step;
+                let indices = index_to_bits(ix as u64, r)
+                    .into_iter()
+                    .zip(index_to_bits(iy as u64, r))
+                    .flat_map(|(x_bit, y_bit)| [x_bit, y_bit])
+                    .collect::<Vec<_>>();
+                let got = mpo.evaluate(&indices).unwrap();
+                let (dx, dy) = (x - center.0, y - center.1);
+                let expected =
+                    1.3 * (-(quad.0 * dx * dx + 2.0 * quad.1 * dx * dy + quad.2 * dy * dy)).exp();
+                max_error = max_error.max((got - expected).abs());
+            };
+            for sample in 0..256 {
+                check_point(
+                    (73 * sample + 11) % (1usize << r),
+                    (151 * sample + 29) % (1usize << r),
+                );
+            }
+            for major_step in -6..=6 {
+                for minor_step in -4..=4 {
+                    let u = major_step as f64 * 0.5 * sigma_minor * rho;
+                    let v = minor_step as f64 * 0.5 * sigma_minor;
+                    let x = center.0 + cos * u - sin * v;
+                    let y = center.1 + sin * u + cos * v;
+                    let ix = ((x + box_l) / step).round() as usize;
+                    let iy = ((y + box_l) / step).round() as usize;
+                    check_point(ix.min((1usize << r) - 1), iy.min((1usize << r) - 1));
+                }
+            }
+        }
+        eprintln!("rotated rank={} max_error={max_error:.3e}", mpo.rank());
+        assert!(
+            max_error < 5e-8,
+            "rank={}, max error={max_error:.3e}",
+            mpo.rank()
+        );
+    }
+
+    #[test]
+    fn multiscale_anisotropic_mixture_matches_grid_values() {
+        let (r, box_l) = (8, 1.0);
+        let mixture = AnisoMixture2D::random(2, 0.7, 0.08, 3.0, 17);
+        let mpo = mixture
+            .to_multiscale_mpo(r, box_l, 24, 1e-12, 1e-10)
+            .unwrap();
+        let step = 2.0 * box_l / (1usize << r) as f64;
+        let mut max_error = 0.0_f64;
+        for sample in 0..128 {
+            let ix = (73 * sample + 11) % (1usize << r);
+            let iy = (151 * sample + 29) % (1usize << r);
+            let x = -box_l + ix as f64 * step;
+            let y = -box_l + iy as f64 * step;
+            let indices = index_to_bits(ix as u64, r)
+                .into_iter()
+                .zip(index_to_bits(iy as u64, r))
+                .flat_map(|(x_bit, y_bit)| [x_bit, y_bit])
+                .collect::<Vec<_>>();
+            max_error = max_error.max((mpo.evaluate(&indices).unwrap() - mixture.eval(x, y)).abs());
+        }
+        assert!(
+            max_error < 1e-7,
+            "rank={}, max error={max_error:.3e}",
+            mpo.rank()
+        );
+    }
+
+    #[test]
+    fn localized_anisotropic_evaluator_respects_absolute_tail_bound() {
+        let mixture = AnisoMixture2D::random(512, 4.0, 0.05, 8.0, 23);
+        let localized = LocalizedAnisoField::new(mixture.clone(), 1e-10).unwrap();
+        assert_eq!(localized.absolute_tolerance(), 1e-10);
+        for sample in 0..256 {
+            let x = -5.0 + 10.0 * ((73 * sample + 11) % 257) as f64 / 256.0;
+            let y = -5.0 + 10.0 * ((151 * sample + 29) % 257) as f64 / 256.0;
+            let error = (localized.eval(x, y) - mixture.eval(x, y)).abs();
+            assert!(error <= 1e-10, "({x}, {y}): error={error:.3e}");
+        }
+    }
+
+    #[test]
+    fn explicit_tci_pivots_make_input_construction_deterministic() {
+        let mixture = AnisoMixture2D::random(4, 1.0, 0.1, 3.0, 29);
+        let pivots = vec![vec![16, 16], vec![8, 24], vec![24, 8]];
+        let (first, _) =
+            to_quantics_mpo_field_with_pivots(&mixture, 5, 1.0, 1e-8, 64, pivots.clone()).unwrap();
+        let (second, _) =
+            to_quantics_mpo_field_with_pivots(&mixture, 5, 1.0, 1e-8, 64, pivots).unwrap();
+        assert_eq!(first.rank(), second.rank());
+        for (left, right) in first.site_tensors().iter().zip(second.site_tensors()) {
+            assert_eq!(left.to_col_major_vec(), right.to_col_major_vec());
+        }
+    }
+
+    #[test]
+    fn localized_anisotropic_evaluator_rejects_negative_weights() {
+        let mut mixture = AnisoMixture2D::random(1, 1.0, 0.05, 8.0, 23);
+        mixture.weights[0] = -1.0;
+        assert!(LocalizedAnisoField::new(mixture, 1e-10).is_err());
     }
 
     #[test]

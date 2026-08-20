@@ -1369,6 +1369,7 @@ dependencies = [
  "tensor4all-aci",
  "tensor4all-core",
  "tensor4all-hdf5",
+ "tensor4all-interpolativeqtt",
  "tensor4all-itensorlike",
  "tensor4all-partitionedtreetn",
  "tensor4all-partitionedtt",
@@ -1581,6 +1582,16 @@ dependencies = [
  "tensor4all-core",
  "tensor4all-itensorlike",
  "tensor4all-treetn",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "tensor4all-interpolativeqtt"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+dependencies = [
+ "tensor4all-simplett",
+ "tensor4all-tensorbackend",
  "thiserror 2.0.20",
 ]
 

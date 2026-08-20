@@ -13,6 +13,7 @@ tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", 
 tensor4all-partitionedtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-partitionedtt" }
 tensor4all-partitionedtreetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-partitionedtreetn" }
 tensor4all-quanticstci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-quanticstci" }
+tensor4all-interpolativeqtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-interpolativeqtt" }
 tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-hdf5" }
 tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "9e9aedaebe0d3918b34dd399ff0981e337f3835b", package = "tensor4all-core" }
 num-complex = "0.4"

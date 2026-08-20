@@ -1,6 +1,6 @@
 //! The scalar types the benchmark's tensor trains are built on.
 //!
-//! Case 1 runs on `Complex64` (a Fourier series) and case 3 on `f64` (a real
+//! Case 1 runs on `Complex64` (a Fourier series) and case 2 on `f64` (a real
 //! Gaussian mixture), and both go through the same Hadamard code, so that code
 //! is generic over this trait.
 //!

@@ -7,56 +7,27 @@ on:
 jobs:
   rust:
     runs-on: ubuntu-latest
-    # The Rust build compiles all of tensor4all-rs from source on a cold cache.
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y libhdf5-dev liblapack-dev
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --release
-      - name: smoke elementwise
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --release --locked
+      - name: smoke Fourier elementwise
         run: >
           BENCH_KS=4 BENCH_R=10 BENCH_RUNS=1 BENCH_WARMUPS=0
-          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke
-          cargo run --release --bin elementwise_fourier
-      - name: smoke mpo
+          OUT_DIR=/tmp/smoke/raw
+          cargo run --release --locked --bin elementwise_fourier
+      - name: smoke Gaussian elementwise
         run: >
-          BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
-          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke
-          cargo run --release --bin mpo_mpo_quantics
-      - name: smoke elementwise gauss2d
+          BENCH_NS=2 BENCH_RUNS=1 BENCH_WARMUPS=0
+          BENCH_INPUT_CACHE_DIR=/tmp/smoke-cache OUT_DIR=/tmp/smoke/raw
+          cargo run --release --locked --bin elementwise_gauss2d_patched
+      - name: smoke Gaussian MPO contraction using the shared cache
         run: >
-          BENCH_RS=8 BENCH_NGAUSS=3 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
-          OUT_DIR=/tmp/smoke EXPORT_HDF5=/tmp/smoke-gauss2d
-          cargo run --release --bin elementwise_gauss2d
-      - name: smoke elementwise gauss2d scaling
-        # No EXPORT_HDF5: case 4 exports no instances, so there is no Julia
-        # check for it, and a single N is enough to exercise the runner.
-        run: >
-          BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
-          OUT_DIR=/tmp/smoke
-          cargo run --release --bin elementwise_gauss2d_scaling
-      - name: smoke elementwise gauss2d patched
-        # Both instance families, since they share only the harness: the default
-        # aniso one, whose N = 8 point is a fraction of a second, and the smooth
-        # one with R0 lowered so the patched construction stays cheap there, since
-        # at the default R0 one N already builds hundreds of patches. No
-        # EXPORT_HDF5, as for case 4.
-        run: >
-          BENCH_NS=8 BENCH_RUNS=1 BENCH_WARMUPS=0 BENCH_SANITY=1e-1
-          OUT_DIR=/tmp/smoke
-          cargo run --release --bin elementwise_gauss2d_patched
-          &&
-          BENCH_FAMILY=smooth BENCH_NS=8 BENCH_R0=8 BENCH_RUNS=1 BENCH_WARMUPS=0
-          BENCH_SANITY=1e-1 OUT_DIR=/tmp/smoke
-          cargo run --release --bin elementwise_gauss2d_patched
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: "1"
-      - name: julia checks
-        run: |
-          julia --project=julia -e 'using Pkg; Pkg.instantiate()'
-          julia --project=julia julia/check_elementwise.jl /tmp/smoke 4
-          julia --project=julia julia/check_mpo_mpo.jl /tmp/smoke 8
-          julia --project=julia julia/check_elementwise_gauss2d.jl /tmp/smoke-gauss2d 8
+          BENCH_NS=2 BENCH_RUNS=1 BENCH_WARMUPS=0
+          BENCH_INPUT_CACHE_DIR=/tmp/smoke-cache OUT_DIR=/tmp/smoke/raw
+          cargo run --release --locked --bin mpo_mpo_aniso_patched

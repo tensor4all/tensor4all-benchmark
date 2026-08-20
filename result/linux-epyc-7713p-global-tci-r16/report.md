@@ -18,3 +18,5 @@ All timings exclude input construction, cache I/O, format conversion, patch prep
 | 256 | 299 | 4096 | 16 | patched_fit | 73.926512 | 3.914e-06 | 16 | 116 | 4 | 192428 | 0.677 |
 | 418 | 898 | 20480 | 16 | global_fit | 402.559843 | 2.329e-06 | 60 | 121 | 1 | 586664 | 1.000 |
 | 418 | 898 | 20480 | 16 | patched_fit | 1771.027045 | 1.254e-05 | 60 | 121 | 30 | 1067216 | 0.227 |
+
+The adaptive patched path reruns projected fit contractions at each recursive output split. With P compatible shared-y contributions and L output leaves, its contraction work scales approximately as P x L; cap-detection probes can raise this to P x (2L - 1).

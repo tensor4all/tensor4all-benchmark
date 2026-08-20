@@ -102,6 +102,11 @@ def main(profile: Path) -> None:
             lines.append(
                 f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {speedup:.3f} |"
             )
+        if case == "gaussian_mpo_contraction":
+            lines += [
+                "",
+                "The adaptive patched path reruns projected fit contractions at each recursive output split. With P compatible shared-y contributions and L output leaves, its contraction work scales approximately as P x L; cap-detection probes can raise this to P x (2L - 1).",
+            ]
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 
 

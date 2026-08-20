@@ -393,6 +393,12 @@ impl PatchedMpoPair {
             max_bond_dim: Some(output_max_bond),
             ..self.tree_options.clone()
         };
+        // Performance note: upstream `contract_adaptive` groups the compatible
+        // shared-y patch contributions, then probes and splits the output domain.
+        // Every recursive child projects the original operands and reruns their fit
+        // contractions instead of slicing a cached parent contribution. For P
+        // compatible y patches and L output leaves, work therefore scales roughly
+        // as P * L, with cap-detection probes reaching up to P * (2 * L - 1).
         let options = TreeContractOptions::fit()
             .with_max_bond_dim(output_max_bond)
             .with_svd_policy(itensor_cutoff_policy(rtol))

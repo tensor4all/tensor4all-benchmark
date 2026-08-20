@@ -56,6 +56,16 @@ BENCH_NS=2 OUT_DIR=/tmp/t4a-probe/raw \
 taskset -c 0 cargo run --release --locked --bin elementwise_gauss2d_patched
 ```
 
+A large Gaussian cache can be prepared and validated without running the operations:
+
+```bash
+RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+MKL_NUM_THREADS=1 BLIS_NUM_THREADS=1 BENCH_INPUT_ONLY=1 BENCH_NS=512 \
+cargo run --release --locked --bin elementwise_gauss2d_patched
+```
+
+Input construction is outside the timed operation.
+
 Gaussian knobs shared by Cases 2 and 3:
 
 | Variable | Default | Meaning |
@@ -66,6 +76,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_WARMUPS` | `0` | untimed repetitions |
 | `BENCH_INPUT_CACHE_DIR` | `.cache/inputs` | shared input cache |
 | `BENCH_INPUT_CACHE_REFRESH` | `0` | rebuild cache entry when nonzero |
+| `BENCH_INPUT_ONLY` | `0` | Case 2 only: prepare and validate caches without timing operations when nonzero |
 | `OUT_DIR` | `result/dev/raw` | JSON output directory |
 
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.

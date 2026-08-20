@@ -94,6 +94,20 @@ fn run_point(
         left_input_error <= ERROR_SANITY && right_input_error <= ERROR_SANITY,
         "input error exceeds sanity gate: ({left_input_error:.3e}, {right_input_error:.3e})"
     );
+    if env_or("BENCH_INPUT_ONLY", 0usize) != 0 {
+        println!(
+            "N={} R={} raw_chi=({}, {}) compressed_chi=({}, {}) build_secs={:.3} cache_hit={}",
+            config.n,
+            input.r,
+            input.raw_left_chi,
+            input.raw_right_chi,
+            input.left.rank(),
+            input.right.rank(),
+            input.build.as_secs_f64(),
+            input.cache_hit
+        );
+        return Ok(());
+    }
     let sites = fused_site_indices(input.r);
     let patch_start = Instant::now();
     let patch_options = NormPatchedInputOptions {

@@ -31,6 +31,20 @@ Every expensive deterministic input must use the shared ignored `.cache/inputs/`
 - Cache inputs only, never timed outputs.
 - Input-generation and serialization tests must force a rebuild.
 
+## Pushing
+
+Work lands on main through a pull request rather than a direct push. An agent
+may push a branch and open the pull request when asked to, and the merge stays
+a human decision. Force push only while a branch is still unreviewed: after
+someone has reviewed, a force push detaches their comments from the code they
+describe.
+
+A pull request that adds or replaces `result/<profile>/` states in its
+description which machine produced the sweep, so the numbers are reviewed
+together with the hardware behind them. Keep hostnames out of the description
+as well as out of the files: on a public repository a hostname leaks the
+operator's institution and location over time.
+
 ## Upstream
 
 All tensor4all-rs crates are pinned to one revision in `Cargo.toml`. Move every pin together. A pin change requires fresh measurements.

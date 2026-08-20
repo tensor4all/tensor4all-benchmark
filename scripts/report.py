@@ -52,6 +52,8 @@ def main(profile: Path) -> None:
         "",
         f"Profile: `{run['profile']}`. CPU: {run['chip']}. Threads: {run['threads']}. CPU affinity: {run['cpu_affinity']}. Source revision: `{run['repo_rev']}`. tensor4all-rs revision: `{run['tensor4all_rs_rev']}`.",
         "",
+        "The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.",
+        "",
         "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use independent two-dimensional interpolative decompositions, balanced pairwise addition, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
         "",
         "## Case 1: Fourier elementwise",

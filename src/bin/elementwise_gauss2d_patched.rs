@@ -393,7 +393,7 @@ fn write_global_record(
             n_params: Some(tt_n_params(output)),
             n_patches: None,
             max_patch_bond: None,
-            rtol: Some(INPUT_L2_RTOL),
+            rtol: (tolerance_metric == "relative_l2_svd").then_some(INPUT_L2_RTOL),
             input_build_secs: Some(input.build.as_secs_f64()),
         },
     )

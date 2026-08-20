@@ -91,8 +91,8 @@ fn main() -> anyhow::Result<()> {
                 // This case is tolerance-driven (the arXiv setup): one tolerance
                 // decides both the input compression and the product
                 // truncation, and the ACI arm keeps the upstream absolute
-                // stopping rule. The fixed-budget cases 2, 3 and 4 separate the
-                // two instead.
+                // stopping rule. Gaussian records keep the input and operation
+                // tolerances separate.
                 elementwise_product(algo, &a, &b, tol, max_bond, AciTolerance::Absolute)
                     .expect("algorithm failed")
             });

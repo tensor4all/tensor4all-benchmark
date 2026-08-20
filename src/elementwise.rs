@@ -37,14 +37,9 @@ pub enum ElementwiseAlgo {
 /// absolute or scaled by the sampled output magnitude of the bond is a separate
 /// upstream switch, `AciOptions::scale_tolerance`, whose upstream default is
 /// scale-relative since tensor4all-rs#619. This enum makes the choice explicit
-/// at every call site rather than inheriting that default, because the two
-/// families of cases want opposite things. The fixed-budget cases (2, 3 and 4)
-/// want the same "tolerance is unreachable, the cap decides" regime for ACI as
-/// for the SVD arms, so they ask for [`AciTolerance::ScaleRelative`]. Cases 1
-/// and 5 are tolerance-driven and judged by one error that is normalized
-/// globally, so they ask for [`AciTolerance::Absolute`]: a per-bond
-/// normalization would hold each region to its own scale, which is not the
-/// quantity either case reports.
+/// at every call site rather than inheriting that default. Case 1 and the
+/// patched arm of case 2 use an absolute residual. The global ACI arm of case 2
+/// uses a scale-relative residual. Records name the selected metric explicitly.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AciTolerance {
     /// Absolute pivot error threshold.
@@ -289,90 +284,6 @@ fn sampled_product_values<A: Field2D, B: Field2D>(
         .collect()
 }
 
-/// Ratio at which the sampled elementwise product counts as numerically zero.
-///
-/// The relative error of cases 3 and 4 is normalized by the largest sampled
-/// `|f * g|`. If the two mixtures barely overlap, that number collapses
-/// exponentially while `max |f|` and `max |g|` stay of order one, and the
-/// reported relative error stops measuring anything. A product scale below
-/// `DEGENERACY_THRESHOLD` times the product of the two input scales means the
-/// sampled reference has lost at least six orders of magnitude to the lack of
-/// overlap, which is far outside anything a healthy instance produces: the
-/// healthy benchmark instances sit many orders of magnitude above the threshold.
-pub const DEGENERACY_THRESHOLD: f64 = 1e-6;
-
-/// Scales of the product and both inputs on one sampled grid.
-#[derive(Clone, Copy, Debug)]
-pub struct MixtureProductScales {
-    /// `max |f(x, y) * g(x, y)|`, the normalization of the relative error.
-    pub ref_scale: f64,
-    /// `max |f(x, y)|`.
-    pub input_scale_f: f64,
-    /// `max |g(x, y)|`.
-    pub input_scale_g: f64,
-}
-
-impl MixtureProductScales {
-    /// True when the sampled product has collapsed relative to the inputs, so
-    /// the relative error metric of the case is meaningless.
-    pub fn is_degenerate(&self) -> bool {
-        self.ref_scale < DEGENERACY_THRESHOLD * self.input_scale_f * self.input_scale_g
-    }
-}
-
-/// Reference and input scales on one sampled grid.
-pub fn product_scales<A: Field2D, B: Field2D>(
-    f: &A,
-    g: &B,
-    r: usize,
-    box_l: f64,
-    n_samples: usize,
-    seed: u64,
-) -> MixtureProductScales {
-    let xs = sample_grid_indices(r, n_samples, seed);
-    let ys = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
-    let mut s = MixtureProductScales {
-        ref_scale: 0.0,
-        input_scale_f: 0.0,
-        input_scale_g: 0.0,
-    };
-    for (&ix, &iy) in xs.iter().zip(&ys) {
-        let x = grid_coord(ix, r, box_l);
-        let y = grid_coord(iy, r, box_l);
-        let (fv, gv) = (f.eval(x, y), g.eval(x, y));
-        s.ref_scale = s.ref_scale.max((fv * gv).abs());
-        s.input_scale_f = s.input_scale_f.max(fv.abs());
-        s.input_scale_g = s.input_scale_g.max(gv.abs());
-    }
-    s
-}
-
-/// Reject an instance whose sampled product is numerically zero.
-pub fn check_product_not_degenerate<A: Field2D, B: Field2D>(
-    f: &A,
-    g: &B,
-    r: usize,
-    box_l: f64,
-    n_samples: usize,
-    seed: u64,
-) -> anyhow::Result<MixtureProductScales> {
-    let s = product_scales(f, g, r, box_l, n_samples, seed);
-    anyhow::ensure!(
-        !s.is_degenerate(),
-        "degenerate instance at r={r}, box_l={box_l}: the two mixtures barely overlap, so the \
-         elementwise product is numerically zero at the sampled points (ref_scale {:.3e} against \
-         input_scale_f {:.3e} and input_scale_g {:.3e}, ratio {:.3e} below the threshold {:.0e}) \
-         and the relative error metric, which divides by ref_scale, is meaningless. Lower \
-         Increase the Gaussian density or use a smaller box.",
-        s.ref_scale,
-        s.input_scale_f,
-        s.input_scale_g,
-        s.ref_scale / (s.input_scale_f * s.input_scale_g).max(f64::MIN_POSITIVE),
-        DEGENERACY_THRESHOLD
-    );
-    Ok(s)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -411,43 +322,6 @@ mod tests {
             println!("{algo:?}: max abs error {err:.3e} (bound {bound:.0e})");
             assert!(err < bound, "{algo:?}: err {err} exceeds {bound}");
         }
-    }
-
-    /// Two mixtures whose supports sit in opposite corners of the box: each one
-    /// is of order one where it lives, but the product is zero to machine
-    /// precision everywhere, so the guard must refuse the instance.
-    #[test]
-    fn degeneracy_guard_fires_on_non_overlapping_mixtures() {
-        use crate::gaussian::AnisoMixture2D;
-
-        let (r, l) = (6, 4.0);
-        let far = |sign: f64| AnisoMixture2D {
-            weights: vec![1.0],
-            quad: vec![(50.0, 0.0, 50.0)],
-            centers: vec![(sign * l / 2.0, sign * l / 2.0)],
-        };
-        let (f, g) = (far(-1.0), far(1.0));
-
-        let s = product_scales(&f, &g, r, l, 128, 7);
-        println!(
-            "ref_scale {:.3e}, input scales {:.3e} and {:.3e}",
-            s.ref_scale, s.input_scale_f, s.input_scale_g
-        );
-        assert!(s.input_scale_f > 1e-3 && s.input_scale_g > 1e-3);
-        assert!(s.is_degenerate(), "guard predicate missed a zero product");
-
-        let err = check_product_not_degenerate(&f, &g, r, l, 128, 7)
-            .expect_err("the guard must reject this instance");
-        let msg = err.to_string();
-        assert!(msg.contains("barely overlap"), "unexpected message: {msg}");
-
-        // A healthy instance of the same shape must pass, so the guard is not
-        // simply always firing.
-        let f2 = AnisoMixture2D::random(8, 1.0, 0.12, 2.0, 1);
-        let g2 = AnisoMixture2D::random(8, 1.0, 0.12, 2.0, 2);
-        let s2 = check_product_not_degenerate(&f2, &g2, 8, 1.0, 128, 99).unwrap();
-        println!("default-like instance: ref_scale {:.3e}", s2.ref_scale);
-        assert!(!s2.is_degenerate());
     }
 
     /// Guards against a dispatch swap between the arms of `elementwise_product`.

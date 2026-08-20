@@ -30,14 +30,12 @@
 //!    it is what makes the `aci` engine usable at all: on the embedded train the
 //!    product is zero outside a `4^-k` fraction of the index space, so a pivot
 //!    search seeded at random points would see nothing but zeros.
-//! 2. The tolerance handed to the per-patch engine is deliberately tighter than
-//!    the tolerance the result is judged at. The real budgeting is done once, at
-//!    the end, by [`truncate_adaptive`], which distributes `rtol^2 * ||F||^2`
-//!    over the patches proportionally to patch volume and drops patches whose
-//!    norm is below their share. That is the correct treatment of shrinking
-//!    patch norms: a plain relative tolerance applied per patch would demand the
-//!    same relative accuracy from a patch that contributes nothing to the global
-//!    norm as from one that carries all of it.
+//! 2. Fit applies the requested relative-L2 tolerance once to every disjoint
+//!    output patch. Squared errors add over disjoint supports, so the same local
+//!    relative tolerance provides the same global relative-L2 bound without a
+//!    second lossy truncation. ACI keeps its patch-local residual threshold
+//!    separate and may use [`truncate_adaptive`] for explicitly recorded L2
+//!    output compression.
 //! 3. A patch pair with at most one free site is multiplied by the `naive`
 //!    engine whatever engine was asked for, because a one-site product is a
 //!    single elementwise multiplication and the sweeping engines have no sweep
@@ -61,19 +59,29 @@ use crate::harness::{index_to_bits, sample_grid_indices};
 ///
 /// The two variants match the global fit and ACI arms of case 2, but run on
 /// projected patch trains.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PatchedEngine {
-    /// `tensor4all_treetn::hadamard` with the variational fit contraction.
-    FitTreetn,
-    /// `tensor4all_aci::elementwise` cross interpolation of the product.
-    Aci,
+    /// Variational fit with one relative-L2 error budget per disjoint patch.
+    FitTreetn {
+        /// Relative-L2 SVD tolerance used once while constructing each patch.
+        l2_rtol: f64,
+    },
+    /// Cross interpolation followed by separately controlled L2 compression.
+    Aci {
+        /// Absolute patch-local ACI residual threshold.
+        residual_tolerance: f64,
+        /// Relative-L2 tolerance used to compress the assembled ACI output.
+        output_l2_rtol: f64,
+    },
 }
 
 impl PatchedEngine {
-    fn algo(self) -> ElementwiseAlgo {
+    fn construction(self) -> (ElementwiseAlgo, f64) {
         match self {
-            PatchedEngine::FitTreetn => ElementwiseAlgo::Fit,
-            PatchedEngine::Aci => ElementwiseAlgo::Aci,
+            PatchedEngine::FitTreetn { l2_rtol } => (ElementwiseAlgo::Fit, l2_rtol),
+            PatchedEngine::Aci {
+                residual_tolerance, ..
+            } => (ElementwiseAlgo::Aci, residual_tolerance),
         }
     }
 }
@@ -192,23 +200,9 @@ pub fn tt_to_patch_train(tt: &SimpleTT<f64>, sites: &[DynIndex]) -> anyhow::Resu
 /// Options for the patched product.
 #[derive(Clone, Copy, Debug)]
 pub struct PatchedProductOptions {
-    /// Engine that forms the product inside each patch pair.
+    /// Engine and its explicitly named accuracy metric.
     pub engine: PatchedEngine,
-    /// Tolerance handed to the per-patch engine.
-    ///
-    /// Kept safely below the tolerance the result is judged at, since the real
-    /// budgeting happens once at the end in [`truncate_adaptive`]. For the three
-    /// SVD-based engines this is a singular value threshold relative to the
-    /// largest singular value of the patch; the `aci` engine runs
-    /// [`AciTolerance::Absolute`] because a patch in a near-empty region must not
-    /// be held to a tolerance relative to its own magnitude.
-    pub product_tol: f64,
-    /// Rank cap for the per-patch product, before the final budgeting.
-    pub product_max_bond_dim: usize,
-    /// Global relative tolerance of the output, spent by [`truncate_adaptive`]
-    /// as `rtol^2 * ||F||^2` distributed over patches by volume.
-    pub rtol: f64,
-    /// Rank cap of the output patches.
+    /// Maximum bond dimension of one output patch.
     pub max_bond_dim: usize,
 }
 
@@ -217,9 +211,9 @@ pub struct PatchedProductOptions {
 /// Every compatible pair of patches contributes one output patch on the
 /// intersection of the two subdomains. Both inputs cover the domain disjointly,
 /// so those intersections are disjoint too and each one is produced exactly
-/// once: there is no patch to add to another patch. The collected patches are
-/// then handed to [`truncate_adaptive`], which computes the output norm and
-/// distributes the global budget over them.
+/// once: there is no patch to add to another patch. Fit patches already carry
+/// the requested relative-L2 accuracy and are assembled without another lossy
+/// truncation. ACI output receives its separately configured L2 compression.
 pub fn patched_elementwise(
     f: &PartitionedTT,
     g: &PartitionedTT,
@@ -230,25 +224,16 @@ pub fn patched_elementwise(
 }
 
 /// Where the wall time of one patched product went.
-///
-/// The two halves of the product are a loop over compatible patch pairs and one
-/// final [`truncate_adaptive`], and they scale differently: the pair loop grows
-/// with the patch count and with the cube of the patch rank, while the final
-/// budgeting has to gauge and truncate every collected patch once. The runner
-/// records both parts because either can dominate.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PatchedProductStats {
-    /// Compatible patch pairs contracted, which is the number of output patches
-    /// before the budgeting drops any.
+    /// Compatible patch pairs contracted before optional ACI compression.
     pub n_pairs: usize,
-    /// Summed wall time of the per-pair products, restriction and embedding
-    /// included.
+    /// Summed wall time of per-pair restriction, product, and embedding.
     pub pairs_secs: f64,
-    /// Wall time of the final [`truncate_adaptive`], the one place the global
-    /// budget is spent, together with the disjointness check of the collected
-    /// patches that precedes it. So `pairs_secs + truncate_secs` is the whole
-    /// product to within the loop bookkeeping.
-    pub truncate_secs: f64,
+    /// Maximum patch bond dimension before optional ACI compression.
+    pub pre_compression_max_bond: usize,
+    /// Wall time of disjoint assembly and optional ACI L2 compression.
+    pub postprocess_secs: f64,
 }
 
 /// [`patched_elementwise`] with the cost breakdown of the two halves.
@@ -261,6 +246,7 @@ pub fn patched_elementwise_with_stats(
     // BENCH_PATCH_TRACE=1 prints one line per contracted pair and one for the
     // final truncation, for cost-breakdown sessions; it is not part of any record.
     let trace = std::env::var("BENCH_PATCH_TRACE").is_ok();
+    let (algorithm, construction_tolerance) = options.engine.construction();
     let mut stats = PatchedProductStats::default();
     let mut patches = Vec::new();
     for (proj_f, sub_f) in f.iter() {
@@ -280,17 +266,17 @@ pub fn patched_elementwise_with_stats(
                     // A single free site has no sweep to run, so the sweeping
                     // engines have nothing to contribute and the local product
                     // is the whole computation. Documented at the module top.
-                    let algo = if ta.len() >= 2 {
-                        options.engine.algo()
+                    let algorithm = if ta.len() >= 2 {
+                        algorithm
                     } else {
                         ElementwiseAlgo::Naive
                     };
                     Restricted::Train(elementwise_product(
-                        algo,
+                        algorithm,
                         &ta,
                         &tb,
-                        options.product_tol,
-                        options.product_max_bond_dim,
+                        construction_tolerance,
+                        options.max_bond_dim,
                         AciTolerance::Absolute,
                     )?)
                 }
@@ -313,17 +299,28 @@ pub fn patched_elementwise_with_stats(
         }
     }
     stats.n_pairs = patches.len();
-    let trunc_t0 = std::time::Instant::now();
+    stats.pre_compression_max_bond = patches
+        .iter()
+        .map(|patch| patch.max_bond_dim())
+        .max()
+        .unwrap_or(0);
+    let postprocess_t0 = std::time::Instant::now();
     let partitioned = PartitionedTT::from_subdomains(patches)
         .map_err(|e| anyhow::anyhow!("pairwise patch intersections were not disjoint: {e}"))?;
-    let result = truncate_adaptive(&partitioned, options.rtol, Some(options.max_bond_dim))
-        .map_err(|e| anyhow::anyhow!("truncate_adaptive failed: {e}"))?;
-    stats.truncate_secs = trunc_t0.elapsed().as_secs_f64();
+    let result = match options.engine {
+        PatchedEngine::FitTreetn { .. } => partitioned,
+        PatchedEngine::Aci { output_l2_rtol, .. } => {
+            truncate_adaptive(&partitioned, output_l2_rtol, Some(options.max_bond_dim))
+                .map_err(|e| anyhow::anyhow!("ACI output compression failed: {e}"))?
+        }
+    };
+    stats.postprocess_secs = postprocess_t0.elapsed().as_secs_f64();
     if trace {
         eprintln!(
-            "  pairs={} truncate_adaptive t={:.3}s kept={}",
+            "  pairs={} pre_compression_chi={} postprocess t={:.3}s kept={}",
             stats.n_pairs,
-            stats.truncate_secs,
+            stats.pre_compression_max_bond,
+            stats.postprocess_secs,
             result.len()
         );
     }
@@ -802,31 +799,34 @@ mod tests {
         let (sites, left_mix, right_mix, left, right, patched_left, patched_right) = fixture();
         for (engine, global_algo, aci_tolerance) in [
             (
-                PatchedEngine::FitTreetn,
+                PatchedEngine::FitTreetn { l2_rtol: 1e-8 },
                 ElementwiseAlgo::Fit,
                 AciTolerance::Absolute,
             ),
             (
-                PatchedEngine::Aci,
+                PatchedEngine::Aci {
+                    residual_tolerance: 1e-10,
+                    output_l2_rtol: 1e-8,
+                },
                 ElementwiseAlgo::Aci,
                 AciTolerance::ScaleRelative,
             ),
         ] {
             let global =
                 elementwise_product(global_algo, &left, &right, 1e-8, 256, aci_tolerance).unwrap();
-            let patched = patched_elementwise(
+            let (patched, stats) = patched_elementwise_with_stats(
                 &patched_left,
                 &patched_right,
                 &sites,
                 PatchedProductOptions {
                     engine,
-                    product_tol: 1e-10,
-                    product_max_bond_dim: 256,
-                    rtol: 1e-8,
                     max_bond_dim: crate::gaussian_input::PATCH_CAP,
                 },
             )
             .unwrap();
+            if matches!(engine, PatchedEngine::FitTreetn { .. }) {
+                assert_eq!(stats.pre_compression_max_bond, max_patch_bond(&patched));
+            }
             let global_error =
                 max_rel_error_vs_product(&global, &left_mix, &right_mix, 6, 1.0, 64, 17);
             let patched_error =

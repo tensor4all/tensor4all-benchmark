@@ -135,9 +135,17 @@ fn hadamard_treetn<T: BenchScalar>(
     } else {
         ContractionMethod::Zipup
     };
+    let policy = if fit {
+        SvdTruncationPolicy::new(tol * tol)
+            .with_relative()
+            .with_squared_values()
+            .with_discarded_tail_sum()
+    } else {
+        SvdTruncationPolicy::new(tol)
+    };
     let mut opts = ContractionOptions::new(method)
         .with_max_bond_dim(max_bond)
-        .with_svd_policy(SvdTruncationPolicy::new(tol));
+        .with_svd_policy(policy);
     if fit {
         opts = opts.with_nfullsweeps(FIT_NFULLSWEEPS);
     }

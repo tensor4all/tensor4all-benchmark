@@ -15,9 +15,9 @@ use t4a_bench::gaussian_input::{
 };
 use t4a_bench::harness::time_median;
 use t4a_bench::patched::{
-    fused_site_indices, max_patch_bond, patched_elementwise, patched_input_from_global,
+    fused_site_indices, max_patch_bond, patched_elementwise_with_stats, patched_input_from_global,
     sampled_relative_l2_patched, total_params, NormPatchedInputOptions, PatchedEngine,
-    PatchedProductOptions,
+    PatchedProductOptions, PatchedProductStats,
 };
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
 
@@ -156,20 +156,19 @@ fn run_point(
     )?;
 
     let (patched_fit_result, patched_fit_timing) = time_median(warmups, runs, || {
-        patched_elementwise(
+        patched_elementwise_with_stats(
             &patched_left,
             &patched_right,
             &sites,
             PatchedProductOptions {
-                engine: PatchedEngine::FitTreetn,
-                product_tol: 1e-8,
-                product_max_bond_dim: PATCH_CAP,
-                rtol: INPUT_L2_RTOL,
+                engine: PatchedEngine::FitTreetn {
+                    l2_rtol: INPUT_L2_RTOL,
+                },
                 max_bond_dim: PATCH_CAP,
             },
         )
     });
-    let patched_fit = patched_fit_result?;
+    let (patched_fit, patched_fit_stats) = patched_fit_result?;
     let patched_fit_error = sampled_relative_l2_patched(
         &patched_fit,
         &sites,
@@ -202,6 +201,7 @@ fn run_point(
         patched_fit_error,
         &patched_fit_timing,
         global_fit_timing.median_secs,
+        patched_fit_stats,
         &sites,
     )?;
 
@@ -250,20 +250,20 @@ fn run_point(
     )?;
 
     let (patched_aci_result, patched_aci_timing) = time_median(warmups, runs, || {
-        patched_elementwise(
+        patched_elementwise_with_stats(
             &patched_left,
             &patched_right,
             &sites,
             PatchedProductOptions {
-                engine: PatchedEngine::Aci,
-                product_tol: aci_tolerance,
-                product_max_bond_dim: PATCH_CAP,
-                rtol: INPUT_L2_RTOL,
+                engine: PatchedEngine::Aci {
+                    residual_tolerance: aci_tolerance,
+                    output_l2_rtol: INPUT_L2_RTOL,
+                },
                 max_bond_dim: PATCH_CAP,
             },
         )
     });
-    let patched_aci = patched_aci_result?;
+    let (patched_aci, patched_aci_stats) = patched_aci_result?;
     let patched_aci_error = sampled_relative_l2_patched(
         &patched_aci,
         &sites,
@@ -296,6 +296,7 @@ fn run_point(
         patched_aci_error,
         &patched_aci_timing,
         global_aci_timing.median_secs,
+        patched_aci_stats,
         &sites,
     )?;
     Ok(())
@@ -419,6 +420,7 @@ fn write_patched_record(
     error: f64,
     timing: &t4a_bench::harness::Timing,
     global_time: f64,
+    stats: PatchedProductStats,
     sites: &[tensor4all_core::DynIndex],
 ) -> anyhow::Result<()> {
     let mut params = common_params(
@@ -435,6 +437,9 @@ fn write_patched_record(
         tolerance_metric,
     );
     params["speedup_vs_global"] = serde_json::json!(global_time / timing.median_secs);
+    params["last_run_pair_product_secs"] = serde_json::json!(stats.pairs_secs);
+    params["last_run_postprocess_secs"] = serde_json::json!(stats.postprocess_secs);
+    params["pre_compression_max_bond"] = serde_json::json!(stats.pre_compression_max_bond);
     write_record(
         out_dir,
         &format!("{CASE}-{arm}-chi{input_chi}"),

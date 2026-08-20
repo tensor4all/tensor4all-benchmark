@@ -1,7 +1,7 @@
 //! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
 
 use tensor4all_core::{DynIndex, SvdTruncationPolicy};
-use tensor4all_itensorlike::{ContractOptions, TensorTrain};
+use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
 use tensor4all_partitionedtt as tt;
 use tensor4all_simplett::mpo::MPO;
@@ -42,6 +42,62 @@ pub struct PatchedMpoOutput {
     pub max_patch_bond: usize,
 }
 
+/// Convert a compatible MPO pair to tensor trains with one shared site index.
+pub fn mpo_pair_to_tensortrains(
+    left: &MPO<f64>,
+    right: &MPO<f64>,
+) -> anyhow::Result<(TensorTrain, TensorTrain)> {
+    anyhow::ensure!(!left.is_empty(), "patched MPO input is empty");
+    anyhow::ensure!(left.len() == right.len(), "MPO lengths differ");
+
+    let n = left.len();
+    let x: Vec<_> = (0..n)
+        .map(|site| DynIndex::new_dyn(left.site_dim(site).0))
+        .collect();
+    let y: Vec<_> = (0..n)
+        .map(|site| DynIndex::new_dyn(left.site_dim(site).1))
+        .collect();
+    let z: Vec<_> = (0..n)
+        .map(|site| DynIndex::new_dyn(right.site_dim(site).1))
+        .collect();
+    for site in 0..n {
+        anyhow::ensure!(
+            left.site_dim(site).1 == right.site_dim(site).0,
+            "contracted site dimensions differ at site {site}"
+        );
+    }
+
+    Ok((
+        mpo_to_tensortrain(left, &x, &y)?,
+        mpo_to_tensortrain(right, &y, &z)?,
+    ))
+}
+
+/// Truncate a tensor train to a relative L2 error tolerance with no rank cap.
+pub fn truncate_tensortrain_l2(tt: &mut TensorTrain, rtol: f64) -> anyhow::Result<()> {
+    anyhow::ensure!(rtol.is_finite() && rtol >= 0.0, "invalid L2 tolerance");
+    let policy = SvdTruncationPolicy::new(rtol * rtol)
+        .with_relative()
+        .with_squared_values()
+        .with_discarded_tail_sum();
+    tt.truncate(&TruncateOptions::svd().with_svd_policy(policy))?;
+    Ok(())
+}
+
+/// Number of stored scalar parameters in a tensor train.
+pub fn tensortrain_n_params(tt: &TensorTrain) -> usize {
+    tt.tensors()
+        .into_iter()
+        .map(|tensor| {
+            tensor
+                .indices()
+                .iter()
+                .map(|index| index.dim)
+                .product::<usize>()
+        })
+        .sum()
+}
+
 impl PatchedMpoPair {
     /// Build both patched representations from exactly the same MPO cores and indices.
     pub fn new(
@@ -50,29 +106,7 @@ impl PatchedMpoPair {
         rtol: f64,
         patch_max_bond: usize,
     ) -> anyhow::Result<Self> {
-        anyhow::ensure!(!left.is_empty(), "patched MPO input is empty");
-        anyhow::ensure!(left.len() == right.len(), "MPO lengths differ");
-        anyhow::ensure!(patch_max_bond > 0, "patch max bond must be positive");
-
-        let n = left.len();
-        let x: Vec<_> = (0..n)
-            .map(|site| DynIndex::new_dyn(left.site_dim(site).0))
-            .collect();
-        let y: Vec<_> = (0..n)
-            .map(|site| DynIndex::new_dyn(left.site_dim(site).1))
-            .collect();
-        let z: Vec<_> = (0..n)
-            .map(|site| DynIndex::new_dyn(right.site_dim(site).1))
-            .collect();
-        for site in 0..n {
-            anyhow::ensure!(
-                left.site_dim(site).1 == right.site_dim(site).0,
-                "contracted site dimensions differ at site {site}"
-            );
-        }
-
-        let left_train = mpo_to_tensortrain(left, &x, &y)?;
-        let right_train = mpo_to_tensortrain(right, &y, &z)?;
+        let (left_train, right_train) = mpo_pair_to_tensortrains(left, right)?;
         Self::from_tensortrains(left_train, right_train, rtol, patch_max_bond)
     }
 
@@ -81,6 +115,17 @@ impl PatchedMpoPair {
         left_train: TensorTrain,
         right_train: TensorTrain,
         rtol: f64,
+        patch_max_bond: usize,
+    ) -> anyhow::Result<Self> {
+        Self::from_tensortrains_with_input_rtol(left_train, right_train, rtol, rtol, patch_max_bond)
+    }
+
+    /// Build patched inputs with a tolerance independent of contraction truncation.
+    pub fn from_tensortrains_with_input_rtol(
+        left_train: TensorTrain,
+        right_train: TensorTrain,
+        input_rtol: f64,
+        contract_rtol: f64,
         patch_max_bond: usize,
     ) -> anyhow::Result<Self> {
         anyhow::ensure!(!left_train.is_empty(), "cached MPO input is empty");
@@ -128,35 +173,47 @@ impl PatchedMpoPair {
         let input_max_bond = left_train.max_bond_dim().max(right_train.max_bond_dim());
         let left_order = y.iter().chain(&x).cloned().collect::<Vec<_>>();
         let right_order = y.iter().chain(&z).cloned().collect::<Vec<_>>();
-        let tt_options = tt::PatchingOptions {
-            rtol,
+        let tt_input_options = tt::PatchingOptions {
+            rtol: input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
-        let tt_right_options = tt::PatchingOptions {
+        let tt_right_input_options = tt::PatchingOptions {
             patch_order: right_order.clone(),
-            ..tt_options.clone()
+            ..tt_input_options.clone()
         };
         let tt_left = tt::add_with_patching(
             vec![tt::SubDomainTT::from_tt(left_train.clone())],
-            &tt_options,
+            &tt_input_options,
         )?;
         let tt_right = tt::add_with_patching(
             vec![tt::SubDomainTT::from_tt(right_train.clone())],
-            &tt_right_options,
+            &tt_right_input_options,
         )?;
         let global_left = left_train.clone();
         let global_right = right_train.clone();
+        let tree_input_options = tree::PatchingOptions {
+            rtol: input_rtol,
+            max_bond_dim: Some(patch_max_bond),
+            patch_order: left_order.clone(),
+            split_strategy: tree::PatchSplitStrategy::Sequential,
+        };
+        let tree_right_input_options = tree::PatchingOptions {
+            patch_order: right_order.clone(),
+            ..tree_input_options.clone()
+        };
+        let tt_options = tt::PatchingOptions {
+            rtol: contract_rtol,
+            max_bond_dim: Some(patch_max_bond),
+            patch_order: left_order.clone(),
+            split_strategy: tt::PatchSplitStrategy::Sequential,
+        };
         let tree_options = tree::PatchingOptions {
-            rtol,
+            rtol: contract_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
-        };
-        let tree_right_options = tree::PatchingOptions {
-            patch_order: right_order,
-            ..tree_options.clone()
         };
         let center = n - 1;
         let tree_left = tree::add_with_patching(
@@ -164,14 +221,14 @@ impl PatchedMpoPair {
                 left_train.into_treetn(),
             )?],
             &center,
-            &tree_options,
+            &tree_input_options,
         )?;
         let tree_right = tree::add_with_patching(
             vec![tree::SubDomainTreeTN::from_treetn(
                 right_train.into_treetn(),
             )?],
             &center,
-            &tree_right_options,
+            &tree_right_input_options,
         )?;
         anyhow::ensure!(
             (tree_left.len(), tree_right.len()) == (tt_left.len(), tt_right.len()),
@@ -221,6 +278,20 @@ impl PatchedMpoPair {
                 .map(|patch| patch.max_bond_dim())
                 .max()
                 .unwrap_or(0),
+        )
+    }
+
+    /// Total stored parameters in the left and right patched inputs.
+    pub fn input_patch_n_params(&self) -> (usize, usize) {
+        (
+            self.tt_left
+                .values()
+                .map(|subdomain| tensortrain_n_params(subdomain.data()))
+                .sum(),
+            self.tt_right
+                .values()
+                .map(|subdomain| tensortrain_n_params(subdomain.data()))
+                .sum(),
         )
     }
 

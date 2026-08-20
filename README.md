@@ -16,7 +16,7 @@ revision that produced it. The pinned `tensor4all-rs` revision lives in `Cargo.t
 | 3. `elementwise_gauss2d` | Elementwise product of two 2D quantics Gaussian mixtures at a fixed output budget, swept over bits per variable `R`, against the exact pointwise product | [description](#case-3-elementwise-product-of-2d-quantics-gaussian-mixtures) | [`src/bin/elementwise_gauss2d.rs`](src/bin/elementwise_gauss2d.rs) | [`result/mac-cpu/elementwise_gauss2d.md`](result/mac-cpu/elementwise_gauss2d.md) | [time](result/mac-cpu/elementwise_gauss2d-time.svg), [error](result/mac-cpu/elementwise_gauss2d-error.svg) |
 | 4. `elementwise_gauss2d_scaling` | Density-constant scaling study of case 3: how the quantics input rank `chi_in` grows with the number of Gaussians `N` when the box area grows proportionally to `N` | [description](#case-4-density-constant-scaling-of-the-quantics-rank) | [`src/bin/elementwise_gauss2d_scaling.rs`](src/bin/elementwise_gauss2d_scaling.rs) | [`result/mac-cpu/elementwise_gauss2d_scaling.md`](result/mac-cpu/elementwise_gauss2d_scaling.md) | [chi](result/mac-cpu/elementwise_gauss2d_scaling-chi.svg), [time](result/mac-cpu/elementwise_gauss2d_scaling-time.svg), [error](result/mac-cpu/elementwise_gauss2d_scaling-error.svg) |
 | 5. `elementwise_gauss2d_patched` | Patched (domain decomposed) elementwise product, controlled by a global relative tolerance instead of a fixed output budget, comparing patched and global representations at equal accuracy on size and time, over two instance families: anisotropic narrow spikes by default and case 4's smooth Gaussians on request | [description](#case-5-patched-elementwise-product-at-equal-accuracy) | [`src/bin/elementwise_gauss2d_patched.rs`](src/bin/elementwise_gauss2d_patched.rs) | [`result/mac-cpu/elementwise_gauss2d_patched.md`](result/mac-cpu/elementwise_gauss2d_patched.md) | [time](result/mac-cpu/elementwise_gauss2d_patched-time.svg), [error](result/mac-cpu/elementwise_gauss2d_patched-error.svg), [parameters](result/mac-cpu/elementwise_gauss2d_patched-params-aniso.svg) |
-| 6. `mpo_mpo_aniso_patched` | Fit contraction of anisotropic Gaussian MPOs, comparing the global baseline with patched chain TreeTN | [description](#case-6-patched-mpo-mpo-fit-contraction) | [`src/bin/mpo_mpo_aniso_patched.rs`](src/bin/mpo_mpo_aniso_patched.rs) | [`result/linux-epyc-7713p/mpo_mpo_aniso_patched.md`](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md) | [results table](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md#results) |
+| 6. `mpo_mpo_aniso_patched` | Fit contraction of anisotropic Gaussian MPOs, comparing the global baseline with patched chain TreeTN | [description](#case-6-patched-mpo-mpo-fit-contraction) | [`src/bin/mpo_mpo_aniso_patched.rs`](src/bin/mpo_mpo_aniso_patched.rs) | [contraction](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md), [input scaling](result/linux-epyc-7713p/mpo_mpo_aniso_input_scaling.md) | [crossover](result/linux-epyc-7713p/mpo_mpo_aniso_patched.md#results), [patch scaling](result/linux-epyc-7713p/mpo_mpo_aniso_input_scaling.md#results) |
 
 ## Benchmark cases
 
@@ -531,7 +531,13 @@ comparison that established numerical equivalence.
 
 The default `N = 512` instance targets the practical global-rank range discussed
 for case 5. The default per-patch cap is 128; cap 64 is intentionally excluded
-from future case-6 measurements. The committed `N = 2048` crossover sweep is
+from future case-6 measurements. The separate [input-scaling report](result/linux-epyc-7713p/mpo_mpo_aniso_input_scaling.md)
+records the established TCI `1e-8` → global relative-L2/SVD `1e-6` → adaptive
+cap-128 pipeline through compressed input χ 900, where each input has 120
+patches. For large TCI inputs the runner uses a spatially indexed evaluator with
+a recorded rigorous absolute tail bound; sampled errors are checked against the
+unmodified full mixture. Regenerate that report from its committed raw records
+with `python3 scripts/report_mpo_input_scaling.py result/linux-epyc-7713p`. The committed `N = 2048` crossover sweep is
 linked in the [top-level case table](#cases-at-a-glance): patched fit is slower
 at input χ 192, faster at χ 224, and 1.60× faster at χ 256 on the recorded
 single-core profile. The global output cap is the measured pre-patching
@@ -779,6 +785,15 @@ Environment knobs:
 | `BENCH_NGAUSS` | cases 2, 3 and 6 | `8` (cases 2 and 3), `512` (case 6) | number of Gaussians or anisotropic spikes per mixture |
 | `BENCH_INPUT_CACHE_DIR` | case 6 | `.cache/inputs` | directory for deterministic global input MPS cache entries |
 | `BENCH_INPUT_CACHE_REFRESH` | case 6 | unset | when set, rebuild and atomically replace the selected input cache entry |
+| `BENCH_INPUT_GENERATOR` | case 6 | `tci` | input constructor: global fused `tci`, or per-Gaussian `multiscale` using principal-axis unsafe points |
+| `BENCH_INPUT_TCI_RTOL` | case 6 | `1e-8` | relative TCI tolerance; also the interpolation tolerance supplied to the multiscale constructor |
+| `BENCH_TCI_LOCAL_ABS_TOL` | case 6 | `1e-12` | rigorous pointwise absolute bound for tails omitted by the spatially indexed TCI callback |
+| `BENCH_TCI_INITIAL_PIVOTS` | case 6 | `8` | deterministic mixture-center grid pivots used by TCI; random initial pivots are disabled |
+| `BENCH_INPUT_POLY_DEGREE` | case 6 | `28` | polynomial degree for the multiscale single-Gaussian constructor |
+| `BENCH_INPUT_ADD_RTOL` | case 6 | `1e-10` | per-bond SVD tolerance used while adding multiscale single-Gaussian QTTs |
+| `BENCH_INPUT_SVD_RTOL` | case 6 | `1e-6` | global relative-L2 SVD tolerance applied before adaptive patching |
+| `BENCH_INPUT_ONLY` | case 6 | unset | when set, write the input/patch record and skip contraction |
+| `BENCH_INPUT_SANITY` | case 6 | `1e-4` | maximum sampled relative error accepted for each compressed input MPO |
 | `BENCH_BOX_L` | cases 2 and 3 | `6.0` | half-width `L` of the box `[-L, L]` |
 | `BENCH_NS` | cases 4 and 5 | `8,16,32,64` (case 4, and case 5 on the `smooth` family), `8,16,32,64,128,256,512` (case 5 on the default `aniso` family) | comma-separated Gaussian or spike counts `N` to sweep. Both cases derive `L` and `R` from `N`, so they ignore `BENCH_NGAUSS`, `BENCH_BOX_L` and `BENCH_RS` |
 | `BENCH_FAMILY` | case 5 | `aniso` | which instance family to sweep. `aniso` is `N` anisotropic narrow spikes at a fixed spacing-to-width ratio, the family the case is written for; `smooth` is case 4's isotropic Gaussians at constant density, unchanged, and it also switches `BENCH_NS` to case 4's four points. Recorded in the params of every record as `family`, and part of every record's filename, so one profile can hold both |

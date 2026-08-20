@@ -83,17 +83,12 @@ fn grid_pivots(
     box_l: f64,
     shifted: bool,
 ) -> Vec<Vec<usize>> {
-    let count = count.min(mixture.centers.len()).max(1);
+    let count = count.min((mixture.centers.len() / 2).max(1));
     let grid_size = 1usize << r;
     let mut pivots = Vec::with_capacity(5 * count);
     for pivot in 0..count {
-        let offset = if shifted {
-            mixture.centers.len() / (2 * count)
-        } else {
-            0
-        };
-        let component =
-            (pivot * mixture.centers.len() / count + offset).min(mixture.centers.len() - 1);
+        let component = ((2 * pivot + usize::from(shifted)) * mixture.centers.len() / (2 * count))
+            .min(mixture.centers.len() - 1);
         let center = mixture.centers[component];
         let (a, b, c) = mixture.quad[component];
         let discriminant = ((a - c).powi(2) + 4.0 * b * b).sqrt();

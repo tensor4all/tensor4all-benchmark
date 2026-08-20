@@ -29,7 +29,12 @@ pub fn fit_mpo_contract(
 ) -> anyhow::Result<MPO<f64>> {
     let options = ContractOptions::fit()
         .with_max_bond_dim(max_bond)
-        .with_svd_policy(SvdTruncationPolicy::new(rtol))
+        .with_svd_policy(
+            SvdTruncationPolicy::new(rtol * rtol)
+                .with_relative()
+                .with_squared_values()
+                .with_discarded_tail_sum(),
+        )
         .with_nsweeps(FIT_NSWEEPS);
     contract_via_bridge(left, right, &options)
 }

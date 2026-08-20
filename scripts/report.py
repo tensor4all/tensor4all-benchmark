@@ -51,12 +51,20 @@ def main(profile: Path) -> None:
         assert params["external_error_metric"] == "sampled_relative_l2"
         assert record["max_error"] <= 1e-4
     run = metadata(profile / "run.yaml")
+    repeat_counts = sorted({len(record["wall_times_secs"]) for record in records})
+    repeat_summary = (
+        str(repeat_counts[0])
+        if len(repeat_counts) == 1
+        else ", ".join(map(str, repeat_counts))
+    )
     lines = [
         "# Tensor4all benchmark results",
         "",
         f"Profile: `{run['profile']}`. CPU: {run['chip']}. Threads: {run['threads']}. CPU affinity: {run['cpu_affinity']}. Source revision: `{run['repo_rev']}`. tensor4all-rs revision: `{run['tensor4all_rs_rev']}`.",
         "",
         "The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.",
+        "",
+        f"Timed repetitions per arm: {repeat_summary}.",
         "",
         "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use whole-mixture global TCI at fixed `R = 16`, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
     ]

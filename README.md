@@ -12,6 +12,8 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
+The MPO-contraction profile through compressed χ418 is in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md).
+
 ## Gaussian input
 
 Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. The production generator applies global TCI directly to the whole mixture. A spatially indexed evaluator omits Gaussian tails only under a rigorous global pointwise absolute bound. Deterministic centers and principal-axis points seed TCI so narrow rotated ridges are represented.

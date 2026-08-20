@@ -7,11 +7,11 @@
     "box_l": 0.10606601717798216,
     "cache_hit": true,
     "cache_key": "interpolative-gaussian-pair-v2-rev9e9aedaebe0d3918b34dd399ff0981e337f3835b-n2-r6-sigma3fa999999999999a-rho4020000000000000-spacing4008000000000000-degree28-interp3ddb7cdfd9d7bdbb-add3ddb7cdfd9d7bdbb-seed0",
-    "cache_load_secs": 0.010659717,
+    "cache_load_secs": 0.011060636,
     "error_samples": 256,
     "external_error_metric": "sampled_relative_l2",
     "input_build_secs": 0.0,
-    "input_compression_secs": 0.030376695,
+    "input_compression_secs": 0.030883943,
     "input_l2_rtol": 1e-6,
     "input_params": 3740,
     "internal_tolerance": 1e-6,
@@ -23,7 +23,7 @@
     "left_input_patch_params": 2008,
     "left_input_sampled_relative_l2": 1.2777851917357638e-6,
     "n_gauss": 2,
-    "patch_build_secs": 0.048127933,
+    "patch_build_secs": 0.051449814,
     "patch_cap": 128,
     "polynomial_degree": 28,
     "r": 6,
@@ -42,11 +42,11 @@
   },
   "seed": 0,
   "tolerance": 1e-6,
-  "wall_time_median_secs": 0.019848453,
+  "wall_time_median_secs": 0.021572244,
   "wall_times_secs": [
-    0.019848453
+    0.021572244
   ],
-  "max_error": 5.942626352274149e-7,
+  "max_error": 5.942626353187935e-7,
   "input_max_bond_dim": 16,
   "output_max_bond_dim": 16,
   "output_bond_dims": [

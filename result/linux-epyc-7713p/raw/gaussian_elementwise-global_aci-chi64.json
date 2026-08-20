@@ -10,8 +10,8 @@
     "cache_load_secs": 0.0,
     "error_samples": 256,
     "external_error_metric": "sampled_relative_l2",
-    "input_build_secs": 889.865710077,
-    "input_compression_secs": 0.017721048,
+    "input_build_secs": 927.013950836,
+    "input_compression_secs": 0.017406887,
     "input_l2_rtol": 1e-6,
     "input_max_patch_chi": 64,
     "input_params": 43200,
@@ -23,7 +23,7 @@
     "left_chi": 64,
     "left_input_sampled_relative_l2": 2.168208907580374e-6,
     "n_gauss": 128,
-    "patch_build_secs": 0.809853404,
+    "patch_build_secs": 0.786904454,
     "patch_cap": 128,
     "polynomial_degree": 28,
     "r": 9,
@@ -39,9 +39,9 @@
   },
   "seed": 0,
   "tolerance": 1e-8,
-  "wall_time_median_secs": 0.214290712,
+  "wall_time_median_secs": 0.21269032,
   "wall_times_secs": [
-    0.214290712
+    0.21269032
   ],
   "max_error": 2.7045742110158743e-6,
   "input_max_bond_dim": 64,
@@ -57,6 +57,5 @@
     4
   ],
   "n_params": 317712,
-  "rtol": 1e-6,
-  "input_build_secs": 889.865710077
+  "input_build_secs": 927.013950836
 }

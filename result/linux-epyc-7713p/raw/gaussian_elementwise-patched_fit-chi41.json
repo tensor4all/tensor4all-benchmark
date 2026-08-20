@@ -10,8 +10,8 @@
     "cache_load_secs": 0.0,
     "error_samples": 256,
     "external_error_metric": "sampled_relative_l2",
-    "input_build_secs": 177.289666199,
-    "input_compression_secs": 0.008117754,
+    "input_build_secs": 167.590778715,
+    "input_compression_secs": 0.009321469,
     "input_l2_rtol": 1e-6,
     "input_max_patch_chi": 41,
     "input_params": 18380,
@@ -23,7 +23,7 @@
     "left_chi": 41,
     "left_input_sampled_relative_l2": 1.8640164827991147e-6,
     "n_gauss": 32,
-    "patch_build_secs": 0.096588712,
+    "patch_build_secs": 0.103943465,
     "patch_cap": 128,
     "polynomial_degree": 28,
     "r": 8,
@@ -36,15 +36,15 @@
     "right_input_sampled_relative_l2": 2.2322759981295966e-6,
     "sigma_minor": 0.05,
     "spacing": 3.0,
-    "speedup_vs_global": 0.15188886573116586
+    "speedup_vs_global": 0.1496655004092719
   },
   "seed": 0,
   "tolerance": 1e-6,
-  "wall_time_median_secs": 0.611420696,
+  "wall_time_median_secs": 0.593427034,
   "wall_times_secs": [
-    0.611420696
+    0.593427034
   ],
-  "max_error": 4.365438227204087e-6,
+  "max_error": 4.365438227323841e-6,
   "input_max_bond_dim": 41,
   "output_max_bond_dim": 48,
   "output_bond_dims": [
@@ -54,5 +54,5 @@
   "n_patches": 1,
   "max_patch_bond": 48,
   "rtol": 1e-6,
-  "input_build_secs": 177.289666199
+  "input_build_secs": 167.590778715
 }

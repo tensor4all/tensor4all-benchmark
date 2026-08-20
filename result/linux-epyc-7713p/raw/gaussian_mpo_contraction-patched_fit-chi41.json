@@ -7,11 +7,11 @@
     "box_l": 0.4242640687119286,
     "cache_hit": true,
     "cache_key": "interpolative-gaussian-pair-v2-rev9e9aedaebe0d3918b34dd399ff0981e337f3835b-n32-r8-sigma3fa999999999999a-rho4020000000000000-spacing4008000000000000-degree28-interp3ddb7cdfd9d7bdbb-add3ddb7cdfd9d7bdbb-seed0",
-    "cache_load_secs": 0.010595794,
+    "cache_load_secs": 0.010558389,
     "error_samples": 256,
     "external_error_metric": "sampled_relative_l2",
     "input_build_secs": 0.0,
-    "input_compression_secs": 0.007658194,
+    "input_compression_secs": 0.007757739,
     "input_l2_rtol": 1e-6,
     "input_params": 18380,
     "internal_tolerance": 1e-6,
@@ -23,7 +23,7 @@
     "left_input_patch_params": 9272,
     "left_input_sampled_relative_l2": 1.8640164827991147e-6,
     "n_gauss": 32,
-    "patch_build_secs": 0.091796873,
+    "patch_build_secs": 0.094807218,
     "patch_cap": 128,
     "polynomial_degree": 28,
     "r": 8,
@@ -39,15 +39,15 @@
     "right_input_sampled_relative_l2": 2.2322759981295966e-6,
     "sigma_minor": 0.05,
     "spacing": 3.0,
-    "speedup_vs_global": 1.023092114260744
+    "speedup_vs_global": 0.9554049764099848
   },
   "seed": 0,
   "tolerance": 1e-6,
-  "wall_time_median_secs": 0.096480555,
+  "wall_time_median_secs": 0.098161446,
   "wall_times_secs": [
-    0.096480555
+    0.098161446
   ],
-  "max_error": 1.7733014478635237e-6,
+  "max_error": 1.7733014479539222e-6,
   "input_max_bond_dim": 41,
   "output_max_bond_dim": 33,
   "output_bond_dims": [

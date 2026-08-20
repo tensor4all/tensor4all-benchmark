@@ -10,8 +10,8 @@
     "cache_load_secs": 0.0,
     "error_samples": 256,
     "external_error_metric": "sampled_relative_l2",
-    "input_build_secs": 4.287072408,
-    "input_compression_secs": 0.001994196,
+    "input_build_secs": 3.938045631,
+    "input_compression_secs": 0.001676991,
     "input_l2_rtol": 1e-6,
     "input_max_patch_chi": 16,
     "input_params": 3740,
@@ -23,7 +23,7 @@
     "left_chi": 16,
     "left_input_sampled_relative_l2": 1.2777851917357638e-6,
     "n_gauss": 2,
-    "patch_build_secs": 0.028239426,
+    "patch_build_secs": 0.023821852,
     "patch_cap": 128,
     "polynomial_degree": 28,
     "r": 6,
@@ -39,11 +39,11 @@
   },
   "seed": 0,
   "tolerance": 1e-6,
-  "wall_time_median_secs": 0.033337764,
+  "wall_time_median_secs": 0.028473381,
   "wall_times_secs": [
-    0.033337764
+    0.028473381
   ],
-  "max_error": 2.293034801788693e-6,
+  "max_error": 2.293034801942847e-6,
   "input_max_bond_dim": 16,
   "output_max_bond_dim": 17,
   "output_bond_dims": [
@@ -55,5 +55,5 @@
   ],
   "n_params": 2300,
   "rtol": 1e-6,
-  "input_build_secs": 4.287072408
+  "input_build_secs": 3.938045631
 }

@@ -32,7 +32,10 @@ repo_rev=$(git rev-parse HEAD)
 if [[ -n $(git status --porcelain --untracked-files=no -- . ':!result') ]]; then
   repo_rev="${repo_rev}-dirty"
 fi
-chip=$(lscpu 2>/dev/null | awk -F: '/Model name/{sub(/^[[:space:]]+/, "", $2); print $2; exit}' || true)
+chip=$(awk -F: '/model name/{sub(/^[[:space:]]+/, "", $2); print $2; exit}' /proc/cpuinfo 2>/dev/null || true)
+if [[ -z $chip ]] && command -v sysctl >/dev/null 2>&1; then
+  chip=$(sysctl -n machdep.cpu.brand_string 2>/dev/null || true)
+fi
 memory_gb=$(awk '/MemTotal/{printf "%.1f", $2/1024/1024}' /proc/meminfo 2>/dev/null || true)
 cat > "$out/run.yaml" <<EOF
 profile: $profile

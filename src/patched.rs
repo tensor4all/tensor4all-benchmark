@@ -89,29 +89,6 @@ pub fn fused_site_indices(r: usize) -> Vec<DynIndex> {
     (0..r).map(|_| DynIndex::new_dyn(4)).collect()
 }
 
-/// Parse `BENCH_PATCH_SPLIT` into an upstream split strategy.
-///
-/// `gain` is `ExactParameterGain`, the upstream default, which forms and
-/// budget-truncates the children of every candidate index and keeps the cheapest.
-/// `sequential` takes the first unprojected index of the patch order instead, so
-/// the splitting runs strictly coarse to fine.
-pub fn parse_split_strategy(name: &str) -> Option<PatchSplitStrategy> {
-    match name {
-        "gain" => Some(PatchSplitStrategy::ExactParameterGain),
-        "sequential" => Some(PatchSplitStrategy::Sequential),
-        _ => None,
-    }
-}
-
-/// Name of a split strategy as it appears in `BENCH_PATCH_SPLIT` and in the
-/// records.
-pub fn split_strategy_label(strategy: PatchSplitStrategy) -> &'static str {
-    match strategy {
-        PatchSplitStrategy::ExactParameterGain => "gain",
-        PatchSplitStrategy::Sequential => "sequential",
-    }
-}
-
 /// Options for the norm-driven patched construction of one input.
 #[derive(Clone, Copy, Debug)]
 pub struct NormPatchedInputOptions {

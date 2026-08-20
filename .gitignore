@@ -3,5 +3,4 @@
 Cargo.lock.orig
 __pycache__/
 .venv/
-julia/Manifest.toml
 result/**/raw/*.h5

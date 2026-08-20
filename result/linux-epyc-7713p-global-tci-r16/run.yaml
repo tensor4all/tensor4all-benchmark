@@ -1,0 +1,9 @@
+profile: linux-epyc-7713p-global-tci-r16
+date_utc: 2026-08-20T15:43:32Z
+os: Linux
+chip: AMD EPYC 7713P 64-Core Processor
+memory_gb: 995.5
+repo_rev: a82e2198c7e6db08b0843f8fb026fef953b6c9f6
+tensor4all_rs_rev: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
+threads: 1
+cpu_affinity: 0

@@ -62,6 +62,20 @@ regions.
 move all the crates together, and never mix backend features across them. A bump
 can change measured numbers, so it belongs in its own commit with a rerun.
 
+## Pushing
+
+Work lands on main through a pull request rather than a direct push. An agent
+may push a branch and open the pull request when asked to, and the merge stays
+a human decision. Force push only while a branch is still unreviewed: after
+someone has reviewed, a force push detaches their comments from the code they
+describe.
+
+A pull request that adds or replaces `result/<profile>/` states in its
+description which machine produced the sweep, so the numbers are reviewed
+together with the hardware behind them. Keep hostnames out of the description
+as well as out of the files: on a public repository a hostname leaks the
+operator's institution and location over time.
+
 ## Prose style
 
 No em dashes or en dashes anywhere in this repository's documents, comments or

@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 use t4a_bench::elementwise::{
-    elementwise_product, max_error_vs_series, tt_n_params, AciTolerance, ElementwiseAlgo,
+    elementwise_product, sampled_relative_l2_vs_series, tt_n_params, AciTolerance, ElementwiseAlgo,
     FIT_NFULLSWEEPS,
 };
 use t4a_bench::fourier::{compress_svd, FourierSeries};
@@ -96,7 +96,8 @@ fn main() -> anyhow::Result<()> {
                 elementwise_product(algo, &a, &b, tol, max_bond, AciTolerance::Absolute)
                     .expect("algorithm failed")
             });
-            let max_error = max_error_vs_series(&out, &exact, r, n_error_samples, error_seed);
+            let max_error =
+                sampled_relative_l2_vs_series(&out, &exact, r, n_error_samples, error_seed);
             // The gate detects wrong results, not precision. Truncation is
             // norm-relative (the TT norm grows like 2^(R/2)), so the pointwise
             // error accumulates to ~100x tol at R=20, K=64 (measured 6.5e-7).
@@ -115,7 +116,12 @@ fn main() -> anyhow::Result<()> {
                     "k_max": k, "r": r, "max_bond": max_bond,
                     "runs": runs, "warmups": warmups,
                     "n_error_samples": n_error_samples, "error_seed": error_seed,
-                    "error_metric": "max_abs",
+                    "error_metric": "sampled_relative_l2",
+                    "internal_tolerance_metric": if matches!(algo, ElementwiseAlgo::Aci) {
+                        "aci_absolute_residual"
+                    } else {
+                        "relative_l2_svd"
+                    },
                     // Part of the benchmark definition for the fit arm.
                     "fit_nfullsweeps": FIT_NFULLSWEEPS,
                 }),

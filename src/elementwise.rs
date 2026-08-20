@@ -3,16 +3,15 @@
 //! two cases that use them.
 //!
 //! The product itself is generic over [`BenchScalar`], because case 1 works on
-//! a complex Fourier series and case 3 on a real 2D Gaussian mixture, and both
-//! run the same four arms. The error metrics are not generic: each one compares
-//! against the analytic reference of its own case, which fixes the scalar type
-//! (`Complex64` for case 1, `f64` for case 3).
+//! a complex Fourier series and case 2 on a real 2D Gaussian mixture. The error
+//! metrics compare against the analytic reference of their own case, fixing the
+//! scalar type to `Complex64` for case 1 and `f64` for case 2.
 
 use num_complex::Complex64;
 use tensor4all_simplett::{tensor3_from_data, AbstractTensorTrain, SimpleTensorTrain, Tensor3Ops};
 
 use crate::fourier::{compress_svd, FourierSeries};
-use crate::gaussian::{grid_coord, Field2D, GaussianMixture2D};
+use crate::gaussian::{grid_coord, Field2D};
 use crate::harness::{index_to_bits, sample_grid_indices};
 use crate::scalar::BenchScalar;
 
@@ -45,8 +44,7 @@ pub enum ElementwiseAlgo {
 /// and 5 are tolerance-driven and judged by one error that is normalized
 /// globally, so they ask for [`AciTolerance::Absolute`]: a per-bond
 /// normalization would hold each region to its own scale, which is not the
-/// quantity either case reports (see the case-5 tolerance discussion in the
-/// README).
+/// quantity either case reports.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AciTolerance {
     /// Absolute pivot error threshold.
@@ -57,7 +55,7 @@ pub enum AciTolerance {
 }
 
 impl ElementwiseAlgo {
-    /// Which engine actually runs this arm, recorded in every case-3 record.
+    /// Which engine actually runs this arm.
     ///
     /// `Naive` is the local bond-Kronecker product plus an SVD sweep written in
     /// this crate on top of `simplett` primitives, so it is labelled `local`
@@ -203,29 +201,27 @@ pub fn max_error_vs_series(
         .fold(0.0, f64::max)
 }
 
-/// Case 3: relative max error of the fused 2D product train against the exact
-/// pointwise product of the two Gaussian mixtures.
-///
-/// `h` is a fused quantics train on `[-L, L)^2` with `r` sites of dimension 4,
-/// local index `x_bit + 2 * y_bit` and the most significant bit first, which is
-/// the layout `gaussian::to_quantics_fused_tt` produces. The normalization
-/// matches case 2: the largest sampled `|reference|`, so the two cases report
-/// the same kind of number under `error_metric = "max_rel_vs_analytic"`.
-pub fn max_rel_error_vs_mixture_product(
-    h: &SimpleTensorTrain<f64>,
-    f: &GaussianMixture2D,
-    g: &GaussianMixture2D,
+/// Deterministic sampled relative-L2 error against an exact Fourier series.
+pub fn sampled_relative_l2_vs_series(
+    output: &SimpleTensorTrain<Complex64>,
+    exact: &FourierSeries,
     r: usize,
-    box_l: f64,
-    n_samples: usize,
+    samples: usize,
     seed: u64,
 ) -> f64 {
-    max_rel_error_vs_product(h, f, g, r, box_l, n_samples, seed)
+    let (error, reference) = sample_grid_indices(r, samples, seed).into_iter().fold(
+        (0.0, 0.0),
+        |(error, reference), index| {
+            let x = index as f64 / (1u64 << r) as f64;
+            let expected = exact.eval(x);
+            let delta = output.evaluate(&index_to_bits(index, r)).unwrap() - expected;
+            (error + delta.norm_sqr(), reference + expected.norm_sqr())
+        },
+    );
+    (error / reference.max(f64::MIN_POSITIVE)).sqrt()
 }
 
-/// [`max_rel_error_vs_mixture_product`] for any pair of [`Field2D`] instances, so
-/// that the two case-5 families share one error metric. Same sampling, same
-/// normalization, same reported `error_metric`.
+/// Sampled relative maximum error against the exact pointwise product.
 pub fn max_rel_error_vs_product<A: Field2D, B: Field2D>(
     h: &SimpleTensorTrain<f64>,
     f: &A,
@@ -235,22 +231,62 @@ pub fn max_rel_error_vs_product<A: Field2D, B: Field2D>(
     n_samples: usize,
     seed: u64,
 ) -> f64 {
-    let xs = sample_grid_indices(r, n_samples, seed);
-    let ys = sample_grid_indices(r, n_samples, seed.wrapping_add(1));
-    let mut max_abs = 0.0f64;
-    let mut max_ref = 0.0f64;
-    for (&ix, &iy) in xs.iter().zip(&ys) {
-        let x = grid_coord(ix, r, box_l);
-        let y = grid_coord(iy, r, box_l);
-        let xb = index_to_bits(ix, r);
-        let yb = index_to_bits(iy, r);
-        let fused: Vec<usize> = (0..r).map(|n| xb[n] + 2 * yb[n]).collect();
-        let got = h.evaluate(&fused).unwrap();
-        let want = f.eval(x, y) * g.eval(x, y);
-        max_abs = max_abs.max((got - want).abs());
-        max_ref = max_ref.max(want.abs());
-    }
-    max_abs / max_ref.max(f64::MIN_POSITIVE)
+    let (error, scale) = sampled_product_values(h, f, g, r, box_l, n_samples, seed)
+        .into_iter()
+        .fold((0.0_f64, 0.0_f64), |(error, scale), (got, expected)| {
+            (error.max((got - expected).abs()), scale.max(expected.abs()))
+        });
+    error / scale.max(f64::MIN_POSITIVE)
+}
+
+/// Deterministic sampled relative-L2 error against the exact pointwise product.
+pub fn sampled_relative_l2_vs_product<A: Field2D, B: Field2D>(
+    output: &SimpleTensorTrain<f64>,
+    left: &A,
+    right: &B,
+    r: usize,
+    box_l: f64,
+    samples: usize,
+    seed: u64,
+) -> f64 {
+    let (error, reference) = sampled_product_values(output, left, right, r, box_l, samples, seed)
+        .into_iter()
+        .fold((0.0, 0.0), |(error, reference), (got, expected)| {
+            (
+                error + (got - expected).powi(2),
+                reference + expected.powi(2),
+            )
+        });
+    (error / reference.max(f64::MIN_POSITIVE)).sqrt()
+}
+
+fn sampled_product_values<A: Field2D, B: Field2D>(
+    output: &SimpleTensorTrain<f64>,
+    left: &A,
+    right: &B,
+    r: usize,
+    box_l: f64,
+    samples: usize,
+    seed: u64,
+) -> Vec<(f64, f64)> {
+    let xs = sample_grid_indices(r, samples, seed);
+    let ys = sample_grid_indices(r, samples, seed.wrapping_add(1));
+    xs.iter()
+        .zip(&ys)
+        .map(|(&ix, &iy)| {
+            let x = grid_coord(ix, r, box_l);
+            let y = grid_coord(iy, r, box_l);
+            let fused: Vec<_> = index_to_bits(ix, r)
+                .into_iter()
+                .zip(index_to_bits(iy, r))
+                .map(|(x, y)| x + 2 * y)
+                .collect();
+            (
+                output.evaluate(&fused).unwrap(),
+                left.eval(x, y) * right.eval(x, y),
+            )
+        })
+        .collect()
 }
 
 /// Ratio at which the sampled elementwise product counts as numerically zero.
@@ -262,12 +298,10 @@ pub fn max_rel_error_vs_product<A: Field2D, B: Field2D>(
 /// `DEGENERACY_THRESHOLD` times the product of the two input scales means the
 /// sampled reference has lost at least six orders of magnitude to the lack of
 /// overlap, which is far outside anything a healthy instance produces: the
-/// default case-3 and case-4 instances sit at a ratio near 0.5, five to six
-/// orders of magnitude above the threshold.
+/// healthy benchmark instances sit many orders of magnitude above the threshold.
 pub const DEGENERACY_THRESHOLD: f64 = 1e-6;
 
-/// Scales of the case-3 and case-4 reference, all measured over one and the
-/// same set of sampled grid points.
+/// Scales of the product and both inputs on one sampled grid.
 #[derive(Clone, Copy, Debug)]
 pub struct MixtureProductScales {
     /// `max |f(x, y) * g(x, y)|`, the normalization of the relative error.
@@ -286,21 +320,7 @@ impl MixtureProductScales {
     }
 }
 
-/// Reference and input scales at the same sampled grid points that
-/// [`max_rel_error_vs_mixture_product`] uses, given the same `r`, `box_l`,
-/// `n_samples` and `seed`.
-pub fn mixture_product_scales(
-    f: &GaussianMixture2D,
-    g: &GaussianMixture2D,
-    r: usize,
-    box_l: f64,
-    n_samples: usize,
-    seed: u64,
-) -> MixtureProductScales {
-    product_scales(f, g, r, box_l, n_samples, seed)
-}
-
-/// [`mixture_product_scales`] for any pair of [`Field2D`] instances.
+/// Reference and input scales on one sampled grid.
 pub fn product_scales<A: Field2D, B: Field2D>(
     f: &A,
     g: &B,
@@ -327,26 +347,7 @@ pub fn product_scales<A: Field2D, B: Field2D>(
     s
 }
 
-/// Fail-fast guard for cases 3 and 4: refuse to benchmark an instance whose
-/// elementwise product is numerically zero at the sampled points.
-///
-/// Returns the scales on success so the caller can record them.
-pub fn check_mixture_product_not_degenerate(
-    f: &GaussianMixture2D,
-    g: &GaussianMixture2D,
-    r: usize,
-    box_l: f64,
-    n_samples: usize,
-    seed: u64,
-) -> anyhow::Result<MixtureProductScales> {
-    check_product_not_degenerate(f, g, r, box_l, n_samples, seed)
-}
-
-/// [`check_mixture_product_not_degenerate`] for any pair of [`Field2D`]
-/// instances, at the same threshold. The anisotropic spike family of case 5 holds
-/// its spacing-to-width ratio fixed as `N` grows, which is exactly what keeps this
-/// guard passing there: the sampled product stays at about half of
-/// `max|f| max|g|` at every `N`.
+/// Reject an instance whose sampled product is numerically zero.
 pub fn check_product_not_degenerate<A: Field2D, B: Field2D>(
     f: &A,
     g: &B,
@@ -362,8 +363,7 @@ pub fn check_product_not_degenerate<A: Field2D, B: Field2D>(
          elementwise product is numerically zero at the sampled points (ref_scale {:.3e} against \
          input_scale_f {:.3e} and input_scale_g {:.3e}, ratio {:.3e} below the threshold {:.0e}) \
          and the relative error metric, which divides by ref_scale, is meaningless. Lower \
-         BENCH_ALPHA_HI so the Gaussians are wider, or raise the density (more Gaussians, or a \
-         smaller box).",
+         Increase the Gaussian density or use a smaller box.",
         s.ref_scale,
         s.input_scale_f,
         s.input_scale_g,
@@ -413,94 +413,22 @@ mod tests {
         }
     }
 
-    /// Case 3 at its own fixed output budget: every arm capped at `chi_in`, the
-    /// larger input rank, and judged only on the error it returns for it.
-    ///
-    /// The budget is the cap alone: the tolerance handed to the arms is the
-    /// runner's inert 1e-15 and the aci arm runs scale-relative, so every arm is
-    /// expected to spend the whole budget rather than stop at a tolerance.
-    ///
-    /// The bounds are per arm because the arms are not comparable here. Measured
-    /// at the pinned revision on this instance (r = 8, 3 Gaussians, chi_in 62):
-    /// naive, fit and aci all land on 1.4e-8 at the full chi_out of 62, and zipup
-    /// returns 8.3e-1 for the same budget. Every bound carries about an order of
-    /// magnitude of margin, since the quantics TCI construction is not
-    /// bit-reproducible and chi_in moves by one between runs. The zipup bound is
-    /// loose on purpose: at this budget a single-pass truncation of an
-    /// elementwise product has no accuracy left to defend (the runner's default
-    /// instance reaches 9.2e-1 at r = 10), so what the bound guards is that the
-    /// arm still returns a finite result of roughly the right scale. This test
-    /// also covers the real-scalar (`f64`) path through all four arms, which case
-    /// 1 does not exercise.
-    #[test]
-    fn gauss2d_arms_meet_their_error_bounds_at_fixed_budget() {
-        use crate::gaussian::{to_quantics_fused_tt, GaussianMixture2D};
-
-        let (r, l) = (8, 6.0);
-        let f = GaussianMixture2D::random(3, l, (0.5, 8.0), 1);
-        let g = GaussianMixture2D::random(3, l, (0.5, 8.0), 2);
-        let (fa, _) = to_quantics_fused_tt(&f, r, l, 1e-8, 512).unwrap();
-        let (gb, _) = to_quantics_fused_tt(&g, r, l, 1e-8, 512).unwrap();
-        let chi_in = fa.rank().max(gb.rank());
-
-        // The third element says whether the arm is expected to spend the whole
-        // budget. The three SVD-based arms keep everything the cap allows, since
-        // the tolerance can no longer stop them; aci is interpolation-based and
-        // may settle below the cap if its pivot search saturates first, so it is
-        // only held to the cap as an upper bound.
-        for (algo, bound, exhausts_budget) in [
-            (ElementwiseAlgo::Naive, 1e-6, true),
-            (ElementwiseAlgo::Zipup, 2.0, true),
-            (ElementwiseAlgo::Fit, 1e-6, true),
-            (ElementwiseAlgo::Aci, 1e-6, false),
-        ] {
-            // The budget is the cap, so the tolerance is pinned inert, exactly as
-            // the runner does it.
-            let out =
-                elementwise_product(algo, &fa, &gb, 1e-15, chi_in, AciTolerance::ScaleRelative)
-                    .unwrap();
-            assert!(
-                out.rank() <= chi_in,
-                "{algo:?}: chi_out {} exceeds the budget {chi_in}",
-                out.rank()
-            );
-            if exhausts_budget {
-                assert_eq!(
-                    out.rank(),
-                    chi_in,
-                    "{algo:?}: chi_out {} fell short of the budget {chi_in}, so something \
-                     other than the cap truncated it",
-                    out.rank()
-                );
-            }
-            let err = max_rel_error_vs_mixture_product(&out, &f, &g, r, l, 128, 99);
-            println!(
-                "{algo:?}: rel err {err:.3e} (bound {bound:.0e}), chi_out {} of {chi_in}",
-                out.rank()
-            );
-            assert!(
-                err.is_finite() && err < bound,
-                "{algo:?}: rel err {err} exceeds {bound}"
-            );
-        }
-    }
-
     /// Two mixtures whose supports sit in opposite corners of the box: each one
     /// is of order one where it lives, but the product is zero to machine
     /// precision everywhere, so the guard must refuse the instance.
     #[test]
     fn degeneracy_guard_fires_on_non_overlapping_mixtures() {
-        use crate::gaussian::GaussianMixture2D;
+        use crate::gaussian::AnisoMixture2D;
 
         let (r, l) = (6, 4.0);
-        let far = |sign: f64| GaussianMixture2D {
+        let far = |sign: f64| AnisoMixture2D {
             weights: vec![1.0],
-            alphas: vec![50.0],
+            quad: vec![(50.0, 0.0, 50.0)],
             centers: vec![(sign * l / 2.0, sign * l / 2.0)],
         };
         let (f, g) = (far(-1.0), far(1.0));
 
-        let s = mixture_product_scales(&f, &g, r, l, 128, 7);
+        let s = product_scales(&f, &g, r, l, 128, 7);
         println!(
             "ref_scale {:.3e}, input scales {:.3e} and {:.3e}",
             s.ref_scale, s.input_scale_f, s.input_scale_g
@@ -508,17 +436,16 @@ mod tests {
         assert!(s.input_scale_f > 1e-3 && s.input_scale_g > 1e-3);
         assert!(s.is_degenerate(), "guard predicate missed a zero product");
 
-        let err = check_mixture_product_not_degenerate(&f, &g, r, l, 128, 7)
+        let err = check_product_not_degenerate(&f, &g, r, l, 128, 7)
             .expect_err("the guard must reject this instance");
         let msg = err.to_string();
         assert!(msg.contains("barely overlap"), "unexpected message: {msg}");
-        assert!(msg.contains("BENCH_ALPHA_HI"), "unexpected message: {msg}");
 
         // A healthy instance of the same shape must pass, so the guard is not
         // simply always firing.
-        let f2 = GaussianMixture2D::random(8, 6.0, (0.5, 8.0), 1);
-        let g2 = GaussianMixture2D::random(8, 6.0, (0.5, 8.0), 2);
-        let s2 = check_mixture_product_not_degenerate(&f2, &g2, 8, 6.0, 128, 99).unwrap();
+        let f2 = AnisoMixture2D::random(8, 1.0, 0.12, 2.0, 1);
+        let g2 = AnisoMixture2D::random(8, 1.0, 0.12, 2.0, 2);
+        let s2 = check_product_not_degenerate(&f2, &g2, 8, 1.0, 128, 99).unwrap();
         println!("default-like instance: ref_scale {:.3e}", s2.ref_scale);
         assert!(!s2.is_degenerate());
     }

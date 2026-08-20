@@ -11,24 +11,6 @@
 //! honoured everywhere and the price of a hard region is paid in patch count
 //! rather than in global rank.
 //!
-//! There are two constructions of that patched input here, and they differ only
-//! in what decides a split.
-//!
-//! * [`patched_input_from_global`], the default of case 5, builds one global
-//!   train first and hands it to `partitionedtt::add_with_patching`, which
-//!   truncates each subdomain against its volume share of the global squared
-//!   budget and splits whatever still sits above the rank cap. The split index is
-//!   chosen by a [`PatchSplitStrategy`], and no TCI runs inside the loop: the
-//!   whole decision is made from Frobenius norms of an already-built train.
-//! * [`patched_input`] instead runs `partitionedtt::adaptiveinterpolate`, which
-//!   never forms a global train at all: it runs a TCI2 per patch on the function
-//!   itself and splits a patch whose own TCI does not converge under the cap.
-//!   That is the construction the case is eventually written for, since it is the
-//!   one whose cost never passes through a global rank. It used to trip a TCI2
-//!   defect on a patch of some instances, fixed upstream and included at the
-//!   pinned revision (README known issue 11); it is not the default because for
-//!   the same cap it splits far harder and returns a much larger representation.
-//!
 //! The product is then formed patch pair by patch pair. Two patches contribute
 //! only if their projectors are compatible, in which case the product lives on
 //! the intersection of the two subdomains. Both partitions cover the domain
@@ -41,8 +23,8 @@
 //!
 //! 1. The per-patch product runs on the FREE sites only. The sites fixed by the
 //!    merged projector are sliced out of both inputs first (which is exactly the
-//!    projection, since a projected site of an `adaptiveinterpolate` patch train
-//!    carries a one-hot core), the product is formed over the remaining sites,
+//!    projection, since a projected site carries a one-hot core), the product is
+//!    formed over the remaining sites,
 //!    and the fixed sites are put back afterwards as one-hot cores. This keeps
 //!    the work proportional to the patch volume instead of the box volume, and
 //!    it is what makes the `aci` engine usable at all: on the embedded train the
@@ -64,9 +46,8 @@
 
 use tensor4all_core::{DynIndex, IdxTensor};
 use tensor4all_partitionedtt::{
-    adaptiveinterpolate, add_with_patching, truncate_adaptive, AdaptiveInterpolateOptions,
-    MultiIndex, PartitionedTT, PatchSplitStrategy, PatchingOptions, Projector, SubDomainTT,
-    TCI2Options, TensorTrain as ItTensorTrain,
+    add_with_patching, truncate_adaptive, PartitionedTT, PatchSplitStrategy, PatchingOptions,
+    Projector, SubDomainTT, TensorTrain as ItTensorTrain,
 };
 use tensor4all_simplett::{
     tensor3_from_data, AbstractTensorTrain, SimpleTensorTrain as SimpleTT, Tensor3Ops,
@@ -78,15 +59,10 @@ use crate::harness::{index_to_bits, sample_grid_indices};
 
 /// Which engine forms the product inside one patch pair.
 ///
-/// The four variants are the four global arms of case 3, run on the projected
-/// patch trains instead of on the global trains, so a difference between a
-/// patched arm and its global namesake is the patching and not the engine.
+/// The two variants match the global fit and ACI arms of case 2, but run on
+/// projected patch trains.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PatchedEngine {
-    /// Local bond-Kronecker product plus an SVD sweep, written in this crate.
-    Naive,
-    /// `tensor4all_treetn::hadamard` with the one-pass zip-up contraction.
-    ZipupTreetn,
     /// `tensor4all_treetn::hadamard` with the variational fit contraction.
     FitTreetn,
     /// `tensor4all_aci::elementwise` cross interpolation of the product.
@@ -94,45 +70,16 @@ pub enum PatchedEngine {
 }
 
 impl PatchedEngine {
-    /// Arm name as it appears in the records.
-    pub fn arm_name(self) -> &'static str {
-        match self {
-            PatchedEngine::Naive => "patched_naive",
-            PatchedEngine::ZipupTreetn => "patched_zipup_treetn",
-            PatchedEngine::FitTreetn => "patched_fit_treetn",
-            PatchedEngine::Aci => "patched_aci",
-        }
-    }
-
-    /// Upstream engine that actually runs the per-patch product.
-    pub fn engine(self) -> &'static str {
-        self.algo().engine()
-    }
-
     fn algo(self) -> ElementwiseAlgo {
         match self {
-            PatchedEngine::Naive => ElementwiseAlgo::Naive,
-            PatchedEngine::ZipupTreetn => ElementwiseAlgo::Zipup,
             PatchedEngine::FitTreetn => ElementwiseAlgo::Fit,
             PatchedEngine::Aci => ElementwiseAlgo::Aci,
         }
     }
 }
 
-/// Parse an arm name back into an engine, for `BENCH_ALGOS`.
-pub fn parse_patched_engine(name: &str) -> Option<PatchedEngine> {
-    [
-        PatchedEngine::Naive,
-        PatchedEngine::ZipupTreetn,
-        PatchedEngine::FitTreetn,
-        PatchedEngine::Aci,
-    ]
-    .into_iter()
-    .find(|engine| engine.arm_name() == name)
-}
-
 /// One fused quantics site index per bit, dimension 4, in the layout
-/// `gaussian::to_quantics_fused_tt` produces: local index `x_bit + 2 * y_bit`,
+/// the interpolative Gaussian QTT uses: local index `x_bit + 2 * y_bit`,
 /// most significant bit first.
 ///
 /// The two inputs of a product MUST be built over the same vector: projector
@@ -140,121 +87,6 @@ pub fn parse_patched_engine(name: &str) -> Option<PatchedEngine> {
 /// `g` can only be paired when they name the same site objects.
 pub fn fused_site_indices(r: usize) -> Vec<DynIndex> {
     (0..r).map(|_| DynIndex::new_dyn(4)).collect()
-}
-
-/// Grid coordinates of one fused quantics multi-index.
-///
-/// Site `n` carries `x_bit + 2 * y_bit` of bit position `n` counted from the
-/// most significant, which is the layout of `fused_site_indices`.
-fn fused_to_coords(index: &MultiIndex, r: usize, box_l: f64) -> (f64, f64) {
-    let mut ix = 0u64;
-    let mut iy = 0u64;
-    for (n, &fused) in index.iter().enumerate() {
-        let shift = r - 1 - n;
-        ix |= ((fused & 1) as u64) << shift;
-        iy |= (((fused >> 1) & 1) as u64) << shift;
-    }
-    (grid_coord(ix, r, box_l), grid_coord(iy, r, box_l))
-}
-
-/// Options for the patched construction of one input.
-#[derive(Clone, Copy, Debug)]
-pub struct PatchedInputOptions {
-    /// Absolute TCI tolerance for every patch.
-    ///
-    /// Absolute, not relative: `TCI2Options::normalize_error` is switched off so
-    /// that a patch sitting in a near-empty region of the box converges at rank
-    /// one instead of being asked for eight relative digits of a quantity that
-    /// contributes nothing. The caller sets this to `rtol` times the sampled
-    /// scale of the function, so the accuracy is uniform across the box.
-    pub abs_tol: f64,
-    /// Per-patch rank cap. A patch whose TCI run does not converge below this
-    /// cap is split at the next site, which is the stopping rule: split until
-    /// the bond dimension fits under the cap.
-    pub max_bond_dim: usize,
-    /// Half-sweep limit of each patch's TCI run.
-    ///
-    /// Exposed because a run that stops at its iteration limit is not converged,
-    /// so its patch is split whatever its rank was, which would make the patch
-    /// tree a measurement of the iteration limit. Measured at the pinned revision
-    /// on the case-5 instance at `N` = 8, that is not what happens: raising this
-    /// from the upstream 20 to 200 left the patch counts and the patch ranks
-    /// unchanged and cost six times the build time, so the splitting there is
-    /// driven by the tolerance and the rank cap, and 20 is the right default.
-    pub max_iter: usize,
-    /// Seed of the deterministic initial-pivot search.
-    pub seed: u64,
-}
-
-/// Build the patched representation of a 2D Gaussian mixture on `[-L, L)^2`.
-///
-/// The patch order is the site order, most significant digit first, so the first
-/// split fixes a quadrant of the box, the second a sub-quadrant, and so on:
-/// coarse to fine, which is what makes a patch a contiguous region of the box.
-pub fn patched_input<M: Field2D>(
-    mix: &M,
-    sites: &[DynIndex],
-    box_l: f64,
-    options: PatchedInputOptions,
-) -> anyhow::Result<PartitionedTT> {
-    let r = sites.len();
-    let mixture = mix.clone();
-    let evaluate = move |index: &MultiIndex| -> f64 {
-        let (x, y) = fused_to_coords(index, r, box_l);
-        mixture.eval(x, y)
-    };
-    let tci_options = TCI2Options {
-        tolerance: options.abs_tol,
-        max_bond_dim: Some(options.max_bond_dim),
-        max_iter: options.max_iter,
-        normalize_error: false,
-        seed: Some(options.seed),
-        ..TCI2Options::default()
-    };
-    let opts = AdaptiveInterpolateOptions {
-        tci_options,
-        patch_order: sites.to_vec(),
-        ..AdaptiveInterpolateOptions::default()
-    };
-    adaptiveinterpolate::<f64, _, fn(&[MultiIndex]) -> Vec<f64>>(
-        evaluate,
-        None,
-        sites.to_vec(),
-        Vec::new(),
-        opts,
-    )
-    .map_err(|e| anyhow::anyhow!("adaptiveinterpolate failed: {e}"))
-}
-
-/// Which construction turns a function into a patched input.
-///
-/// Recorded in every case-5 record as `input_path`, because the two are not the
-/// same measurement: one of them pays for a global train before it splits and the
-/// other never builds one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PatchedInputPath {
-    /// Frobenius-norm-driven splitting of a global train,
-    /// [`patched_input_from_global`].
-    NormDriven,
-    /// TCI2-driven splitting of the function itself, [`patched_input`].
-    TciDriven,
-}
-
-impl PatchedInputPath {
-    /// Name as it appears in `BENCH_PATCH_INPUT` and in the records.
-    pub fn label(self) -> &'static str {
-        match self {
-            PatchedInputPath::NormDriven => "norm",
-            PatchedInputPath::TciDriven => "tci",
-        }
-    }
-}
-
-/// Parse `BENCH_PATCH_INPUT`.
-pub fn parse_input_path(name: &str) -> Option<PatchedInputPath> {
-    [PatchedInputPath::NormDriven, PatchedInputPath::TciDriven]
-        .into_iter()
-        .find(|path| path.label() == name)
 }
 
 /// Parse `BENCH_PATCH_SPLIT` into an upstream split strategy.
@@ -289,8 +121,7 @@ pub struct NormPatchedInputOptions {
     /// patch volume, both while the splitting decides whether a patch is over its
     /// cap and in the final truncation. Relative to the norm of the whole
     /// function, so a patch in a near-empty corner of the box is not asked for
-    /// digits of a quantity that contributes nothing, which is what the TCI-driven
-    /// path needs its absolute tolerance for.
+    /// digits of a quantity that contributes nothing.
     pub rtol: f64,
     /// Per-patch rank cap. A subdomain whose budget-truncated bond dimension is
     /// still above this is split, which is the stopping rule.
@@ -392,13 +223,8 @@ pub struct PatchedProductOptions {
     /// budgeting happens once at the end in [`truncate_adaptive`]. For the three
     /// SVD-based engines this is a singular value threshold relative to the
     /// largest singular value of the patch; the `aci` engine runs
-    /// [`AciTolerance::Absolute`], which is the same rule as the per-patch input
-    /// TCI tolerance and for the same reason: a patch in a near-empty corner of
-    /// the box must not be held to a tolerance relative to its own magnitude,
-    /// since its share of the global error budget is what matters. Measured on
-    /// the smooth family at `N` = 32, the upstream scale-relative criterion left
-    /// the `patched_aci` arm at `5.3e-4` while the three other engines returned
-    /// `3.5e-8`; on an absolute budget all four agree again.
+    /// [`AciTolerance::Absolute`] because a patch in a near-empty region must not
+    /// be held to a tolerance relative to its own magnitude.
     pub product_tol: f64,
     /// Rank cap for the per-patch product, before the final budgeting.
     pub product_max_bond_dim: usize,
@@ -431,13 +257,8 @@ pub fn patched_elementwise(
 /// The two halves of the product are a loop over compatible patch pairs and one
 /// final [`truncate_adaptive`], and they scale differently: the pair loop grows
 /// with the patch count and with the cube of the patch rank, while the final
-/// budgeting has to gauge and truncate every collected patch once. Which half
-/// dominates moves with the family and with the engine: measured on the smooth
-/// family at `N` = 64, the budgeting was 23.1 s of the 40.1 s of `patched_aci`
-/// against 4.7 s of the 36.0 s of `patched_fit_treetn`, while on the aniso family
-/// at `N` = 512 the pair loop dominates both. So a case-5 total is not
-/// interpretable without this split, and the runner records it in every patched
-/// record.
+/// budgeting has to gauge and truncate every collected patch once. The runner
+/// records both parts because either can dominate.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PatchedProductStats {
     /// Compatible patch pairs contracted, which is the number of output patches
@@ -868,12 +689,7 @@ pub fn max_patch_bond(partitioned: &PartitionedTT) -> usize {
         .unwrap_or(0)
 }
 
-/// Case-5 error metric: sampled max relative error of a patched product against
-/// the exact pointwise product of the two mixtures.
-///
-/// Same sampling, same normalization and same `error_metric` name as
-/// [`crate::elementwise::max_rel_error_vs_mixture_product`], so a case-5 number
-/// is directly comparable with a case-4 one.
+/// Sampled maximum relative error of a patched product against the exact product.
 #[allow(clippy::too_many_arguments)]
 pub fn max_rel_error_patched<A: Field2D, B: Field2D>(
     h: &PartitionedTT,
@@ -903,468 +719,151 @@ pub fn max_rel_error_patched<A: Field2D, B: Field2D>(
     Ok(max_abs / max_ref.max(f64::MIN_POSITIVE))
 }
 
+/// Deterministic sampled relative-L2 error of a patched product.
+#[allow(clippy::too_many_arguments)]
+pub fn sampled_relative_l2_patched<A: Field2D, B: Field2D>(
+    output: &PartitionedTT,
+    sites: &[DynIndex],
+    left: &A,
+    right: &B,
+    box_l: f64,
+    samples: usize,
+    seed: u64,
+) -> anyhow::Result<f64> {
+    let r = sites.len();
+    let xs = sample_grid_indices(r, samples, seed);
+    let ys = sample_grid_indices(r, samples, seed.wrapping_add(1));
+    let mut squared_error = 0.0;
+    let mut squared_reference = 0.0;
+    for (&ix, &iy) in xs.iter().zip(&ys) {
+        let x = grid_coord(ix, r, box_l);
+        let y = grid_coord(iy, r, box_l);
+        let fused: Vec<_> = index_to_bits(ix, r)
+            .into_iter()
+            .zip(index_to_bits(iy, r))
+            .map(|(x, y)| x + 2 * y)
+            .collect();
+        let expected = left.eval(x, y) * right.eval(x, y);
+        let error = eval_patched(output, sites, &fused)? - expected;
+        squared_error += error * error;
+        squared_reference += expected * expected;
+    }
+    anyhow::ensure!(squared_reference > 0.0, "zero elementwise reference norm");
+    Ok((squared_error / squared_reference).sqrt())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::elementwise::mixture_product_scales;
-    use crate::gaussian::GaussianMixture2D;
+    use crate::elementwise::{max_rel_error_vs_product, AciTolerance};
+    use crate::gaussian::AnisoMixture2D;
 
-    /// Two small mixtures at R = 6 and a per-patch cap tight enough that the
-    /// construction really splits, so the test exercises the patch machinery
-    /// rather than a one-patch degenerate case.
-    fn setup(
-        r: usize,
-        chi_p: usize,
-    ) -> (
+    fn fixture() -> (
         Vec<DynIndex>,
-        GaussianMixture2D,
-        GaussianMixture2D,
+        AnisoMixture2D,
+        AnisoMixture2D,
+        SimpleTT<f64>,
+        SimpleTT<f64>,
         PartitionedTT,
         PartitionedTT,
-        f64,
-        f64,
     ) {
-        let box_l = 4.0;
-        let f = GaussianMixture2D::random(3, box_l, (0.5, 8.0), 1);
-        let g = GaussianMixture2D::random(3, box_l, (0.5, 8.0), 2);
+        let (r, box_l) = (6, 1.0);
+        let left_mix = AnisoMixture2D::random(2, 0.8, 0.15, 2.0, 1);
+        let right_mix = AnisoMixture2D::random(2, 0.8, 0.15, 2.0, 2);
+        let left = left_mix
+            .to_interpolative_qtt(r, box_l, 12, 1e-9, 1e-10)
+            .unwrap();
+        let right = right_mix
+            .to_interpolative_qtt(r, box_l, 12, 1e-9, 1e-10)
+            .unwrap();
         let sites = fused_site_indices(r);
-        let scales = mixture_product_scales(&f, &g, r, box_l, 128, 99);
-        let rtol = 1e-8;
-        let fp = patched_input(
-            &f,
-            &sites,
-            box_l,
-            PatchedInputOptions {
-                abs_tol: rtol * scales.input_scale_f,
-                max_bond_dim: chi_p,
-                max_iter: 200,
-                seed: 1,
-            },
-        )
-        .unwrap();
-        let gp = patched_input(
-            &g,
-            &sites,
-            box_l,
-            PatchedInputOptions {
-                abs_tol: rtol * scales.input_scale_g,
-                max_bond_dim: chi_p,
-                max_iter: 200,
-                seed: 2,
-            },
-        )
-        .unwrap();
-        (sites, f, g, fp, gp, box_l, rtol)
-    }
-
-    /// The same two mixtures through the norm-driven path: one global train per
-    /// input at the same tolerance, bridged and split by `add_with_patching`.
-    #[allow(clippy::type_complexity)]
-    fn setup_norm(
-        r: usize,
-        chi_p: usize,
-    ) -> (
-        Vec<DynIndex>,
-        GaussianMixture2D,
-        GaussianMixture2D,
-        PartitionedTT,
-        PartitionedTT,
-        f64,
-        f64,
-    ) {
-        use crate::gaussian::to_quantics_fused_tt;
-
-        let box_l = 4.0;
-        let f = GaussianMixture2D::random(3, box_l, (0.5, 8.0), 1);
-        let g = GaussianMixture2D::random(3, box_l, (0.5, 8.0), 2);
-        let sites = fused_site_indices(r);
-        let rtol = 1e-8;
         let options = NormPatchedInputOptions {
-            rtol,
-            max_bond_dim: chi_p,
-            strategy: PatchSplitStrategy::default(),
+            rtol: 1e-8,
+            max_bond_dim: crate::gaussian_input::PATCH_CAP,
+            strategy: PatchSplitStrategy::Sequential,
         };
-        let (fa, _) = to_quantics_fused_tt(&f, r, box_l, rtol, 256).unwrap();
-        let (gb, _) = to_quantics_fused_tt(&g, r, box_l, rtol, 256).unwrap();
-        let fp = patched_input_from_global(&fa, &sites, options).unwrap();
-        let gp = patched_input_from_global(&gb, &sites, options).unwrap();
-        (sites, f, g, fp, gp, box_l, rtol)
+        let patched_left = patched_input_from_global(&left, &sites, options).unwrap();
+        let patched_right = patched_input_from_global(&right, &sites, options).unwrap();
+        (
+            sites,
+            left_mix,
+            right_mix,
+            left,
+            right,
+            patched_left,
+            patched_right,
+        )
     }
 
-    fn product_options(engine: PatchedEngine, rtol: f64) -> PatchedProductOptions {
-        PatchedProductOptions {
-            engine,
-            product_tol: rtol * 1e-2,
-            product_max_bond_dim: 256,
-            rtol,
-            max_bond_dim: 256,
-        }
-    }
-
-    /// All four engines must reproduce the pointwise product to an accuracy
-    /// consistent with the tolerance they were built and truncated at.
-    ///
-    /// The bound is shared: unlike the fixed-budget cases, nothing here forces
-    /// an arm to spend a budget it cannot afford, so every engine is expected to
-    /// land near the tolerance. It is `1e3 * rtol` for the same reason case 1
-    /// uses that shape, the pointwise error of a norm-relative truncation is not
-    /// bounded by the tolerance itself.
-    ///
-    /// The four engines are expected to agree here, and in the case-5 sweep they
-    /// agree to every reported digit: at a tolerance nothing binds against, each
-    /// one computes the same product and the final budgeting truncates all of
-    /// them identically. So this test cannot tell the engines apart, which is why
-    /// it checks instead that they really ran, by requiring the patches to have
-    /// enough free sites for the per-patch product to be a sweep rather than the
-    /// single-site fallback. `elementwise::algorithms_are_distinguishable_under_
-    /// forced_truncation` is what pins the engines apart, on the same code path.
     #[test]
-    fn all_engines_reproduce_the_pointwise_product() {
-        let (sites, f, g, fp, gp, box_l, rtol) = setup(6, 8);
-        println!("patches: f {} g {}", fp.len(), gp.len());
-        assert!(
-            fp.len() > 1 || gp.len() > 1,
-            "the cap did not force a split, so this instance tests nothing"
-        );
-        let deepest = fp
-            .projectors()
-            .chain(gp.projectors())
-            .map(Projector::len)
-            .max()
-            .unwrap();
-        assert!(
-            sites.len() - deepest >= 2,
-            "the deepest patch leaves {} free sites, so the per-patch products fall back \
-             to the single-site path and no engine is exercised",
-            sites.len() - deepest
-        );
-        for engine in [
-            PatchedEngine::Naive,
-            PatchedEngine::ZipupTreetn,
-            PatchedEngine::FitTreetn,
-            PatchedEngine::Aci,
-        ] {
-            let h = patched_elementwise(&fp, &gp, &sites, product_options(engine, rtol)).unwrap();
-            let err = max_rel_error_patched(&h, &sites, &f, &g, box_l, 128, 99).unwrap();
-            let params = total_params(&h, &sites).unwrap();
-            println!(
-                "{engine:?}: rel err {err:.3e}, {} patches, max bond {}, params {params}",
-                h.len(),
-                max_patch_bond(&h)
-            );
+    fn bridge_preserves_values_and_site_indices() {
+        let (sites, _, _, left, _, _, _) = fixture();
+        let bridged = tt_to_patch_train(&left, &sites).unwrap();
+        let patched = PartitionedTT::from_subdomains(vec![SubDomainTT::from_tt(bridged)]).unwrap();
+        let (_, subdomain) = patched.iter().next().unwrap();
+        for sample in sample_grid_indices(left.len(), 32, 9) {
+            let bits = index_to_bits(sample, left.len());
+            let fused: Vec<_> = bits.into_iter().map(|bit| bit * 3).collect();
             assert!(
-                err.is_finite() && err < 1e3 * rtol,
-                "{engine:?}: rel err {err:e} exceeds {:e}",
-                1e3 * rtol
+                (eval_patched(&patched, &sites, &fused).unwrap() - left.evaluate(&fused).unwrap())
+                    .abs()
+                    < 1e-10
             );
-            assert!(params > 0);
-            assert!(!h.is_empty());
+        }
+        for site in &sites {
+            assert!(subdomain
+                .data()
+                .site_indices()
+                .iter()
+                .flatten()
+                .any(|index| index == site));
         }
     }
 
-    /// The default construction of case 5, the norm-driven one, has to reproduce
-    /// the pointwise product just as the TCI-driven one does.
-    ///
-    /// Same instance, same tolerance and same bound as
-    /// `all_engines_reproduce_the_pointwise_product`, so the two paths are held to
-    /// one standard and the difference between them stays visible in the printed
-    /// patch counts rather than in what they are allowed to return. The cap is
-    /// tight enough that the splitting really runs, and the free-site check is the
-    /// same one: it is what says the per-patch products were sweeps rather than the
-    /// single-site fallback, so the engines were exercised. Two engines are run
-    /// here, one SVD-based and the interpolating one, which are the two kinds of
-    /// per-patch product; the four-engine sweep on this code path is the test
-    /// above.
     #[test]
-    fn norm_driven_path_reproduces_the_pointwise_product() {
-        let (sites, f, g, fp, gp, box_l, rtol) = setup_norm(6, 8);
-        println!("patches: f {} g {}", fp.len(), gp.len());
-        assert!(
-            fp.len() > 1 || gp.len() > 1,
-            "the cap did not force a split, so this instance tests nothing"
-        );
-        let deepest = fp
-            .projectors()
-            .chain(gp.projectors())
-            .map(Projector::len)
-            .max()
-            .unwrap();
-        assert!(
-            sites.len() - deepest >= 2,
-            "the deepest patch leaves {} free sites, so the per-patch products fall back \
-             to the single-site path and no engine is exercised",
-            sites.len() - deepest
-        );
-        for engine in [PatchedEngine::FitTreetn, PatchedEngine::Aci] {
-            let h = patched_elementwise(&fp, &gp, &sites, product_options(engine, rtol)).unwrap();
-            let err = max_rel_error_patched(&h, &sites, &f, &g, box_l, 128, 99).unwrap();
-            let params = total_params(&h, &sites).unwrap();
-            println!(
-                "{engine:?}: rel err {err:.3e}, {} patches, max bond {}, params {params}",
-                h.len(),
-                max_patch_bond(&h)
-            );
-            assert!(
-                err.is_finite() && err < 1e3 * rtol,
-                "{engine:?}: rel err {err:e} exceeds {:e}",
-                1e3 * rtol
-            );
-            assert!(params > 0);
-            assert!(!h.is_empty());
-        }
-    }
-
-    /// The anisotropic spike family, the default family of case 5, on the default
-    /// input construction.
-    ///
-    /// Small and deliberately well conditioned: four spikes of minor width 0.25 on
-    /// a box of half-width 1 at `R` = 6, so the grid resolves a spike to eight
-    /// steps and the sampled reference is not a field of zeros, which it would be
-    /// if this test copied the sweep's own spacing-to-width ratio at this bit
-    /// count. What it checks is the same thing the smooth tests check on the same
-    /// code path, that every engine reproduces the pointwise product at the
-    /// tolerance, with the cap tight enough that the splitting really runs and the
-    /// deepest patch still leaves the per-patch products a sweep to do.
-    #[test]
-    fn aniso_family_products_reproduce_the_pointwise_product() {
-        use crate::gaussian::{to_quantics_fused_tt_field, AnisoMixture2D};
-
-        let (r, box_l, chi_p) = (6usize, 1.0, 8usize);
-        let f = AnisoMixture2D::random(4, box_l, 0.25, 8.0, 1);
-        let g = AnisoMixture2D::random(4, box_l, 0.25, 8.0, 2);
-        let sites = fused_site_indices(r);
-        let rtol = 1e-8;
-        let options = NormPatchedInputOptions {
-            rtol,
-            max_bond_dim: chi_p,
-            strategy: PatchSplitStrategy::default(),
-        };
-        let (fa, _) = to_quantics_fused_tt_field(&f, r, box_l, rtol, 256).unwrap();
-        let (gb, _) = to_quantics_fused_tt_field(&g, r, box_l, rtol, 256).unwrap();
-        let fp = patched_input_from_global(&fa, &sites, options).unwrap();
-        let gp = patched_input_from_global(&gb, &sites, options).unwrap();
-        println!("patches: f {} g {}", fp.len(), gp.len());
-        assert!(
-            fp.len() > 1 || gp.len() > 1,
-            "the cap did not force a split, so this instance tests nothing"
-        );
-        let deepest = fp
-            .projectors()
-            .chain(gp.projectors())
-            .map(Projector::len)
-            .max()
-            .unwrap();
-        assert!(
-            sites.len() - deepest >= 2,
-            "the deepest patch leaves {} free sites, so the per-patch products fall back \
-             to the single-site path and no engine is exercised",
-            sites.len() - deepest
-        );
-        for engine in [
-            PatchedEngine::Naive,
-            PatchedEngine::ZipupTreetn,
-            PatchedEngine::FitTreetn,
-            PatchedEngine::Aci,
+    fn fit_and_aci_patched_products_match_the_reference() {
+        let (sites, left_mix, right_mix, left, right, patched_left, patched_right) = fixture();
+        for (engine, global_algo, aci_tolerance) in [
+            (
+                PatchedEngine::FitTreetn,
+                ElementwiseAlgo::Fit,
+                AciTolerance::Absolute,
+            ),
+            (
+                PatchedEngine::Aci,
+                ElementwiseAlgo::Aci,
+                AciTolerance::ScaleRelative,
+            ),
         ] {
-            let (h, stats) =
-                patched_elementwise_with_stats(&fp, &gp, &sites, product_options(engine, rtol))
+            let global =
+                elementwise_product(global_algo, &left, &right, 1e-8, 256, aci_tolerance).unwrap();
+            let patched = patched_elementwise(
+                &patched_left,
+                &patched_right,
+                &sites,
+                PatchedProductOptions {
+                    engine,
+                    product_tol: 1e-10,
+                    product_max_bond_dim: 256,
+                    rtol: 1e-8,
+                    max_bond_dim: crate::gaussian_input::PATCH_CAP,
+                },
+            )
+            .unwrap();
+            let global_error =
+                max_rel_error_vs_product(&global, &left_mix, &right_mix, 6, 1.0, 64, 17);
+            let patched_error =
+                max_rel_error_patched(&patched, &sites, &left_mix, &right_mix, 1.0, 64, 17)
                     .unwrap();
-            let err = max_rel_error_patched(&h, &sites, &f, &g, box_l, 128, 99).unwrap();
-            println!(
-                "{engine:?}: rel err {err:.3e}, {} patches, {} pairs, max bond {}",
-                h.len(),
-                stats.n_pairs,
-                max_patch_bond(&h)
+            assert!(
+                global_error < 1e-4,
+                "{engine:?}: global error={global_error:.3e}"
             );
             assert!(
-                err.is_finite() && err < 1e3 * rtol,
-                "{engine:?}: rel err {err:e} exceeds {:e}",
-                1e3 * rtol
+                patched_error < 1e-4,
+                "{engine:?}: patched error={patched_error:.3e}"
             );
-            // The breakdown has to describe the run that produced this product.
-            assert!(stats.n_pairs >= h.len());
-            assert!(stats.pairs_secs > 0.0 && stats.truncate_secs > 0.0);
-            assert!(total_params(&h, &sites).unwrap() > 0);
-        }
-    }
-
-    /// The bridge that the norm-driven path goes through must copy the train
-    /// rather than change it, and it must land on the site indices this module
-    /// hands out: a bridge that minted its own indices would produce patches that
-    /// can never be paired with another input's patches, since projector
-    /// compatibility is decided by index identity.
-    #[test]
-    fn the_bridge_preserves_values_and_site_indices() {
-        use crate::gaussian::to_quantics_fused_tt;
-
-        let (r, box_l) = (5, 3.0);
-        let mix = GaussianMixture2D::random(3, box_l, (0.5, 8.0), 4);
-        let sites = fused_site_indices(r);
-        let (tt, _) = to_quantics_fused_tt(&mix, r, box_l, 1e-10, 256).unwrap();
-        let bridged = tt_to_patch_train(&tt, &sites).unwrap();
-
-        // One subdomain over the whole domain, so a full projector turns the
-        // restriction into an evaluation of the bridged train itself.
-        let whole = PartitionedTT::from_subdomain(SubDomainTT::from_tt(bridged)).unwrap();
-        for &(ix, iy) in &[(0u64, 0u64), (5, 27), (31, 1), (16, 16)] {
-            let xb = index_to_bits(ix, r);
-            let yb = index_to_bits(iy, r);
-            let fused: Vec<usize> = (0..r).map(|n| xb[n] + 2 * yb[n]).collect();
-            let got = eval_patched(&whole, &sites, &fused).unwrap();
-            let want = tt.evaluate(&fused).unwrap();
-            assert!(
-                (got - want).abs() < 1e-12 * want.abs().max(1e-12),
-                "bridge changed the value at ({ix},{iy}): got {got:e} want {want:e}"
-            );
-        }
-    }
-
-    /// The patched product must agree with the global product of the same
-    /// instance, which is the statement that the patching is a representation
-    /// change and not a different function.
-    #[test]
-    fn patched_product_agrees_with_the_global_product() {
-        use crate::gaussian::to_quantics_fused_tt;
-
-        let (sites, f, g, fp, gp, box_l, rtol) = setup(6, 8);
-        let r = sites.len();
-        let h = patched_elementwise(
-            &fp,
-            &gp,
-            &sites,
-            product_options(PatchedEngine::FitTreetn, rtol),
-        )
-        .unwrap();
-
-        let (fa, _) = to_quantics_fused_tt(&f, r, box_l, rtol, 256).unwrap();
-        let (gb, _) = to_quantics_fused_tt(&g, r, box_l, rtol, 256).unwrap();
-        let global = elementwise_product(
-            ElementwiseAlgo::Fit,
-            &fa,
-            &gb,
-            rtol,
-            256,
-            AciTolerance::Absolute,
-        )
-        .unwrap();
-
-        let mut worst = 0.0f64;
-        let mut scale = 0.0f64;
-        for &ix in &sample_grid_indices(r, 64, 5) {
-            for &iy in &sample_grid_indices(r, 4, 6) {
-                let xb = index_to_bits(ix, r);
-                let yb = index_to_bits(iy, r);
-                let fused: Vec<usize> = (0..r).map(|n| xb[n] + 2 * yb[n]).collect();
-                let a = eval_patched(&h, &sites, &fused).unwrap();
-                let b = global.evaluate(&fused).unwrap();
-                worst = worst.max((a - b).abs());
-                scale = scale.max(b.abs());
-            }
-        }
-        println!("max |patched - global| = {worst:.3e} on a scale of {scale:.3e}");
-        assert!(
-            worst < 1e-4 * scale.max(1e-12),
-            "patched and global disagree"
-        );
-    }
-
-    /// A patch whose norm is negligible against its volume share of the budget
-    /// is dropped, and the representation then evaluates to zero there, while the
-    /// patches that carry the function survive.
-    ///
-    /// The instance is one Gaussian sitting in the lower-left quadrant, squared:
-    /// the product is of order one there and around `1e-56` in the opposite
-    /// corner, so the budgeting has both kinds of patch to decide about. Both
-    /// halves of the behaviour are pinned here, patches disappearing where the
-    /// function is negligible and `eval_patched` answering zero exactly there, and
-    /// the surviving patches still reproducing the product where it is not.
-    ///
-    /// The width is chosen so that the Gaussian is still visible to a handful of
-    /// random samples over the whole box. A much narrower one is a genuinely
-    /// sparse function, and `adaptiveinterpolate` then declares the top patch zero
-    /// without sampling further, as its documentation says it will unless it is
-    /// given pivots in a nonzero region, which would make this a test of that
-    /// behaviour instead.
-    #[test]
-    fn negligible_patches_are_dropped_and_evaluate_to_zero() {
-        let (r, box_l) = (6, 4.0);
-        let sites = fused_site_indices(r);
-        let corner = GaussianMixture2D {
-            weights: vec![1.0],
-            alphas: vec![2.0],
-            centers: vec![(-box_l / 2.0, -box_l / 2.0)],
-        };
-        let options = |seed| PatchedInputOptions {
-            abs_tol: 1e-8,
-            max_bond_dim: 8,
-            max_iter: 200,
-            seed,
-        };
-        let fp = patched_input(&corner, &sites, box_l, options(1)).unwrap();
-        let gp = patched_input(&corner, &sites, box_l, options(2)).unwrap();
-
-        let h = patched_elementwise(
-            &fp,
-            &gp,
-            &sites,
-            product_options(PatchedEngine::ZipupTreetn, 1e-8),
-        )
-        .unwrap();
-        println!(
-            "patches: f {} g {}, pairs kept after budgeting {}",
-            fp.len(),
-            gp.len(),
-            h.len()
-        );
-        assert!(
-            h.len() < fp.len() * gp.len(),
-            "no patch was dropped from a product that vanishes over most of the box"
-        );
-        assert!(!h.is_empty(), "every patch was dropped, including the peak");
-
-        // The far corner of the box is where the product is negligible, so its
-        // patches are gone and the representation answers exactly zero. That is
-        // also the right answer to about machine precision.
-        let mut dropped = 0usize;
-        for &ix in &sample_grid_indices(r, 32, 11) {
-            let far = (1u64 << (r - 1)) | (ix >> 1);
-            let xb = index_to_bits(far, r);
-            let fused: Vec<usize> = (0..r).map(|n| xb[n] * 3).collect();
-            let got = eval_patched(&h, &sites, &fused).unwrap();
-            assert!(got.abs() < 1e-12, "expected a dropped patch, got {got:e}");
-            if got == 0.0 {
-                dropped += 1;
-            }
-        }
-        assert!(dropped > 0, "no sampled point fell in a dropped patch");
-
-        // The peak is in a surviving patch and is still reproduced there.
-        let peak = 1u64 << (r - 2);
-        let bits = index_to_bits(peak, r);
-        let fused: Vec<usize> = (0..r).map(|n| bits[n] * 3).collect();
-        let x = grid_coord(peak, r, box_l);
-        let want = corner.eval(x, x).powi(2);
-        let got = eval_patched(&h, &sites, &fused).unwrap();
-        println!("at the peak: {got:.6e} against {want:.6e}");
-        assert!(
-            want > 1e-3,
-            "the chosen point is not the peak of the product"
-        );
-        assert!((got - want).abs() < 1e-6 * want, "the peak patch was lost");
-    }
-
-    /// The fused layout of `patched_input` has to be the layout the rest of the
-    /// benchmark uses, or the patched arms would silently interpolate a
-    /// transposed function.
-    #[test]
-    fn fused_coordinates_match_the_benchmark_layout() {
-        let (r, box_l) = (5, 3.0);
-        for &(ix, iy) in &[(0u64, 0u64), (5, 27), (31, 1), (16, 16)] {
-            let xb = index_to_bits(ix, r);
-            let yb = index_to_bits(iy, r);
-            let fused: Vec<usize> = (0..r).map(|n| xb[n] + 2 * yb[n]).collect();
-            let (x, y) = fused_to_coords(&fused, r, box_l);
-            assert_eq!((x, y), (grid_coord(ix, r, box_l), grid_coord(iy, r, box_l)));
+            assert!(max_patch_bond(&patched) <= crate::gaussian_input::PATCH_CAP);
         }
     }
 }

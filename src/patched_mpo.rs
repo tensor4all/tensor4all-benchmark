@@ -9,8 +9,8 @@ use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
 
 use crate::mpo_contract::{mpo_to_tensortrain, tensortrain_to_mpo};
 
-fn itensor_cutoff_policy(cutoff: f64) -> SvdTruncationPolicy {
-    SvdTruncationPolicy::new(cutoff)
+fn itensor_cutoff_policy(rtol: f64) -> SvdTruncationPolicy {
+    SvdTruncationPolicy::new(rtol * rtol)
         .with_relative()
         .with_squared_values()
         .with_discarded_tail_sum()
@@ -94,6 +94,29 @@ pub fn tensortrain_n_params(tt: &TensorTrain) -> usize {
                 .iter()
                 .map(|index| index.dim)
                 .product::<usize>()
+        })
+        .sum()
+}
+
+/// Total stored scalar entries across a patched chain TreeTN.
+pub fn partitioned_treetn_n_params(output: &tree::PartitionedTreeTN<usize>) -> usize {
+    output
+        .values()
+        .map(|subdomain| {
+            let network = subdomain.data();
+            network
+                .node_names()
+                .into_iter()
+                .filter_map(|node| network.node_index(&node))
+                .filter_map(|node| network.tensor(node))
+                .map(|tensor| {
+                    tensor
+                        .indices()
+                        .iter()
+                        .map(|index| index.dim)
+                        .product::<usize>()
+                })
+                .sum::<usize>()
         })
         .sum()
 }

@@ -1014,6 +1014,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "quanticsgrids"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/quanticsgrids-rs?rev=8214b72#8214b72aef2cc42167226c0b8e43ef14eba44a6f"
+dependencies = [
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1365,6 +1373,7 @@ dependencies = [
  "tensor4all-itensorlike",
  "tensor4all-partitionedtreetn",
  "tensor4all-partitionedtt",
+ "tensor4all-quanticstci",
  "tensor4all-simplett",
  "tensor4all-treetn",
 ]
@@ -1631,6 +1640,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tensor4all-quanticstci"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+dependencies = [
+ "anyhow",
+ "num-complex",
+ "num-traits",
+ "quanticsgrids",
+ "rand",
+ "tensor4all-core",
+ "tensor4all-simplett",
+ "tensor4all-tensorbackend",
+ "tensor4all-treetci",
+ "tensor4all-treetn",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "tensor4all-simplett"
 version = "0.2.0"
 source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
@@ -1679,6 +1706,23 @@ dependencies = [
  "tensor4all-core",
  "tensor4all-simplett",
  "tensor4all-tensorbackend",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "tensor4all-treetci"
+version = "0.2.0"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+dependencies = [
+ "anyhow",
+ "num-complex",
+ "petgraph",
+ "rand",
+ "tenferro-linalg",
+ "tenferro-tensor",
+ "tensor4all-core",
+ "tensor4all-tensorbackend",
+ "tensor4all-treetn",
  "thiserror 2.0.20",
 ]
 

@@ -6,7 +6,7 @@ Read `README.md` before changing case definitions, timing boundaries, input gene
 
 The repository has exactly three benchmark cases: Fourier elementwise, Gaussian elementwise global versus patched, and Gaussian MPO-MPO contraction global versus patched. Do not add another case when an arm or metric in one of these cases answers the question.
 
-Gaussian inputs use independent two-dimensional interpolative decomposition per term, deterministic balanced pairwise add-and-compress, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128. Do not add TCI generation, whole-mixture interpolation, isotropic controls, independent `R` sweeps, or a runtime patch-cap knob without an explicit design change.
+Production Gaussian inputs use whole-mixture global TCI at fixed `R = 16`, a rigorously localized positive-Gaussian evaluator, deterministic center and principal-axis pivots, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128. Keep the independent two-dimensional interpolative-QTT builder and balanced reduction as focused test references, not as the production generator. Do not add isotropic controls, independent `R` sweeps, or a runtime patch-cap knob without an explicit design change.
 
 ACI residual tolerance is not an L2 tolerance. Keep its internal metric explicit and compare it with other arms only through the common achieved external error.
 

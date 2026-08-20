@@ -10,15 +10,15 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 | `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, patched fit, global ACI, patched ACI | compressed input χ |
 | `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit, patched fit | compressed input χ |
 
-There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
+There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
 ## Gaussian input
 
-Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. Each term is independently constructed by two-dimensional `interpolate_multi_scale_nd`. Principal-axis unsafe points spaced by half the minor-axis standard deviation keep the narrow ridge refined.
+Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. The production generator applies global TCI directly to the whole mixture. A spatially indexed evaluator omits Gaussian tails only under a rigorous global pointwise absolute bound. Deterministic centers and principal-axis points seed TCI so narrow rotated ridges are represented.
 
-The terms are combined by deterministic balanced pairwise reduction. Every pair is added and immediately compressed with the recorded intermediate relative-L2/SVD tolerance. This gives logarithmic reduction depth and avoids an exact intermediate sum whose bond dimension grows with the number of terms. A final global relative-L2/SVD truncation uses `1e-6`.
+The raw global-TCI result is compressed once with relative-L2/SVD tolerance `1e-6`. The independent two-dimensional `interpolate_multi_scale_nd` builder and deterministic balanced pairwise reduction remain in the test suite as a reference for individual Gaussian and small-mixture accuracy.
 
-The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache key includes the schema version, pinned tensor4all-rs revision, `N`, `R`, width, aspect range, spacing, polynomial degree, interpolation tolerance, addition tolerance, and seed. Cases 2 and 3 share the same cache entry. Set `BENCH_INPUT_CACHE_REFRESH=1` to rebuild it or `BENCH_INPUT_CACHE_DIR` to move the cache.
+The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache key includes the schema version, pinned tensor4all-rs revision, `N`, fixed `R`, width, aspect range, spacing, TCI tolerance and cap, localized evaluator bound, pivot count, and seed. Cases 2 and 3 share the same cache entry. Set `BENCH_INPUT_CACHE_REFRESH=1` to rebuild it or `BENCH_INPUT_CACHE_DIR` to move the cache.
 
 ## Patching and accuracy
 

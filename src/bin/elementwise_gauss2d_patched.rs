@@ -11,7 +11,8 @@ use t4a_bench::elementwise::{
 };
 use t4a_bench::gaussian_input::{
     prepare_gaussian_pair, sampled_input_relative_l2, tensortrain_n_params, GaussianInputConfig,
-    INPUT_L2_RTOL, PATCH_CAP,
+    INPUT_L2_RTOL, INPUT_LOCAL_ABS_TOLERANCE, INPUT_TCI_MAX_BOND, INPUT_TCI_PIVOT_COMPONENTS,
+    INPUT_TCI_TOLERANCE, PATCH_CAP,
 };
 use t4a_bench::harness::time_median;
 use t4a_bench::patched::{
@@ -80,9 +81,10 @@ fn run_point(
         sigma_minor: 0.05,
         rho_max: 8.0,
         spacing: 3.0,
-        polynomial_degree: 28,
-        interpolation_tolerance: 1e-10,
-        addition_tolerance: 1e-10,
+        tci_tolerance: INPUT_TCI_TOLERANCE,
+        tci_max_bond_dim: INPUT_TCI_MAX_BOND,
+        localized_absolute_tolerance: INPUT_LOCAL_ABS_TOLERANCE,
+        tci_pivot_components: INPUT_TCI_PIVOT_COMPONENTS,
         seed,
         cache_dir: cache_dir.to_path_buf(),
         refresh,
@@ -333,9 +335,11 @@ fn common_params(
     serde_json::json!({
         "n_gauss": config.n, "r": input.r, "box_l": input.box_l,
         "sigma_minor": config.sigma_minor, "rho_max": config.rho_max,
-        "spacing": config.spacing, "polynomial_degree": config.polynomial_degree,
-        "interpolation_tolerance": config.interpolation_tolerance,
-        "addition_tolerance": config.addition_tolerance,
+        "spacing": config.spacing, "input_generator": "global_tci",
+        "input_tci_tolerance": config.tci_tolerance,
+        "input_tci_max_bond_dim": config.tci_max_bond_dim,
+        "input_localized_absolute_tolerance": config.localized_absolute_tolerance,
+        "input_tci_pivot_components": config.tci_pivot_components,
         "input_l2_rtol": INPUT_L2_RTOL, "patch_cap": PATCH_CAP,
         "raw_left_chi": input.raw_left_chi, "raw_right_chi": input.raw_right_chi,
         "left_chi": input.left.rank(), "right_chi": input.right.rank(),

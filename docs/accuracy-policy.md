@@ -40,7 +40,9 @@ No claim equates these two values. The sampled error is the comparison metric ac
 
 ## Input and operation errors
 
-Gaussian input interpolation and compression happen before the timed operation and have their own recorded tolerances and sampled errors. Operation tolerances describe only the elementwise product or contraction. End-to-end sampled error includes both input and operation approximation.
+Whole-mixture global TCI and final input compression happen before the timed operation. The TCI residual, localized-evaluator absolute tail bound, final relative-L2 SVD tolerance, random holdout error, and principal-axis holdout error are recorded separately. The per-Gaussian two-dimensional interpolative builder remains a focused reference test and is not the production generator.
+
+Operation tolerances describe only the elementwise product or contraction. End-to-end sampled error includes both input and operation approximation.
 
 ## Timing boundary
 

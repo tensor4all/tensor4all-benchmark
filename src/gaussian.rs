@@ -1,8 +1,13 @@
 //! Randomly rotated anisotropic Gaussian mixtures and their quantics representation.
 
+use std::collections::HashMap;
+
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use tensor4all_interpolativeqtt::{interpolate_multi_scale_nd, InterpolativeQttOptions};
+use tensor4all_quanticstci::{
+    quanticscrossinterpolate, DiscretizedGrid, QtciOptions, UnfoldingScheme,
+};
 use tensor4all_simplett::mpo::{tensor4_from_data, MPO};
 use tensor4all_simplett::{
     AbstractTensorTrain, CompressionMethod, CompressionOptions, SimpleTensorTrain, Tensor3Ops,
@@ -180,6 +185,146 @@ impl Field2D for AnisoMixture2D {
     fn eval(&self, x: f64, y: f64) -> f64 {
         AnisoMixture2D::eval(self, x, y)
     }
+}
+
+/// Spatially indexed evaluator with a rigorous global absolute tail bound.
+///
+/// Positive Gaussian components are omitted only when their combined value is
+/// bounded by `absolute_tolerance` at every point.
+#[derive(Clone, Debug)]
+pub struct LocalizedAnisoField {
+    mixture: AnisoMixture2D,
+    absolute_tolerance: f64,
+    bin_width: f64,
+    cutoff_squared: Vec<f64>,
+    bins: HashMap<(i64, i64), Vec<usize>>,
+}
+
+impl LocalizedAnisoField {
+    /// Build a local evaluator for one positive anisotropic mixture.
+    pub fn new(mixture: AnisoMixture2D, absolute_tolerance: f64) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            absolute_tolerance.is_finite() && absolute_tolerance > 0.0,
+            "localized evaluator tolerance must be positive and finite"
+        );
+        anyhow::ensure!(
+            mixture.weights.len() == mixture.quad.len()
+                && mixture.weights.len() == mixture.centers.len()
+                && !mixture.weights.is_empty(),
+            "invalid anisotropic mixture"
+        );
+        anyhow::ensure!(
+            mixture
+                .weights
+                .iter()
+                .all(|weight| weight.is_finite() && *weight >= 0.0),
+            "localized evaluator requires finite non-negative weights"
+        );
+        let total_weight = mixture.weights.iter().sum::<f64>();
+        anyhow::ensure!(
+            total_weight.is_finite() && total_weight > absolute_tolerance,
+            "localized evaluator tolerance must be smaller than total weight"
+        );
+        let exponent_cutoff = (total_weight / absolute_tolerance).ln();
+        let cutoff_squared = mixture
+            .quad
+            .iter()
+            .map(|&(a, b, c)| {
+                let discriminant = ((a - c).powi(2) + 4.0 * b * b).sqrt();
+                let lambda_min = 0.5 * (a + c - discriminant);
+                anyhow::ensure!(lambda_min.is_finite() && lambda_min > 0.0);
+                Ok(exponent_cutoff / lambda_min)
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let bin_width = cutoff_squared
+            .iter()
+            .copied()
+            .fold(0.0_f64, f64::max)
+            .sqrt();
+        let mut bins = HashMap::<(i64, i64), Vec<usize>>::new();
+        for (i, &(x, y)) in mixture.centers.iter().enumerate() {
+            bins.entry(Self::bin_key(x, y, bin_width))
+                .or_default()
+                .push(i);
+        }
+        Ok(Self {
+            mixture,
+            absolute_tolerance,
+            bin_width,
+            cutoff_squared,
+            bins,
+        })
+    }
+
+    fn bin_key(x: f64, y: f64, bin_width: f64) -> (i64, i64) {
+        (
+            (x / bin_width).floor() as i64,
+            (y / bin_width).floor() as i64,
+        )
+    }
+
+    /// Guaranteed pointwise absolute error bound relative to exact evaluation.
+    pub fn absolute_tolerance(&self) -> f64 {
+        self.absolute_tolerance
+    }
+
+    /// Evaluate the rigorously localized Gaussian sum.
+    pub fn eval(&self, x: f64, y: f64) -> f64 {
+        let (bx, by) = Self::bin_key(x, y, self.bin_width);
+        let mut value = 0.0;
+        for dx_bin in -1..=1 {
+            for dy_bin in -1..=1 {
+                if let Some(indices) = self.bins.get(&(bx + dx_bin, by + dy_bin)) {
+                    for &i in indices {
+                        let (cx, cy) = self.mixture.centers[i];
+                        let (dx, dy) = (x - cx, y - cy);
+                        if dx * dx + dy * dy <= self.cutoff_squared[i] {
+                            let (a, b, c) = self.mixture.quad[i];
+                            value += self.mixture.weights[i]
+                                * (-(a * dx * dx + 2.0 * b * dx * dy + c * dy * dy)).exp();
+                        }
+                    }
+                }
+            }
+        }
+        value
+    }
+}
+
+impl Field2D for LocalizedAnisoField {
+    fn eval(&self, x: f64, y: f64) -> f64 {
+        LocalizedAnisoField::eval(self, x, y)
+    }
+}
+
+/// Cross-interpolate one 2D field into a fused dimension-4 QTT.
+pub fn global_tci_qtt<M: Field2D + Clone + 'static>(
+    field: &M,
+    r: usize,
+    box_l: f64,
+    tolerance: f64,
+    max_bond_dim: usize,
+    initial_pivots: Vec<Vec<usize>>,
+) -> anyhow::Result<SimpleTensorTrain<f64>> {
+    anyhow::ensure!(!initial_pivots.is_empty(), "initial pivot list is empty");
+    let grid = DiscretizedGrid::builder(&[r, r])
+        .with_lower_bound(&[-box_l, -box_l])
+        .with_upper_bound(&[box_l, box_l])
+        .with_unfolding_scheme(UnfoldingScheme::Fused)
+        .build()?;
+    let sampled = field.clone();
+    let options = QtciOptions::default()
+        .with_tolerance(tolerance)
+        .with_max_bond_dim(max_bond_dim)
+        .with_unfoldingscheme(UnfoldingScheme::Fused)
+        .with_nrandominitpivot(0);
+    let (qtt, _, _) = quanticscrossinterpolate(
+        &grid,
+        move |xy: &[f64]| sampled.eval(xy[0], xy[1]),
+        Some(initial_pivots),
+        options,
+    )?;
+    Ok(qtt.tensor_train())
 }
 
 fn rotated_gaussian_qtt(
@@ -425,6 +570,19 @@ mod tests {
             squared_reference += expected * expected;
         }
         assert!((squared_error / squared_reference).sqrt() < 1e-7);
+    }
+
+    #[test]
+    fn localized_evaluator_respects_its_global_tail_bound() {
+        let mixture = AnisoMixture2D::random(64, 2.0, 0.05, 8.0, 29);
+        let tolerance = 1e-10;
+        let localized = LocalizedAnisoField::new(mixture.clone(), tolerance).unwrap();
+        assert_eq!(localized.absolute_tolerance(), tolerance);
+        for sample in 0..256 {
+            let x = -2.0 + 4.0 * ((73 * sample + 11) % 1024) as f64 / 1024.0;
+            let y = -2.0 + 4.0 * ((151 * sample + 29) % 1024) as f64 / 1024.0;
+            assert!((mixture.eval(x, y) - localized.eval(x, y)).abs() <= 1.01 * tolerance);
+        }
     }
 
     #[test]

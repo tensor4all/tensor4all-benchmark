@@ -54,7 +54,7 @@ def main(profile: Path) -> None:
         "",
         "The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.",
         "",
-        "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use independent two-dimensional interpolative decompositions, balanced pairwise addition, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
+        "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use whole-mixture global TCI at fixed `R = 16`, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
         "",
         "## Case 1: Fourier elementwise",
         "",

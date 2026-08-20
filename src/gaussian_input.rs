@@ -7,15 +7,25 @@ use tensor4all_simplett::{
     AbstractTensorTrain, CompressionMethod, CompressionOptions, SimpleTensorTrain, Tensor3Ops,
 };
 
-use crate::gaussian::{grid_coord, AnisoMixture2D};
+use crate::gaussian::{global_tci_qtt, grid_coord, AnisoMixture2D, LocalizedAnisoField};
 use crate::harness::{index_to_bits, sample_grid_indices};
 use crate::hdf5_export::{load_tt_from_mps, save_tt_as_mps};
 
+/// Fixed quantics bit count per physical axis.
+pub const GAUSSIAN_R: usize = 16;
 /// Fixed patch rank cap used by every patched benchmark arm.
 pub const PATCH_CAP: usize = 128;
 /// Final global relative-L2 input tolerance.
 pub const INPUT_L2_RTOL: f64 = 1e-6;
-const CACHE_SCHEMA: &str = "interpolative-gaussian-pair-v2";
+/// Global TCI residual tolerance used to construct each raw input.
+pub const INPUT_TCI_TOLERANCE: f64 = 1e-8;
+/// Maximum raw TCI bond dimension before final L2 compression.
+pub const INPUT_TCI_MAX_BOND: usize = 1024;
+/// Rigorous pointwise tail budget of the localized Gaussian evaluator.
+pub const INPUT_LOCAL_ABS_TOLERANCE: f64 = 1e-12;
+/// Gaussian components supplying deterministic center and principal-axis pivots.
+pub const INPUT_TCI_PIVOT_COMPONENTS: usize = 16;
+const CACHE_SCHEMA: &str = "global-tci-gaussian-pair-v3";
 const TENSOR4ALL_REV: &str = "9e9aedaebe0d3918b34dd399ff0981e337f3835b";
 
 /// Parameters that uniquely define one cached input pair.
@@ -25,9 +35,10 @@ pub struct GaussianInputConfig {
     pub sigma_minor: f64,
     pub rho_max: f64,
     pub spacing: f64,
-    pub polynomial_degree: usize,
-    pub interpolation_tolerance: f64,
-    pub addition_tolerance: f64,
+    pub tci_tolerance: f64,
+    pub tci_max_bond_dim: usize,
+    pub localized_absolute_tolerance: f64,
+    pub tci_pivot_components: usize,
     pub seed: u64,
     pub cache_dir: PathBuf,
     pub refresh: bool,
@@ -52,14 +63,9 @@ pub struct GaussianInputPair {
     pub raw_right_params: usize,
 }
 
-/// Choose the box and the smallest bit count resolving the minor width by eight cells.
+/// Choose the box while keeping the quantics bit count fixed.
 pub fn box_and_bits(n: usize, sigma_minor: f64, spacing: f64) -> (f64, usize) {
-    let box_l = 0.5 * spacing * sigma_minor * (n as f64).sqrt();
-    let mut r = 2;
-    while 2.0 * box_l / (1usize << r) as f64 > sigma_minor / 8.0 {
-        r += 1;
-    }
-    (box_l, r)
+    (0.5 * spacing * sigma_minor * (n as f64).sqrt(), GAUSSIAN_R)
 }
 
 /// Number of stored scalar entries in a tensor train.
@@ -70,9 +76,88 @@ pub fn tensortrain_n_params(tt: &SimpleTensorTrain<f64>) -> usize {
         .sum()
 }
 
-/// Load or build, then globally L2-compress, one deterministic Gaussian input pair.
+fn grid_pivots(
+    mixture: &AnisoMixture2D,
+    count: usize,
+    r: usize,
+    box_l: f64,
+    shifted: bool,
+) -> Vec<Vec<usize>> {
+    let count = count.min(mixture.centers.len()).max(1);
+    let grid_size = 1usize << r;
+    let mut pivots = Vec::with_capacity(5 * count);
+    for pivot in 0..count {
+        let offset = if shifted {
+            mixture.centers.len() / (2 * count)
+        } else {
+            0
+        };
+        let component =
+            (pivot * mixture.centers.len() / count + offset).min(mixture.centers.len() - 1);
+        let center = mixture.centers[component];
+        let (a, b, c) = mixture.quad[component];
+        let discriminant = ((a - c).powi(2) + 4.0 * b * b).sqrt();
+        let lambda_major = 0.5 * (a + c - discriminant);
+        let lambda_minor = 0.5 * (a + c + discriminant);
+        let mut major = if b.abs() > f64::EPSILON * a.abs().max(c.abs()) {
+            (b, lambda_major - a)
+        } else if a <= c {
+            (1.0, 0.0)
+        } else {
+            (0.0, 1.0)
+        };
+        let norm = major.0.hypot(major.1);
+        major.0 /= norm;
+        major.1 /= norm;
+        let minor = (-major.1, major.0);
+        let sigma_major = (2.0 * lambda_major).sqrt().recip();
+        let sigma_minor = (2.0 * lambda_minor).sqrt().recip();
+        for point in [
+            center,
+            (
+                center.0 + sigma_major * major.0,
+                center.1 + sigma_major * major.1,
+            ),
+            (
+                center.0 - sigma_major * major.0,
+                center.1 - sigma_major * major.1,
+            ),
+            (
+                center.0 + sigma_minor * minor.0,
+                center.1 + sigma_minor * minor.1,
+            ),
+            (
+                center.0 - sigma_minor * minor.0,
+                center.1 - sigma_minor * minor.1,
+            ),
+        ] {
+            let grid_point = [point.0, point.1]
+                .into_iter()
+                .map(|coordinate| {
+                    let scaled = ((coordinate + box_l) * grid_size as f64 / (2.0 * box_l)).floor();
+                    scaled.clamp(0.0, (grid_size - 1) as f64) as usize
+                })
+                .collect::<Vec<_>>();
+            if !pivots.contains(&grid_point) {
+                pivots.push(grid_point);
+            }
+        }
+    }
+    pivots
+}
+
+/// Load or build a global-TCI input pair, then apply final L2 compression.
 pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<GaussianInputPair> {
     anyhow::ensure!(config.n > 0, "Gaussian count must be positive");
+    anyhow::ensure!(
+        config.tci_tolerance.is_finite() && config.tci_tolerance > 0.0,
+        "TCI tolerance must be positive and finite"
+    );
+    anyhow::ensure!(config.tci_max_bond_dim > 0, "TCI rank cap must be positive");
+    anyhow::ensure!(
+        config.tci_pivot_components > 0,
+        "TCI pivot count must be positive"
+    );
     let (box_l, r) = box_and_bits(config.n, config.sigma_minor, config.spacing);
     let left_mixture = AnisoMixture2D::random(
         config.n,
@@ -89,14 +174,15 @@ pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<Gau
         config.seed.wrapping_add(2),
     );
     let cache_key = format!(
-        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-sigma{:016x}-rho{:016x}-spacing{:016x}-degree{}-interp{:016x}-add{:016x}-seed{}",
+        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
         config.n,
         config.sigma_minor.to_bits(),
         config.rho_max.to_bits(),
         config.spacing.to_bits(),
-        config.polynomial_degree,
-        config.interpolation_tolerance.to_bits(),
-        config.addition_tolerance.to_bits(),
+        config.tci_tolerance.to_bits(),
+        config.localized_absolute_tolerance.to_bits(),
+        config.tci_pivot_components,
+        config.tci_max_bond_dim,
         config.seed,
     );
     std::fs::create_dir_all(&config.cache_dir)?;
@@ -109,19 +195,25 @@ pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<Gau
         (left, right, true, load_start.elapsed(), Duration::ZERO)
     } else {
         let build_start = Instant::now();
-        let left = left_mixture.to_interpolative_qtt(
+        let localized_left =
+            LocalizedAnisoField::new(left_mixture.clone(), config.localized_absolute_tolerance)?;
+        let localized_right =
+            LocalizedAnisoField::new(right_mixture.clone(), config.localized_absolute_tolerance)?;
+        let left = global_tci_qtt(
+            &localized_left,
             r,
             box_l,
-            config.polynomial_degree,
-            config.interpolation_tolerance,
-            config.addition_tolerance,
+            config.tci_tolerance,
+            config.tci_max_bond_dim,
+            grid_pivots(&left_mixture, config.tci_pivot_components, r, box_l, false),
         )?;
-        let right = right_mixture.to_interpolative_qtt(
+        let right = global_tci_qtt(
+            &localized_right,
             r,
             box_l,
-            config.polynomial_degree,
-            config.interpolation_tolerance,
-            config.addition_tolerance,
+            config.tci_tolerance,
+            config.tci_max_bond_dim,
+            grid_pivots(&right_mixture, config.tci_pivot_components, r, box_l, false),
         )?;
         validate_cached_pair(&left, &right, r)?;
         write_pair_atomically(&path, &left, &right)?;
@@ -200,6 +292,60 @@ pub fn sampled_input_relative_l2(
     ))
 }
 
+fn relative_l2_at_grid_points(
+    qtt: &SimpleTensorTrain<f64>,
+    mixture: &AnisoMixture2D,
+    points: &[Vec<usize>],
+    r: usize,
+    box_l: f64,
+) -> anyhow::Result<f64> {
+    let mut squared_error = 0.0;
+    let mut squared_reference = 0.0;
+    for point in points {
+        anyhow::ensure!(point.len() == 2, "principal-axis grid point is not 2D");
+        let (ix, iy) = (point[0] as u64, point[1] as u64);
+        let fused = index_to_bits(ix, r)
+            .into_iter()
+            .zip(index_to_bits(iy, r))
+            .map(|(x, y)| x + 2 * y)
+            .collect::<Vec<_>>();
+        let expected = mixture.eval(grid_coord(ix, r, box_l), grid_coord(iy, r, box_l));
+        let error = qtt.evaluate(&fused)? - expected;
+        squared_error += error * error;
+        squared_reference += expected * expected;
+    }
+    anyhow::ensure!(
+        squared_reference > 0.0,
+        "zero principal-axis reference norm"
+    );
+    Ok((squared_error / squared_reference).sqrt())
+}
+
+/// Relative-L2 errors on centers and principal axes not used as TCI pivots.
+pub fn principal_axis_input_relative_l2(
+    pair: &GaussianInputPair,
+    components: usize,
+) -> anyhow::Result<(f64, f64)> {
+    let left_points = grid_pivots(&pair.left_mixture, components, pair.r, pair.box_l, true);
+    let right_points = grid_pivots(&pair.right_mixture, components, pair.r, pair.box_l, true);
+    Ok((
+        relative_l2_at_grid_points(
+            &pair.left,
+            &pair.left_mixture,
+            &left_points,
+            pair.r,
+            pair.box_l,
+        )?,
+        relative_l2_at_grid_points(
+            &pair.right,
+            &pair.right_mixture,
+            &right_points,
+            pair.r,
+            pair.box_l,
+        )?,
+    ))
+}
+
 fn validate_cached_pair(
     left: &SimpleTensorTrain<f64>,
     right: &SimpleTensorTrain<f64>,
@@ -248,9 +394,10 @@ mod tests {
             sigma_minor: 0.12,
             rho_max: 2.0,
             spacing: 3.0,
-            polynomial_degree: 12,
-            interpolation_tolerance: 1e-9,
-            addition_tolerance: 1e-10,
+            tci_tolerance: 1e-8,
+            tci_max_bond_dim: 64,
+            localized_absolute_tolerance: 1e-12,
+            tci_pivot_components: 2,
             seed: 31,
             cache_dir: cache_dir.clone(),
             refresh: true,
@@ -263,6 +410,14 @@ mod tests {
         .unwrap();
         assert!(!first.cache_hit);
         assert!(second.cache_hit);
+        assert_eq!(first.r, GAUSSIAN_R);
+        let sampled = sampled_input_relative_l2(&first, 64, 41).unwrap();
+        let principal = principal_axis_input_relative_l2(&first, 2).unwrap();
+        assert!(sampled.0 < 1e-4 && sampled.1 < 1e-4, "sampled={sampled:?}");
+        assert!(
+            principal.0 < 1e-4 && principal.1 < 1e-4,
+            "principal={principal:?}"
+        );
         assert_eq!(first.raw_left_chi, second.raw_left_chi);
         assert_eq!(first.raw_right_chi, second.raw_right_chi);
         for point in [vec![0; first.r], (0..first.r).map(|i| i % 4).collect()] {

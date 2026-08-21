@@ -21,6 +21,7 @@ profile: $profile
 date: $(date -I)
 repository_revision: $repo_rev
 tensor4all_rs_revision: $tensor4all_rev
+input_cache_compatibility_revision: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
 cpu: $(lscpu | awk -F: '/Model name/{sub(/^[[:space:]]+/, "", $2); print $2; exit}')
 cpu_affinity: $core
 threads: {rayon: 1, omp: 1, openblas: 1, mkl: 1, blis: 1}
@@ -30,10 +31,15 @@ padding_factor: 4
 patch_cap: 128
 patch_input_rtol: 1e-6
 contraction_performed: false
+patch_build_repetitions: 1
 layouts: [balanced_xyz, shared_y_only]
 default_n_points: [512, 1024, 2048, 4096, 8192, 12000]
 fixed_n_chi_sweep: {n: 12000, input_l2_rtols: [1e-6, 1e-8, 1e-9, 1e-10]}
 measurement_command_timeout_seconds: 570
+notes:
+  - The cache-key revision is the input-generator compatibility baseline; tensor4all_rs_revision is the actual patched worktree used for this run.
+  - Raw padded input tensors are gitignored and are not part of this artifact; exact regeneration rebuilds or supplies the v4 padded caches.
+  - Patch build values are single measurements; the report does not label them medians.
 EOF
 
 export RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1

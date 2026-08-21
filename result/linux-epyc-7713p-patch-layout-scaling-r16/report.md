@@ -45,6 +45,7 @@ These are contraction-free measurements on factor-4 padded, fixed-`R=16` inputs.
 
 ## Interpretation
 
+- At N=512 and N=1,024 the layouts are identical because no x/z refinement is selected; the balanced-versus-y-only comparison becomes nontrivial at N=2,048.
 - The observed balanced staircase reaches 32 patches/operand, 128 compatible pairs, and 16 output groups at N=4,096, then remains unchanged through N=12,000.
 - Shared-y-only reaches 16 patches/operand at N=4,096 and 32 at N=8,192. From N=8,192 onward it has 32 compatible pairs and one output group, versus balanced 128 and 16.
 - At N=12,000, shared-y-only has 0.434× the balanced parameter-product proxy and 0.368× the cubed max-bond proxy. This suggests less pairwise contraction work, but it does not include the rank of each contracted contribution or the cost of fitting all y contributions into one global x/z output group.

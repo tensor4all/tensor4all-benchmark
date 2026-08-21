@@ -1,0 +1,33 @@
+profile: linux-epyc-7713p-padded-r16
+date: 2026-08-21
+repository_revision: ed1b300
+tensor4all_rs_revision: 6926379a
+cpu: AMD EPYC 7713P 64-Core Processor
+cpu_affinity: 0
+threads:
+  rayon: 1
+  omp: 1
+  openblas: 1
+  mkl: 1
+  blis: 1
+build: cargo release locked
+fit_profile: T4A_PROFILE_FIT=1
+quantics_bits_per_axis: 16
+padding_factor: 4
+patch_cap: 128
+operation_points:
+  - 512
+  - 4096
+patch_scaling_points:
+  - 512
+  - 1024
+  - 2048
+  - 4096
+  - 8192
+  - 12000
+measurement_command_timeout_seconds: 570
+notes:
+  - Patch-scaling points perform no MPO contraction or output validation.
+  - Operation timing excludes input generation, patch preparation, integrated-reference construction/cache I/O, output conversion, and center validation.
+  - Integrated references use a rigorous 1e-12 pair-omission budget plus a spatially indexed evaluator with its own 1e-12 pointwise tail budget.
+  - Global and patched arms validate at the same deterministic retained-output-Gaussian centers.

@@ -52,16 +52,18 @@ pub fn prepare_integrated_reference(
 ) -> anyhow::Result<IntegratedGaussianReference> {
     let load_start = Instant::now();
     let (mixture, stats, cache_hit, cache_load, build) = if cache_path.exists() && !refresh {
-        let (mixture, stats) = load_cache(cache_path)?;
-        (mixture, stats, true, load_start.elapsed(), Duration::ZERO)
-    } else {
-        let build_start = Instant::now();
-        let (mixture, stats) = integrate_mixtures(left, right, absolute_tolerance)?;
-        if let Some(parent) = cache_path.parent() {
-            std::fs::create_dir_all(parent)?;
+        match load_cache(cache_path) {
+            Ok((mixture, stats)) => (mixture, stats, true, load_start.elapsed(), Duration::ZERO),
+            Err(_) => {
+                let cache_load = load_start.elapsed();
+                let (mixture, stats, build) =
+                    build_cache(left, right, absolute_tolerance, cache_path)?;
+                (mixture, stats, false, cache_load, build)
+            }
         }
-        write_cache(cache_path, &mixture, &stats)?;
-        (mixture, stats, false, Duration::ZERO, build_start.elapsed())
+    } else {
+        let (mixture, stats, build) = build_cache(left, right, absolute_tolerance, cache_path)?;
+        (mixture, stats, false, Duration::ZERO, build)
     };
     let field = LocalizedAnisoField::new(mixture, absolute_tolerance)?;
     Ok(IntegratedGaussianReference {
@@ -72,6 +74,21 @@ pub fn prepare_integrated_reference(
         build,
         cache_path: cache_path.to_path_buf(),
     })
+}
+
+fn build_cache(
+    left: &AnisoMixture2D,
+    right: &AnisoMixture2D,
+    absolute_tolerance: f64,
+    cache_path: &Path,
+) -> anyhow::Result<(AnisoMixture2D, IntegratedGaussianStats, Duration)> {
+    let build_start = Instant::now();
+    let (mixture, stats) = integrate_mixtures(left, right, absolute_tolerance)?;
+    if let Some(parent) = cache_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_cache(cache_path, &mixture, &stats)?;
+    Ok((mixture, stats, build_start.elapsed()))
 }
 
 #[derive(Clone, Copy)]
@@ -365,6 +382,25 @@ fn load_cache(path: &Path) -> anyhow::Result<(AnisoMixture2D, IntegratedGaussian
     };
     let omitted_absolute_bound = read_f64(&mut file)?;
     let y_cell_width = read_f64(&mut file)?;
+    anyhow::ensure!(
+        omitted_absolute_bound.is_finite() && omitted_absolute_bound > 0.0,
+        "invalid cached omission bound"
+    );
+    anyhow::ensure!(
+        y_cell_width.is_finite() && y_cell_width > 0.0,
+        "invalid cached y-cell width"
+    );
+    let expected_bytes = 56u64
+        .checked_add(
+            u64::try_from(count)?
+                .checked_mul(48)
+                .ok_or_else(|| anyhow::anyhow!("integrated cache byte count overflow"))?,
+        )
+        .ok_or_else(|| anyhow::anyhow!("integrated cache byte count overflow"))?;
+    anyhow::ensure!(
+        std::fs::metadata(path)?.len() == expected_bytes,
+        "integrated cache length mismatch"
+    );
     let mut weights = Vec::with_capacity(count);
     let mut quad = Vec::with_capacity(count);
     let mut centers = Vec::with_capacity(count);
@@ -375,7 +411,18 @@ fn load_cache(path: &Path) -> anyhow::Result<(AnisoMixture2D, IntegratedGaussian
         let c = read_f64(&mut file)?;
         let x = read_f64(&mut file)?;
         let z = read_f64(&mut file)?;
-        anyhow::ensure!(weight.is_finite() && a.is_finite() && b.is_finite() && c.is_finite());
+        anyhow::ensure!(
+            weight.is_finite()
+                && weight >= 0.0
+                && a.is_finite()
+                && b.is_finite()
+                && c.is_finite()
+                && a > 0.0
+                && a * c - b * b > 0.0
+                && x.is_finite()
+                && z.is_finite(),
+            "invalid integrated Gaussian cache component"
+        );
         weights.push(weight);
         quad.push((a, b, c));
         centers.push((x, z));
@@ -438,6 +485,13 @@ mod tests {
         assert_eq!(
             first.field.mixture().centers,
             second.field.mixture().centers
+        );
+        std::fs::write(&path, b"corrupt").unwrap();
+        let rebuilt = prepare_integrated_reference(&left, &right, 1e-14, &path, false).unwrap();
+        assert!(!rebuilt.cache_hit);
+        assert_eq!(
+            first.field.mixture().weights,
+            rebuilt.field.mixture().weights
         );
         std::fs::remove_file(path).unwrap();
     }

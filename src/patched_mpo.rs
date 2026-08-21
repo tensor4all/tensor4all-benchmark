@@ -48,6 +48,7 @@ fn regularize_binary_partition(
         .checked_shl(indices.len() as u32)
         .ok_or_else(|| anyhow::anyhow!("regular patch count overflow"))?;
     let mut patches = Vec::with_capacity(count);
+    let mut covered_sources = HashSet::new();
     for assignment in 0..count {
         let target = tree::Projector::from_pairs(
             indices
@@ -65,12 +66,17 @@ fn regularize_binary_partition(
             sources.next().is_none(),
             "regular projector has multiple sources"
         );
+        covered_sources.insert(source.projector().clone());
         patches.push(
             source
                 .project(&target)?
                 .ok_or_else(|| anyhow::anyhow!("regular projection unexpectedly vanished"))?,
         );
     }
+    anyhow::ensure!(
+        covered_sources.len() == partition.len(),
+        "regular refinement did not cover every nonzero adaptive source"
+    );
     tree::PartitionedTreeTN::from_subdomains(patches).map_err(Into::into)
 }
 
@@ -535,5 +541,48 @@ impl PatchedMpoPair {
     ) -> anyhow::Result<PatchedMpoOutput> {
         let output = self.contract_fit_treetn_partitioned(rtol, output_max_bond)?;
         self.finish_treetn_output(output)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tensor4all_core::IdxTensor;
+    use tensor4all_treetn::TreeTN;
+
+    #[test]
+    fn regular_refinement_splits_coarse_sources_without_overlap() -> anyhow::Result<()> {
+        let x = DynIndex::new_dyn(2);
+        let y = DynIndex::new_dyn(2);
+        let network = TreeTN::from_tensors(
+            vec![IdxTensor::from_dense(
+                vec![x.clone(), y.clone()],
+                vec![1.0_f64, 2.0, 3.0, 4.0],
+            )?],
+            vec![0usize],
+        )?;
+        let global = tree::SubDomainTreeTN::from_treetn(network)?;
+        let coarse = tree::Projector::from_pairs([(x.clone(), 0)])?;
+        let fine_zero = tree::Projector::from_pairs([(x.clone(), 1), (y.clone(), 0)])?;
+        let fine_one = tree::Projector::from_pairs([(x.clone(), 1), (y.clone(), 1)])?;
+        let adaptive = tree::PartitionedTreeTN::from_subdomains(vec![
+            global.project(&coarse)?.unwrap(),
+            global.project(&fine_zero)?.unwrap(),
+            global.project(&fine_one)?.unwrap(),
+        ])?;
+
+        let regular = regularize_binary_partition(
+            &adaptive,
+            &[std::slice::from_ref(&x), std::slice::from_ref(&y)],
+        )?;
+        assert_eq!(regular.len(), 4);
+        for x_value in 0..2 {
+            for y_value in 0..2 {
+                let projector =
+                    tree::Projector::from_pairs([(x.clone(), x_value), (y.clone(), y_value)])?;
+                assert!(regular.contains(&projector));
+            }
+        }
+        Ok(())
     }
 }

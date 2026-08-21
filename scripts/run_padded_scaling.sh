@@ -8,6 +8,7 @@ profiles="$out/profiles"
 cache=${BENCH_INPUT_CACHE_DIR:-.cache/inputs}
 core=${BENCH_CPU_CORE:-0}
 mkdir -p "$raw" "$profiles" "$cache"
+rm -f "$raw"/*.json "$profiles"/*.log
 
 repo_rev=$(git rev-parse HEAD)
 local_tensor4all="../tensor4all-rs/.worktrees/adaptive-contract-scheduling"

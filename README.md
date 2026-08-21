@@ -12,7 +12,7 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
-The current factor-4 padded patch-scaling and profiled small-N MPO results are in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
+The current factor-4 padded patch-scaling and profiled small-N MPO results are in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The contraction-free balanced versus shared-y-only N/χ study is in [`result/linux-epyc-7713p-patch-layout-scaling-r16/report.md`](result/linux-epyc-7713p-patch-layout-scaling-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
 
 ## Gaussian input
 
@@ -58,6 +58,14 @@ BENCH_CPU_CORE=0 scripts/run_padded_scaling.sh linux-epyc-7713p-padded-r16
 ```
 
 Each child command is terminated at 570 seconds. Large-N rows stop after input patching and integrated-reference survivor counting.
+
+The contraction-free balanced versus shared-y-only N/χ sweep is reproduced separately:
+
+```bash
+BENCH_CPU_CORE=0 scripts/run_patch_layout_scaling.sh linux-epyc-7713p-patch-layout-scaling-r16
+```
+
+It records exact partition reconstruction errors and structural compatible-pair work proxies, but performs no MPO contraction.
 
 For a probe run:
 

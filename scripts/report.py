@@ -66,7 +66,7 @@ def main(profile: Path) -> None:
         "",
         f"Timed repetitions per arm: {repeat_summary}.",
         "",
-        "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use whole-mixture global TCI at fixed `R = 16`, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128.",
+        "All timings exclude input construction, cache I/O, format conversion, patch preparation, output conversion and accuracy evaluation. Gaussian inputs use whole-mixture global TCI at fixed `R = 16`; balanced input patches use cap 128, while fit-sum output patches have no hard bond cap before the final adaptive truncation.",
     ]
     if "elementwise_fourier" in grouped:
         lines += [
@@ -105,7 +105,7 @@ def main(profile: Path) -> None:
         if case == "gaussian_mpo_contraction":
             lines += [
                 "",
-                "The adaptive patched path reruns projected fit contractions at each recursive output split. With P compatible shared-y contributions and L output leaves, its contraction work scales approximately as P x L; cap-detection probes can raise this to P x (2L - 1).",
+                "The balanced patched path prepartitions x, y, and z; each existing x/z output patch uses a cap-bounded initial sum followed by variational fit_sum over its shared-y contributions, with no recursive output splitting.",
             ]
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 

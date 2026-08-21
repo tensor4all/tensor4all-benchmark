@@ -1,0 +1,9 @@
+profile: linux-epyc-7713p-balanced-fitsum-r16
+date_utc: 2026-08-21T07:34:09Z
+os: Linux
+chip: AMD EPYC 7713P 64-Core Processor
+memory_gb: 995.5
+repo_rev: cfff5ff4e693ce44922115bcb3367a38dc989efc
+tensor4all_rs_rev: 6926379a06689a206aed57f01857e905eb310366
+threads: 1
+cpu_affinity: 0

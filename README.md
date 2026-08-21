@@ -26,7 +26,7 @@ The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache
 
 The [accuracy policy](docs/accuracy-policy.md) defines how disjoint patch errors combine and keeps fit relative-L2 tolerances separate from ACI residual tolerances.
 
-The patch cap is fixed at 128 and has no runtime setting. Gaussian fit arms apply the same relative-L2/SVD tolerance once on each disjoint output patch. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records therefore carry both the internal tolerance metric and a common deterministic holdout sampled relative-L2 error.
+The input patch cap is fixed at 128 and has no runtime setting. Case 3 prepartitions x, y, and z, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic holdout sampled relative-L2 error.
 
 Case 2 compares:
 

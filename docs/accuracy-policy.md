@@ -4,6 +4,8 @@ This repository distinguishes approximation metrics instead of treating every nu
 
 ## Fit on disjoint patches
 
+This section governs the elementwise patched-fit arm. The MPO-contraction arm uses balanced input patches, a cap-bounded initial sum followed by `fit_sum` for each existing x/z output patch, no hard output cap, and one final adaptive truncation over the completed partition.
+
 Fit uses a relative L2 SVD policy:
 
 ```rust

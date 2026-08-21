@@ -38,6 +38,27 @@ pub struct IntegratedGaussianField {
 
 impl IntegratedGaussianField {
     fn new(mixture: AnisoMixture2D, absolute_tolerance: f64) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            absolute_tolerance.is_finite() && absolute_tolerance > 0.0,
+            "integrated-field tolerance must be positive and finite"
+        );
+        anyhow::ensure!(
+            mixture.weights.len() == mixture.quad.len()
+                && mixture.weights.len() == mixture.centers.len()
+                && !mixture.weights.is_empty(),
+            "invalid integrated Gaussian mixture"
+        );
+        anyhow::ensure!(
+            mixture
+                .weights
+                .iter()
+                .all(|weight| weight.is_finite() && *weight >= 0.0)
+                && mixture
+                    .centers
+                    .iter()
+                    .all(|(x, z)| x.is_finite() && z.is_finite()),
+            "integrated Gaussian weights and centers must be finite and non-negative"
+        );
         let total_weight = mixture.weights.iter().sum::<f64>();
         anyhow::ensure!(total_weight.is_finite() && total_weight > absolute_tolerance);
         let exponent_cutoff = (total_weight / absolute_tolerance).ln();

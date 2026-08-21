@@ -1,5 +1,7 @@
 # Tensor4all benchmark results
 
+> **Archived pre-padding profile.** It introduced balanced fit-sum contraction but is superseded by the current factor-4 padded scaling profile.
+
 Profile: `linux-epyc-7713p-balanced-fitsum-r16`. CPU: AMD EPYC 7713P 64-Core Processor. Threads: 1. CPU affinity: 0. Source revision: `cfff5ff4e693ce44922115bcb3367a38dc989efc`. tensor4all-rs revision: `6926379a06689a206aed57f01857e905eb310366`.
 
 The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.

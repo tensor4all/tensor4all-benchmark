@@ -1,5 +1,7 @@
 # Tensor4all benchmark results
 
+> **Archived legacy profile.** These records use the earlier per-Gaussian interpolative input family and variable `R`; they are not current factor-4 padded, fixed-`R=16` results.
+
 Profile: `linux-epyc-7713p`. CPU: AMD EPYC 7713P 64-Core Processor. Threads: 1. CPU affinity: 0. Source revision: `4ed4ba6597639797b9f622cb7c5ab429e7b92647`. tensor4all-rs revision: `9e9aedaebe0d3918b34dd399ff0981e337f3835b`.
 
 The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.

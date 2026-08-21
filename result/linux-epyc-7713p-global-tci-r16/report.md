@@ -1,5 +1,7 @@
 # Tensor4all benchmark results
 
+> **Archived unpadded profile.** Its recursive/x-only patched path predates the current regular balanced x/y/z fit-sum implementation; it is retained only for historical comparison.
+
 Profile: `linux-epyc-7713p-global-tci-r16`. CPU: AMD EPYC 7713P 64-Core Processor. Threads: 1. CPU affinity: 0. Source revision: `a82e2198c7e6db08b0843f8fb026fef953b6c9f6`. tensor4all-rs revision: `9e9aedaebe0d3918b34dd399ff0981e337f3835b`.
 
 The source revision identifies the clean code that was measured. The commit adding these generated records necessarily follows that revision.

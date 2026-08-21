@@ -1,7 +1,7 @@
 profile: linux-epyc-7713p-padded-r16
 date: 2026-08-21
-repository_revision: 61cd653
-tensor4all_rs_revision: 6926379a
+repository_revision: 61cd6530f384fe40e2bea0e33faf37741c68300b
+tensor4all_rs_revision: 1b3ebb74ea40d5aa0c44f39d7bcfba34710e038b
 cpu: AMD EPYC 7713P 64-Core Processor
 cpu_affinity: 0
 threads:

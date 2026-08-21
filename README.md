@@ -41,7 +41,9 @@ Input construction, cache I/O, global input compression, format conversion, patc
 
 ## Running
 
-Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. A complete single-core run is:
+Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. This working branch also patches the partitioned TreeTN crates from the relative sibling worktree `../tensor4all-rs/.worktrees/adaptive-contract-scheduling`; its measured revision is recorded in each profile's `run.yaml`. The local patch must exist at that path until the tensor4all-rs branch is published and the dependency can be replaced by its merged revision.
+
+A complete single-core run is:
 
 ```bash
 BENCH_CPU_CORE=0 scripts/run_all.sh linux-epyc-7713p

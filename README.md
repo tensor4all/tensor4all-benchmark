@@ -65,7 +65,7 @@ The contraction-free balanced versus shared-y-only N/χ sweep is reproduced sepa
 BENCH_CPU_CORE=0 scripts/run_patch_layout_scaling.sh linux-epyc-7713p-patch-layout-scaling-r16
 ```
 
-It records exact partition reconstruction errors and structural compatible-pair work proxies, but performs no MPO contraction.
+It records exact partition reconstruction errors and structural compatible-pair work proxies, but performs no MPO contraction. Because partition patching exposes a local SVD cutoff, the runner distributes the requested squared relative-L2 budget over the chain truncation plan's two visits per edge; the independently measured `patch_tolerance_met` result remains authoritative.
 
 For a probe run:
 

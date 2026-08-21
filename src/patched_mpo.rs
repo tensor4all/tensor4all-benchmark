@@ -10,6 +10,12 @@ use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
 
 use crate::mpo_contract::{mpo_to_tensortrain, tensortrain_to_mpo};
 
+/// Convert a whole-chain relative-L2 target to a conservative local sweep tolerance.
+pub fn local_sweep_rtol(global_rtol: f64, node_count: usize) -> f64 {
+    let edge_visits = 2 * node_count.saturating_sub(1).max(1);
+    global_rtol / (edge_visits as f64).sqrt()
+}
+
 fn interleave(left: &[DynIndex], right: &[DynIndex]) -> Vec<DynIndex> {
     left.iter()
         .zip(right)
@@ -332,8 +338,14 @@ impl PatchedMpoPair {
             MpoPatchLayout::SharedYOnly => (y.clone(), y.clone()),
         };
         let output_order = interleave(&x, &z);
+        // Partition patch cutoffs are local to each SVD. TreeTN's truncation
+        // plan visits every edge twice, so distribute the requested squared
+        // relative-L2 budget over those visits. Patch probes verify the exact
+        // reconstructed-input residual independently.
+        let local_input_rtol = local_sweep_rtol(input_rtol, n);
+        let local_contract_rtol = local_sweep_rtol(contract_rtol, n);
         let tt_input_options = tt::PatchingOptions {
-            rtol: input_rtol,
+            rtol: local_input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tt::PatchSplitStrategy::Sequential,
@@ -353,7 +365,7 @@ impl PatchedMpoPair {
         let global_left = left_train.clone();
         let global_right = right_train.clone();
         let tree_input_options = tree::PatchingOptions {
-            cutoff: input_rtol * input_rtol,
+            cutoff: local_input_rtol * local_input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -363,13 +375,13 @@ impl PatchedMpoPair {
             ..tree_input_options.clone()
         };
         let tt_options = tt::PatchingOptions {
-            rtol: contract_rtol,
+            rtol: local_contract_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
         let tree_options = tree::PatchingOptions {
-            cutoff: contract_rtol * contract_rtol,
+            cutoff: local_contract_rtol * local_contract_rtol,
             max_bond_dim: None,
             patch_order: output_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -604,7 +616,7 @@ impl PatchedMpoPair {
         output_max_bond: usize,
     ) -> anyhow::Result<tt::PartitionedTT> {
         let output_options = tt::PatchingOptions {
-            rtol,
+            rtol: local_sweep_rtol(rtol, self.global_left.len()),
             max_bond_dim: Some(output_max_bond),
             ..self.tt_options.clone()
         };
@@ -647,8 +659,9 @@ impl PatchedMpoPair {
         rtol: f64,
         contribution_max_bond: usize,
     ) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
+        let local_rtol = local_sweep_rtol(rtol, self.global_left.len());
         let output_options = tree::PatchingOptions {
-            cutoff: rtol * rtol,
+            cutoff: local_rtol * local_rtol,
             max_bond_dim: None,
             ..self.tree_options.clone()
         };
@@ -704,6 +717,12 @@ mod tests {
     use super::*;
     use tensor4all_core::IdxTensor;
     use tensor4all_treetn::TreeTN;
+
+    #[test]
+    fn local_sweep_tolerance_distributes_squared_budget_over_edge_visits() {
+        let local = local_sweep_rtol(1.0e-6, 16);
+        assert!((local * local * 30.0 - 1.0e-12).abs() < 1.0e-27);
+    }
 
     #[test]
     fn regular_refinement_splits_coarse_sources_without_overlap() -> anyhow::Result<()> {

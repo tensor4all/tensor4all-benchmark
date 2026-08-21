@@ -20,7 +20,8 @@ use t4a_bench::integrated_gaussian::{
 };
 use t4a_bench::mpo_contract::center_errors_vs_integrated_gaussians;
 use t4a_bench::patched_mpo::{
-    partitioned_treetn_n_params, tensortrain_n_params, MpoPatchLayout, PatchedMpoPair,
+    local_sweep_rtol, partitioned_treetn_n_params, tensortrain_n_params, MpoPatchLayout,
+    PatchedMpoPair,
 };
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
 
@@ -588,7 +589,11 @@ fn common_params(
         "input_localized_absolute_tolerance": config.localized_absolute_tolerance,
         "input_tci_pivot_components": config.tci_pivot_components,
         "input_l2_rtol": input_l2_rtol,
-        "patch_input_rtol": INPUT_L2_RTOL, "patch_cap": PATCH_CAP,
+        "patch_input_rtol": INPUT_L2_RTOL,
+        "patch_local_sweep_rtol": local_sweep_rtol(INPUT_L2_RTOL, input.r),
+        "patch_local_svd_cutoff": local_sweep_rtol(INPUT_L2_RTOL, input.r).powi(2),
+        "patch_svd_visit_budget_count": 2 * input.r.saturating_sub(1).max(1),
+        "patch_cap": PATCH_CAP,
         "raw_left_chi": input.raw_left_chi, "raw_right_chi": input.raw_right_chi,
         "left_chi": input.left.rank(), "right_chi": input.right.rank(),
         "raw_left_params": input.raw_left_params, "raw_right_params": input.raw_right_params,

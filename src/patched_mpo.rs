@@ -11,6 +11,16 @@ use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
 use crate::mpo_contract::{mpo_to_tensortrain, tensortrain_to_mpo};
 
 /// Convert a whole-chain relative-L2 target to a conservative local sweep tolerance.
+///
+/// The squared target is divided over the two truncation-plan visits to every
+/// chain edge. Zero- and one-node inputs use one effective edge visit pair.
+///
+/// # Examples
+///
+/// ```
+/// let local = t4a_bench::patched_mpo::local_sweep_rtol(1.0e-6, 16);
+/// assert!((local * local * 30.0 - 1.0e-12).abs() < 1.0e-27);
+/// ```
 pub fn local_sweep_rtol(global_rtol: f64, node_count: usize) -> f64 {
     let edge_visits = 2 * node_count.saturating_sub(1).max(1);
     global_rtol / (edge_visits as f64).sqrt()

@@ -151,14 +151,26 @@ fn grid_pivots(
     pivots
 }
 
-/// Load or build a global-TCI input pair, then apply final L2 compression.
+/// Load or build a global-TCI input pair, then apply the standard L2 compression.
 pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<GaussianInputPair> {
+    prepare_gaussian_pair_with_l2_rtol(config, INPUT_L2_RTOL)
+}
+
+/// Load or build a global-TCI input pair, then apply an explicit L2 compression.
+pub fn prepare_gaussian_pair_with_l2_rtol(
+    config: &GaussianInputConfig,
+    input_l2_rtol: f64,
+) -> anyhow::Result<GaussianInputPair> {
     anyhow::ensure!(config.n > 0, "Gaussian count must be positive");
     anyhow::ensure!(
         config.tci_tolerance.is_finite() && config.tci_tolerance > 0.0,
         "TCI tolerance must be positive and finite"
     );
     anyhow::ensure!(config.tci_max_bond_dim > 0, "TCI rank cap must be positive");
+    anyhow::ensure!(
+        input_l2_rtol.is_finite() && input_l2_rtol > 0.0,
+        "input L2 tolerance must be positive and finite"
+    );
     anyhow::ensure!(
         config.tci_pivot_components > 0,
         "TCI pivot count must be positive"
@@ -232,7 +244,7 @@ pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<Gau
     let compression_start = Instant::now();
     let options = CompressionOptions {
         method: CompressionMethod::SVD,
-        tolerance: INPUT_L2_RTOL,
+        tolerance: input_l2_rtol,
         max_bond_dim: None,
         normalize_error: true,
     };

@@ -135,7 +135,7 @@ def main() -> None:
         )
     lines += [
         "",
-        "At N=4096 the compatible contribution contractions dominate the patched arm; `fit_sum` is a small fraction. The current factor-4 padded input reaches χ≈263 at N=4096. Larger-N contraction timing was intentionally not run: this profile is for patch scaling plus repeatable small-N timing, with every measurement command bounded below ten minutes.",
+        "At N=4096 and N=8192 the compatible contribution contractions dominate the patched arm; `fit_sum` remains a small fraction. The default input tolerance reaches χ≈263 at N=4096. A recorded input compression tolerance of `1e-9` reaches χ381 at N=8192, the closest global+patched point to χ418 that completes with each arm in a separate command under the hard 570-second limit; χ418 itself exceeded that limit.",
         "",
     ]
     (root / "report.md").write_text("\n".join(lines))

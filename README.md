@@ -88,6 +88,8 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_INPUT_CACHE_REFRESH` | `0` | rebuild cache entry when nonzero |
 | `BENCH_INPUT_ONLY` | `0` | Case 2 only: prepare and validate caches without timing operations when nonzero |
 | `BENCH_PATCH_ONLY` | `0` | Case 3 only: build balanced cap-128 input patches and record x/y/z regions, compatible pairs, predicted output patches, ranks, parameters, and construction time without contraction or output validation |
+| `BENCH_ARM` | `both` | Case 3 only: `global`, `patched`, or `both`; the bounded runner separates the largest point into two commands |
+| `BENCH_INPUT_L2_RTOL` | `1e-6` | Case 3 only: explicit input compression tolerance, recorded in every result; the near-χ418 point uses `1e-9` and reaches χ381 |
 | `OUT_DIR` | `result/dev/raw` | JSON output directory |
 
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.

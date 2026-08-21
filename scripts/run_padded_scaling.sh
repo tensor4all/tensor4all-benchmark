@@ -35,7 +35,8 @@ fit_profile: T4A_PROFILE_FIT=1
 quantics_bits_per_axis: 16
 padding_factor: 4
 patch_cap: 128
-operation_points: [512, 4096]
+operation_points: [512, 4096, 8192]
+near_chi_418_input_l2_rtol: 1e-9
 patch_scaling_points: [512, 1024, 2048, 4096, 8192, 12000]
 measurement_command_timeout_seconds: 570
 EOF
@@ -57,5 +58,10 @@ for n in 512 1024 2048 4096 8192 12000; do
 done
 for n in 512 4096; do
   run_point "$n" >"$profiles/n$n.log" 2>&1
+done
+: >"$profiles/n8192.log"
+for arm in global patched; do
+  BENCH_ARM=$arm BENCH_INPUT_L2_RTOL=1e-9 run_point 8192 \
+    >>"$profiles/n8192.log" 2>&1
 done
 python3 scripts/report_padded_scaling.py "$out"

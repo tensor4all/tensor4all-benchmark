@@ -5,15 +5,14 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use tensor4all_itensorlike::TensorTrain;
 use tensor4all_simplett::AbstractTensorTrain;
 
 use t4a_bench::gaussian::fused_qtt_to_mpo;
 use t4a_bench::gaussian_input::{
-    prepare_gaussian_pair, principal_axis_input_relative_l2, sampled_input_relative_l2,
-    tensortrain_n_params as simple_n_params, GaussianInputConfig, INPUT_L2_RTOL,
-    INPUT_LOCAL_ABS_TOLERANCE, INPUT_TCI_MAX_BOND, INPUT_TCI_PIVOT_COMPONENTS, INPUT_TCI_TOLERANCE,
-    PATCH_CAP,
+    prepare_gaussian_pair_with_l2_rtol, principal_axis_input_relative_l2,
+    sampled_input_relative_l2, tensortrain_n_params as simple_n_params, GaussianInputConfig,
+    INPUT_L2_RTOL, INPUT_LOCAL_ABS_TOLERANCE, INPUT_TCI_MAX_BOND, INPUT_TCI_PIVOT_COMPONENTS,
+    INPUT_TCI_TOLERANCE, PATCH_CAP,
 };
 use t4a_bench::harness::time_median;
 use t4a_bench::integrated_gaussian::{
@@ -89,7 +88,8 @@ fn run_point(
         refresh,
     };
     let patch_only = env_or("BENCH_PATCH_ONLY", 0usize) != 0;
-    let input = prepare_gaussian_pair(&config)?;
+    let input_l2_rtol = env_or("BENCH_INPUT_L2_RTOL", INPUT_L2_RTOL);
+    let input = prepare_gaussian_pair_with_l2_rtol(&config, input_l2_rtol)?;
     let (left_input_error, right_input_error) = if patch_only {
         (0.0, 0.0)
     } else {
@@ -148,6 +148,7 @@ fn run_point(
             &input,
             &config,
             input_params,
+            input_l2_rtol,
             left_patch_count,
             right_patch_count,
             x_patch_count,
@@ -215,6 +216,30 @@ fn run_point(
         return Ok(());
     }
 
+    let arm = std::env::var("BENCH_ARM").unwrap_or_else(|_| "both".into());
+    anyhow::ensure!(
+        matches!(arm.as_str(), "both" | "global" | "patched"),
+        "BENCH_ARM must be 'both', 'global', or 'patched'"
+    );
+    let global_measurement = if arm != "patched" {
+        let (result, timing) = time_median(warmups, runs, || {
+            prepared.contract_fit_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)
+        });
+        Some((result?, timing))
+    } else {
+        None
+    };
+    let patched_measurement = if arm != "global" {
+        let (result, timing) = time_median(warmups, runs, || {
+            prepared.contract_fit_treetn_partitioned(INPUT_L2_RTOL, PATCH_CAP)
+        });
+        Some((result?, timing))
+    } else {
+        None
+    };
+
+    // Reference preparation and validation are deliberately after every timed
+    // operation so their cost cannot delay or contaminate fit profiling.
     let reference_cache = cache_dir.join(format!(
         "integrated-v2-{:016x}-tol{:016x}.bin",
         stable_key_hash(&input.cache_key),
@@ -228,31 +253,12 @@ fn run_point(
         refresh,
     )?;
     let reference_cache_bytes = std::fs::metadata(&reference.cache_path)?.len();
-
-    let (global_result, global_timing) = time_median(warmups, runs, || {
-        prepared.contract_fit_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)
-    });
-    let global: TensorTrain = global_result?;
-    let global_params = tensortrain_n_params(&global);
-    let global_chi = global.max_bond_dim();
-    let global_mpo = prepared.finish_global_output(&global)?;
     let grid_step = 2.0 * input.box_l / (1usize << input.r) as f64;
-    let (global_error, global_max_scaled_error) = center_errors_vs_integrated_gaussians(
-        &global_mpo,
-        grid_step,
-        &reference.field,
-        input.r,
-        input.box_l,
-        ERROR_SAMPLES,
-    )?;
-    anyhow::ensure!(
-        global_error <= ERROR_SANITY,
-        "global contraction error {global_error:.3e}"
-    );
     let mut common = common_params(
         &input,
         &config,
         input_params,
+        input_l2_rtol,
         left_patch_count,
         right_patch_count,
         x_patch_count,
@@ -289,80 +295,99 @@ fn run_point(
     common["center_error_samples"] =
         serde_json::json!(ERROR_SAMPLES.min(reference.stats.retained_pair_count));
     common["external_error_metric"] = serde_json::json!("retained_center_relative_l2");
-    common["global_max_rms_scaled_error"] = serde_json::json!(global_max_scaled_error);
-    write_record(
-        out_dir,
-        &format!("{CASE}-global_fit-chi{input_chi}"),
-        &RunRecord {
-            schema_version: SCHEMA_VERSION,
-            case: CASE.into(),
-            algorithm: "global_fit".into(),
-            params: common.clone(),
-            seed,
-            tolerance: INPUT_L2_RTOL,
-            wall_time_median_secs: global_timing.median_secs,
-            wall_times_secs: global_timing.runs_secs.clone(),
-            max_error: global_error,
-            input_max_bond_dim: input_chi,
-            output_max_bond_dim: global_chi,
-            output_bond_dims: global.bond_dims(),
-            n_params: Some(global_params),
-            n_patches: None,
-            max_patch_bond: None,
-            rtol: Some(INPUT_L2_RTOL),
-            input_build_secs: Some(input.build.as_secs_f64()),
-        },
-    )?;
 
-    let (patched_result, patched_timing) = time_median(warmups, runs, || {
-        prepared.contract_fit_treetn_partitioned(INPUT_L2_RTOL, PATCH_CAP)
-    });
-    let patched = patched_result?;
-    let patched_params = partitioned_treetn_n_params(&patched);
-    let patched_finished = prepared.finish_treetn_output(patched)?;
-    anyhow::ensure!(
-        patched_finished.max_patch_bond <= PATCH_CAP,
-        "output patch cap exceeded"
-    );
-    let (patched_error, patched_max_scaled_error) = center_errors_vs_integrated_gaussians(
-        &patched_finished.mpo,
-        grid_step,
-        &reference.field,
-        input.r,
-        input.box_l,
-        ERROR_SAMPLES,
-    )?;
-    anyhow::ensure!(
-        patched_error <= ERROR_SANITY,
-        "patched contraction error {patched_error:.3e}"
-    );
-    let mut patched_common = common;
-    patched_common["speedup_vs_global"] =
-        serde_json::json!(global_timing.median_secs / patched_timing.median_secs);
-    patched_common["patched_max_rms_scaled_error"] = serde_json::json!(patched_max_scaled_error);
-    write_record(
-        out_dir,
-        &format!("{CASE}-patched_fit-chi{input_chi}"),
-        &RunRecord {
-            schema_version: SCHEMA_VERSION,
-            case: CASE.into(),
-            algorithm: "patched_fit".into(),
-            params: patched_common,
-            seed,
-            tolerance: INPUT_L2_RTOL,
-            wall_time_median_secs: patched_timing.median_secs,
-            wall_times_secs: patched_timing.runs_secs,
-            max_error: patched_error,
-            input_max_bond_dim: input_chi,
-            output_max_bond_dim: patched_finished.max_patch_bond,
-            output_bond_dims: vec![patched_finished.max_patch_bond],
-            n_params: Some(patched_params),
-            n_patches: Some(patched_finished.n_patches),
-            max_patch_bond: Some(patched_finished.max_patch_bond),
-            rtol: Some(INPUT_L2_RTOL),
-            input_build_secs: Some(input.build.as_secs_f64()),
-        },
-    )?;
+    let global_time = global_measurement
+        .as_ref()
+        .map(|(_, timing)| timing.median_secs);
+    if let Some((global, global_timing)) = global_measurement {
+        let global_params = tensortrain_n_params(&global);
+        let global_chi = global.max_bond_dim();
+        let global_mpo = prepared.finish_global_output(&global)?;
+        let (global_error, global_max_scaled_error) = center_errors_vs_integrated_gaussians(
+            &global_mpo,
+            grid_step,
+            &reference.field,
+            input.r,
+            input.box_l,
+            ERROR_SAMPLES,
+        )?;
+        anyhow::ensure!(
+            global_error <= ERROR_SANITY,
+            "global contraction error {global_error:.3e}"
+        );
+        let mut global_common = common.clone();
+        global_common["global_max_rms_scaled_error"] = serde_json::json!(global_max_scaled_error);
+        write_record(
+            out_dir,
+            &format!("{CASE}-global_fit-chi{input_chi}"),
+            &RunRecord {
+                schema_version: SCHEMA_VERSION,
+                case: CASE.into(),
+                algorithm: "global_fit".into(),
+                params: global_common,
+                seed,
+                tolerance: INPUT_L2_RTOL,
+                wall_time_median_secs: global_timing.median_secs,
+                wall_times_secs: global_timing.runs_secs,
+                max_error: global_error,
+                input_max_bond_dim: input_chi,
+                output_max_bond_dim: global_chi,
+                output_bond_dims: global.bond_dims(),
+                n_params: Some(global_params),
+                n_patches: None,
+                max_patch_bond: None,
+                rtol: Some(INPUT_L2_RTOL),
+                input_build_secs: Some(input.build.as_secs_f64()),
+            },
+        )?;
+    }
+
+    if let Some((patched, patched_timing)) = patched_measurement {
+        let patched_params = partitioned_treetn_n_params(&patched);
+        let patched_finished = prepared.finish_treetn_output(patched)?;
+        let (patched_error, patched_max_scaled_error) = center_errors_vs_integrated_gaussians(
+            &patched_finished.mpo,
+            grid_step,
+            &reference.field,
+            input.r,
+            input.box_l,
+            ERROR_SAMPLES,
+        )?;
+        anyhow::ensure!(
+            patched_error <= ERROR_SANITY,
+            "patched contraction error {patched_error:.3e}"
+        );
+        let mut patched_common = common;
+        if let Some(global_time) = global_time {
+            patched_common["speedup_vs_global"] =
+                serde_json::json!(global_time / patched_timing.median_secs);
+        }
+        patched_common["patched_max_rms_scaled_error"] =
+            serde_json::json!(patched_max_scaled_error);
+        write_record(
+            out_dir,
+            &format!("{CASE}-patched_fit-chi{input_chi}"),
+            &RunRecord {
+                schema_version: SCHEMA_VERSION,
+                case: CASE.into(),
+                algorithm: "patched_fit".into(),
+                params: patched_common,
+                seed,
+                tolerance: INPUT_L2_RTOL,
+                wall_time_median_secs: patched_timing.median_secs,
+                wall_times_secs: patched_timing.runs_secs,
+                max_error: patched_error,
+                input_max_bond_dim: input_chi,
+                output_max_bond_dim: patched_finished.max_patch_bond,
+                output_bond_dims: vec![patched_finished.max_patch_bond],
+                n_params: Some(patched_params),
+                n_patches: Some(patched_finished.n_patches),
+                max_patch_bond: Some(patched_finished.max_patch_bond),
+                rtol: Some(INPUT_L2_RTOL),
+                input_build_secs: Some(input.build.as_secs_f64()),
+            },
+        )?;
+    }
     Ok(())
 }
 
@@ -371,6 +396,7 @@ fn common_params(
     input: &t4a_bench::gaussian_input::GaussianInputPair,
     config: &GaussianInputConfig,
     input_params: usize,
+    input_l2_rtol: f64,
     left_patch_count: usize,
     right_patch_count: usize,
     x_patch_count: usize,
@@ -402,7 +428,7 @@ fn common_params(
         "input_tci_max_bond_dim": config.tci_max_bond_dim,
         "input_localized_absolute_tolerance": config.localized_absolute_tolerance,
         "input_tci_pivot_components": config.tci_pivot_components,
-        "input_l2_rtol": INPUT_L2_RTOL, "patch_cap": PATCH_CAP,
+        "input_l2_rtol": input_l2_rtol, "patch_cap": PATCH_CAP,
         "raw_left_chi": input.raw_left_chi, "raw_right_chi": input.raw_right_chi,
         "left_chi": input.left.rank(), "right_chi": input.right.rank(),
         "raw_left_params": input.raw_left_params, "raw_right_params": input.raw_right_params,

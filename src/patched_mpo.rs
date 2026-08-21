@@ -583,6 +583,14 @@ mod tests {
                 assert!(regular.contains(&projector));
             }
         }
+        let reconstructed = regular.to_treetn()?;
+        assert_eq!(
+            reconstructed
+                .tensor(reconstructed.node_index(&0).unwrap())
+                .unwrap()
+                .to_vec::<f64>()?,
+            vec![1.0, 2.0, 3.0, 4.0]
+        );
         Ok(())
     }
 }

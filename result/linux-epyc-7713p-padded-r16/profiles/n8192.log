@@ -1,0 +1,2030 @@
+=== contract_fit Profiling ===
+zipup init:        389.006287151s
+canonicalize:      0ns
+sweeps total:      125.563313464s
+steps:             30
+sweeps:            1
+env get:           477.95652004s (requests=95, hits=53, misses=42)
+env leaf compute:  975.03µs
+env node compute:  82.976700404s
+2-site contract:   41.721665932s
+left_inds:         57.474µs
+factorize:         285.920201ms
+replace/update:    273.221µs
+invalidate:        549.625156ms
+=== contract_fit Profiling ===
+zipup init:        26.60268ms
+canonicalize:      0ns
+sweeps total:      47.20691ms
+steps:             30
+sweeps:            1
+env get:           49.10395ms (requests=95, hits=53, misses=42)
+env leaf compute:  912.148µs
+env node compute:  14.735757ms
+2-site contract:   15.35134ms
+left_inds:         31.992µs
+factorize:         14.708239ms
+replace/update:    175.982µs
+invalidate:        115.038µs
+=== contract_fit Profiling ===
+zipup init:        174.00644ms
+canonicalize:      0ns
+sweeps total:      154.8533ms
+steps:             30
+sweeps:            1
+env get:           217.570398ms (requests=95, hits=53, misses=42)
+env leaf compute:  767.772µs
+env node compute:  58.223092ms
+2-site contract:   60.040851ms
+left_inds:         37.021µs
+factorize:         34.001085ms
+replace/update:    216.96µs
+invalidate:        174.029µs
+=== contract_fit Profiling ===
+zipup init:        160.839161ms
+canonicalize:      0ns
+sweeps total:      145.999773ms
+steps:             30
+sweeps:            1
+env get:           207.973033ms (requests=95, hits=53, misses=42)
+env leaf compute:  709.518µs
+env node compute:  55.089648ms
+2-site contract:   56.025661ms
+left_inds:         36.701µs
+factorize:         32.269789ms
+replace/update:    206.099µs
+invalidate:        159.003µs
+=== contract_fit Profiling ===
+zipup init:        25.331659ms
+canonicalize:      0ns
+sweeps total:      47.48359ms
+steps:             30
+sweeps:            1
+env get:           46.865935ms (requests=95, hits=53, misses=42)
+env leaf compute:  758.431µs
+env node compute:  15.042773ms
+2-site contract:   15.461341ms
+left_inds:         33.323µs
+factorize:         14.652017ms
+replace/update:    179.689µs
+invalidate:        134.544µs
+=== contract_fit Profiling ===
+zipup init:        193.690412ms
+canonicalize:      0ns
+sweeps total:      146.815707ms
+steps:             30
+sweeps:            1
+env get:           248.564414ms (requests=95, hits=53, misses=42)
+env leaf compute:  745.971µs
+env node compute:  58.235578ms
+2-site contract:   57.270161ms
+left_inds:         33.273µs
+factorize:         28.940562ms
+replace/update:    184.9µs
+invalidate:        140.186µs
+=== contract_fit Profiling ===
+zipup init:        1.590925431s
+canonicalize:      0ns
+sweeps total:      1.539229027s
+steps:             30
+sweeps:            1
+env get:           2.520428816s (requests=95, hits=53, misses=42)
+env leaf compute:  704.358µs
+env node compute:  678.210716ms
+2-site contract:   783.505945ms
+left_inds:         39.55µs
+factorize:         62.816998ms
+replace/update:    213.825µs
+invalidate:        161.573µs
+=== contract_fit Profiling ===
+zipup init:        1.557443277s
+canonicalize:      0ns
+sweeps total:      1.559924084s
+steps:             30
+sweeps:            1
+env get:           2.557896021s (requests=95, hits=53, misses=42)
+env leaf compute:  713.669µs
+env node compute:  710.944777ms
+2-site contract:   772.545834ms
+left_inds:         40.782µs
+factorize:         62.102734ms
+replace/update:    232.212µs
+invalidate:        171.682µs
+=== contract_fit Profiling ===
+zipup init:        186.266862ms
+canonicalize:      0ns
+sweeps total:      117.825989ms
+steps:             30
+sweeps:            1
+env get:           146.254644ms (requests=95, hits=53, misses=42)
+env leaf compute:  684.298µs
+env node compute:  42.319022ms
+2-site contract:   46.969477ms
+left_inds:         33.64µs
+factorize:         26.292631ms
+replace/update:    178.918µs
+invalidate:        136.503µs
+=== contract_fit Profiling ===
+zipup init:        35.322641ms
+canonicalize:      0ns
+sweeps total:      117.573029ms
+steps:             30
+sweeps:            1
+env get:           57.088061ms (requests=95, hits=53, misses=42)
+env leaf compute:  690.858µs
+env node compute:  18.195102ms
+2-site contract:   21.936791ms
+left_inds:         31.752µs
+factorize:         75.295758ms
+replace/update:    174.615µs
+invalidate:        109.511µs
+=== contract_fit Profiling ===
+zipup init:        32.417264ms
+canonicalize:      0ns
+sweeps total:      117.09563ms
+steps:             30
+sweeps:            1
+env get:           52.098875ms (requests=95, hits=53, misses=42)
+env leaf compute:  647.496µs
+env node compute:  16.230153ms
+2-site contract:   19.503155ms
+left_inds:         33.661µs
+factorize:         79.191893ms
+replace/update:    186.529µs
+invalidate:        115.683µs
+=== contract_fit Profiling ===
+zipup init:        40.335932ms
+canonicalize:      0ns
+sweeps total:      146.816625ms
+steps:             30
+sweeps:            1
+env get:           57.805631ms (requests=95, hits=53, misses=42)
+env leaf compute:  669.027µs
+env node compute:  19.429461ms
+2-site contract:   25.042916ms
+left_inds:         33.701µs
+factorize:         100.067095ms
+replace/update:    187.908µs
+invalidate:        132.588µs
+=== contract_fit Profiling ===
+zipup init:        38.099312ms
+canonicalize:      0ns
+sweeps total:      142.324154ms
+steps:             30
+sweeps:            1
+env get:           46.246481ms (requests=95, hits=53, misses=42)
+env leaf compute:  598.753µs
+env node compute:  16.796745ms
+2-site contract:   22.336492ms
+left_inds:         32.68µs
+factorize:         101.01205ms
+replace/update:    199.89µs
+invalidate:        123.246µs
+=== contract_fit Profiling ===
+zipup init:        32.033408ms
+canonicalize:      0ns
+sweeps total:      111.933292ms
+steps:             30
+sweeps:            1
+env get:           45.593116ms (requests=95, hits=53, misses=42)
+env leaf compute:  626.146µs
+env node compute:  15.252221ms
+2-site contract:   19.060496ms
+left_inds:         33.09µs
+factorize:         75.468139ms
+replace/update:    186.09µs
+invalidate:        112.754µs
+=== contract_fit Profiling ===
+zipup init:        32.486717ms
+canonicalize:      0ns
+sweeps total:      109.790205ms
+steps:             30
+sweeps:            1
+env get:           50.753623ms (requests=95, hits=53, misses=42)
+env leaf compute:  656.076µs
+env node compute:  15.428215ms
+2-site contract:   18.557656ms
+left_inds:         31.802µs
+factorize:         73.693033ms
+replace/update:    178.988µs
+invalidate:        105.514µs
+=== contract_fit Profiling ===
+zipup init:        37.556431ms
+canonicalize:      0ns
+sweeps total:      135.24795ms
+steps:             30
+sweeps:            1
+env get:           47.895701ms (requests=95, hits=53, misses=42)
+env leaf compute:  609.845µs
+env node compute:  16.586605ms
+2-site contract:   21.265356ms
+left_inds:         31.901µs
+factorize:         95.280803ms
+replace/update:    186.827µs
+invalidate:        116.202µs
+=== contract_fit Profiling ===
+zipup init:        39.624313ms
+canonicalize:      0ns
+sweeps total:      144.793513ms
+steps:             30
+sweeps:            1
+env get:           52.537993ms (requests=95, hits=53, misses=42)
+env leaf compute:  631.334µs
+env node compute:  17.442399ms
+2-site contract:   22.518885ms
+left_inds:         57.243µs
+factorize:         102.666374ms
+replace/update:    188.022µs
+invalidate:        119.828µs
+=== contract_fit Profiling ===
+zipup init:        175.161525ms
+canonicalize:      0ns
+sweeps total:      133.77415ms
+steps:             30
+sweeps:            1
+env get:           167.836926ms (requests=95, hits=53, misses=42)
+env leaf compute:  706.229µs
+env node compute:  46.449165ms
+2-site contract:   55.539511ms
+left_inds:         34.921µs
+factorize:         29.441084ms
+replace/update:    197.907µs
+invalidate:        137.405µs
+=== contract_fit Profiling ===
+zipup init:        1.685561279s
+canonicalize:      0ns
+sweeps total:      1.936506747s
+steps:             30
+sweeps:            1
+env get:           2.933833336s (requests=95, hits=53, misses=42)
+env leaf compute:  838.544µs
+env node compute:  829.887582ms
+2-site contract:   1.011473576s
+left_inds:         46.632µs
+factorize:         74.871984ms
+replace/update:    268.412µs
+invalidate:        203.205µs
+=== contract_fit Profiling ===
+zipup init:        1.736919306s
+canonicalize:      0ns
+sweeps total:      1.690951324s
+steps:             30
+sweeps:            1
+env get:           2.905680714s (requests=95, hits=53, misses=42)
+env leaf compute:  713.259µs
+env node compute:  770.880077ms
+2-site contract:   840.324742ms
+left_inds:         44.211µs
+factorize:         65.115729ms
+replace/update:    252.613µs
+invalidate:        179.937µs
+=== contract_fit Profiling ===
+zipup init:        173.297278ms
+canonicalize:      0ns
+sweeps total:      126.306939ms
+steps:             30
+sweeps:            1
+env get:           168.656387ms (requests=95, hits=53, misses=42)
+env leaf compute:  749.561µs
+env node compute:  46.903748ms
+2-site contract:   49.443339ms
+left_inds:         34.781µs
+factorize:         27.534068ms
+replace/update:    199.889µs
+invalidate:        147.206µs
+=== contract_fit Profiling ===
+zipup init:        26.258826ms
+canonicalize:      0ns
+sweeps total:      47.303452ms
+steps:             30
+sweeps:            1
+env get:           47.207972ms (requests=95, hits=53, misses=42)
+env leaf compute:  737.079µs
+env node compute:  14.931677ms
+2-site contract:   15.129628ms
+left_inds:         33.031µs
+factorize:         15.007144ms
+replace/update:    185.667µs
+invalidate:        106.974µs
+=== contract_fit Profiling ===
+zipup init:        159.067276ms
+canonicalize:      0ns
+sweeps total:      127.784598ms
+steps:             30
+sweeps:            1
+env get:           168.561085ms (requests=95, hits=53, misses=42)
+env leaf compute:  762.141µs
+env node compute:  45.370929ms
+2-site contract:   52.659679ms
+left_inds:         41.781µs
+factorize:         27.336728ms
+replace/update:    199.34µs
+invalidate:        143.557µs
+=== contract_fit Profiling ===
+zipup init:        155.071235ms
+canonicalize:      0ns
+sweeps total:      121.232124ms
+steps:             30
+sweeps:            1
+env get:           159.27862ms (requests=95, hits=53, misses=42)
+env leaf compute:  689.937µs
+env node compute:  43.027491ms
+2-site contract:   49.47996ms
+left_inds:         34.672µs
+factorize:         26.382453ms
+replace/update:    204.628µs
+invalidate:        146.189µs
+=== contract_fit Profiling ===
+zipup init:        25.425863ms
+canonicalize:      0ns
+sweeps total:      45.645246ms
+steps:             30
+sweeps:            1
+env get:           46.464954ms (requests=95, hits=53, misses=42)
+env leaf compute:  729.249µs
+env node compute:  14.634027ms
+2-site contract:   14.623426ms
+left_inds:         32.98µs
+factorize:         14.197535ms
+replace/update:    184.69µs
+invalidate:        97.266µs
+=== contract_fit Profiling ===
+zipup init:        61.244963ms
+canonicalize:      0ns
+sweeps total:      185.060891ms
+steps:             30
+sweeps:            1
+env get:           75.082565ms (requests=95, hits=53, misses=42)
+env leaf compute:  738.149µs
+env node compute:  24.995016ms
+2-site contract:   33.026487ms
+left_inds:         33.6µs
+factorize:         124.658675ms
+replace/update:    194.455µs
+invalidate:        135.444µs
+=== contract_fit Profiling ===
+zipup init:        59.350586ms
+canonicalize:      0ns
+sweeps total:      175.413373ms
+steps:             30
+sweeps:            1
+env get:           66.788763ms (requests=95, hits=53, misses=42)
+env leaf compute:  677.607µs
+env node compute:  21.688963ms
+2-site contract:   28.599581ms
+left_inds:         33.242µs
+factorize:         122.825899ms
+replace/update:    190.417µs
+invalidate:        131.102µs
+=== contract_fit Profiling ===
+zipup init:        76.293808ms
+canonicalize:      0ns
+sweeps total:      235.709317ms
+steps:             30
+sweeps:            1
+env get:           78.408224ms (requests=95, hits=53, misses=42)
+env leaf compute:  696.458µs
+env node compute:  26.217111ms
+2-site contract:   43.79427ms
+left_inds:         33.891µs
+factorize:         163.337687ms
+replace/update:    199.419µs
+invalidate:        138.505µs
+=== contract_fit Profiling ===
+zipup init:        74.953783ms
+canonicalize:      0ns
+sweeps total:      231.576431ms
+steps:             30
+sweeps:            1
+env get:           73.114474ms (requests=95, hits=53, misses=42)
+env leaf compute:  692.448µs
+env node compute:  24.265217ms
+2-site contract:   41.306901ms
+left_inds:         34µs
+factorize:         163.611997ms
+replace/update:    200.671µs
+invalidate:        145.236µs
+=== contract_fit Profiling ===
+zipup init:        59.718551ms
+canonicalize:      0ns
+sweeps total:      176.148722ms
+steps:             30
+sweeps:            1
+env get:           67.152043ms (requests=95, hits=53, misses=42)
+env leaf compute:  695.167µs
+env node compute:  21.712341ms
+2-site contract:   28.664086ms
+left_inds:         33.511µs
+factorize:         123.413429ms
+replace/update:    194.293µs
+invalidate:        146.268µs
+=== contract_fit Profiling ===
+zipup init:        59.028053ms
+canonicalize:      0ns
+sweeps total:      176.393182ms
+steps:             30
+sweeps:            1
+env get:           66.302938ms (requests=95, hits=53, misses=42)
+env leaf compute:  679.867µs
+env node compute:  21.563622ms
+2-site contract:   28.528357ms
+left_inds:         33.45µs
+factorize:         124.00768ms
+replace/update:    193.302µs
+invalidate:        138.336µs
+=== contract_fit Profiling ===
+zipup init:        74.810977ms
+canonicalize:      0ns
+sweeps total:      230.860732ms
+steps:             30
+sweeps:            1
+env get:           73.52485ms (requests=95, hits=53, misses=42)
+env leaf compute:  703.758µs
+env node compute:  24.324639ms
+2-site contract:   41.056813ms
+left_inds:         33.891µs
+factorize:         163.117355ms
+replace/update:    199.767µs
+invalidate:        138.873µs
+=== contract_fit Profiling ===
+zipup init:        74.759465ms
+canonicalize:      0ns
+sweeps total:      230.767539ms
+steps:             30
+sweeps:            1
+env get:           73.044629ms (requests=95, hits=53, misses=42)
+env leaf compute:  693.118µs
+env node compute:  24.185242ms
+2-site contract:   41.277067ms
+left_inds:         33.912µs
+factorize:         162.964421ms
+replace/update:    199.011µs
+invalidate:        138.084µs
+=== contract_fit Profiling ===
+zipup init:        25.669652ms
+canonicalize:      0ns
+sweeps total:      45.161696ms
+steps:             30
+sweeps:            1
+env get:           46.163178ms (requests=95, hits=53, misses=42)
+env leaf compute:  742.87µs
+env node compute:  14.494204ms
+2-site contract:   14.487673ms
+left_inds:         32.981µs
+factorize:         13.957011ms
+replace/update:    190.917µs
+invalidate:        96.917µs
+=== contract_fit Profiling ===
+zipup init:        168.62478ms
+canonicalize:      0ns
+sweeps total:      143.059721ms
+steps:             30
+sweeps:            1
+env get:           177.316661ms (requests=95, hits=53, misses=42)
+env leaf compute:  772.21µs
+env node compute:  49.913169ms
+2-site contract:   58.427447ms
+left_inds:         34.772µs
+factorize:         32.277625ms
+replace/update:    196.15µs
+invalidate:        144.019µs
+=== contract_fit Profiling ===
+zipup init:        162.232673ms
+canonicalize:      0ns
+sweeps total:      135.440155ms
+steps:             30
+sweeps:            1
+env get:           172.679755ms (requests=95, hits=53, misses=42)
+env leaf compute:  699.047µs
+env node compute:  47.531678ms
+2-site contract:   54.628904ms
+left_inds:         35µs
+factorize:         30.915512ms
+replace/update:    200.411µs
+invalidate:        142.927µs
+=== contract_fit Profiling ===
+zipup init:        25.917632ms
+canonicalize:      0ns
+sweeps total:      46.221498ms
+steps:             30
+sweeps:            1
+env get:           47.202376ms (requests=95, hits=53, misses=42)
+env leaf compute:  734.769µs
+env node compute:  14.824854ms
+2-site contract:   14.789392ms
+left_inds:         32.813µs
+factorize:         14.396902ms
+replace/update:    186.985µs
+invalidate:        96.123µs
+=== contract_fit Profiling ===
+zipup init:        180.610582ms
+canonicalize:      0ns
+sweeps total:      144.845354ms
+steps:             30
+sweeps:            1
+env get:           187.982515ms (requests=95, hits=53, misses=42)
+env leaf compute:  744.841µs
+env node compute:  53.023471ms
+2-site contract:   59.289913ms
+left_inds:         34.621µs
+factorize:         30.137314ms
+replace/update:    196.987µs
+invalidate:        136.709µs
+=== contract_fit Profiling ===
+zipup init:        1.681102075s
+canonicalize:      0ns
+sweeps total:      1.752829775s
+steps:             30
+sweeps:            1
+env get:           2.706396582s (requests=95, hits=53, misses=42)
+env leaf compute:  777.602µs
+env node compute:  779.854443ms
+2-site contract:   881.276779ms
+left_inds:         44.471µs
+factorize:         69.4277ms
+replace/update:    269.004µs
+invalidate:        6.855715ms
+=== contract_fit Profiling ===
+zipup init:        1.71427237s
+canonicalize:      0ns
+sweeps total:      1.606138761s
+steps:             30
+sweeps:            1
+env get:           2.648961583s (requests=95, hits=53, misses=42)
+env leaf compute:  677.659µs
+env node compute:  709.351114ms
+2-site contract:   817.691056ms
+left_inds:         40.516µs
+factorize:         64.26829ms
+replace/update:    246.059µs
+invalidate:        178.912µs
+=== contract_fit Profiling ===
+zipup init:        172.38979ms
+canonicalize:      0ns
+sweeps total:      121.528435ms
+steps:             30
+sweeps:            1
+env get:           167.599238ms (requests=95, hits=53, misses=42)
+env leaf compute:  755.2µs
+env node compute:  44.900616ms
+2-site contract:   48.374076ms
+left_inds:         33.781µs
+factorize:         25.898492ms
+replace/update:    190.218µs
+invalidate:        135.584µs
+=== contract_fit Profiling ===
+zipup init:        35.735906ms
+canonicalize:      0ns
+sweeps total:      133.617261ms
+steps:             30
+sweeps:            1
+env get:           60.886871ms (requests=95, hits=53, misses=42)
+env leaf compute:  740.66µs
+env node compute:  19.765392ms
+2-site contract:   24.770397ms
+left_inds:         33.323µs
+factorize:         86.75725ms
+replace/update:    192.364µs
+invalidate:        122.237µs
+=== contract_fit Profiling ===
+zipup init:        34.604781ms
+canonicalize:      0ns
+sweeps total:      124.523785ms
+steps:             30
+sweeps:            1
+env get:           56.63431ms (requests=95, hits=53, misses=42)
+env leaf compute:  994.33µs
+env node compute:  16.601388ms
+2-site contract:   20.444043ms
+left_inds:         32.65µs
+factorize:         84.930574ms
+replace/update:    189.937µs
+invalidate:        119.335µs
+=== contract_fit Profiling ===
+zipup init:        40.586291ms
+canonicalize:      0ns
+sweeps total:      152.25787ms
+steps:             30
+sweeps:            1
+env get:           58.230248ms (requests=95, hits=53, misses=42)
+env leaf compute:  683.357µs
+env node compute:  19.422105ms
+2-site contract:   25.511715ms
+left_inds:         33.511µs
+factorize:         105.05058ms
+replace/update:    190.502µs
+invalidate:        125.339µs
+=== contract_fit Profiling ===
+zipup init:        39.455176ms
+canonicalize:      0ns
+sweeps total:      147.52348ms
+steps:             30
+sweeps:            1
+env get:           52.994948ms (requests=95, hits=53, misses=42)
+env leaf compute:  675.668µs
+env node compute:  17.759435ms
+2-site contract:   23.030256ms
+left_inds:         33.251µs
+factorize:         104.475662ms
+replace/update:    190.996µs
+invalidate:        123.803µs
+=== contract_fit Profiling ===
+zipup init:        32.857951ms
+canonicalize:      0ns
+sweeps total:      124.215493ms
+steps:             30
+sweeps:            1
+env get:           52.336065ms (requests=95, hits=53, misses=42)
+env leaf compute:  673.877µs
+env node compute:  16.504364ms
+2-site contract:   20.306159ms
+left_inds:         32.3µs
+factorize:         85.15924ms
+replace/update:    197.771µs
+invalidate:        117.457µs
+=== contract_fit Profiling ===
+zipup init:        32.655853ms
+canonicalize:      0ns
+sweeps total:      124.689362ms
+steps:             30
+sweeps:            1
+env get:           51.815098ms (requests=95, hits=53, misses=42)
+env leaf compute:  667.648µs
+env node compute:  16.429764ms
+2-site contract:   20.398369ms
+left_inds:         32.943µs
+factorize:         85.619493ms
+replace/update:    189.267µs
+invalidate:        119.034µs
+=== contract_fit Profiling ===
+zipup init:        39.416274ms
+canonicalize:      0ns
+sweeps total:      147.767029ms
+steps:             30
+sweeps:            1
+env get:           52.716774ms (requests=95, hits=53, misses=42)
+env leaf compute:  676.128µs
+env node compute:  17.663811ms
+2-site contract:   23.146579ms
+left_inds:         33.312µs
+factorize:         104.69898ms
+replace/update:    200.696µs
+invalidate:        125.621µs
+=== contract_fit Profiling ===
+zipup init:        39.55581ms
+canonicalize:      0ns
+sweeps total:      147.520139ms
+steps:             30
+sweeps:            1
+env get:           52.93493ms (requests=95, hits=53, misses=42)
+env leaf compute:  665.946µs
+env node compute:  17.704962ms
+2-site contract:   23.097188ms
+left_inds:         33.781µs
+factorize:         104.470358ms
+replace/update:    190.775µs
+invalidate:        121.163µs
+=== contract_fit Profiling ===
+zipup init:        180.332028ms
+canonicalize:      0ns
+sweeps total:      143.442145ms
+steps:             30
+sweeps:            1
+env get:           187.732184ms (requests=95, hits=53, misses=42)
+env leaf compute:  745.759µs
+env node compute:  52.927228ms
+2-site contract:   58.351046ms
+left_inds:         35.28µs
+factorize:         29.749588ms
+replace/update:    207.356µs
+invalidate:        140.878µs
+=== contract_fit Profiling ===
+zipup init:        1.575121177s
+canonicalize:      0ns
+sweeps total:      1.576468718s
+steps:             30
+sweeps:            1
+env get:           2.599121941s (requests=95, hits=53, misses=42)
+env leaf compute:  785.833µs
+env node compute:  705.294602ms
+2-site contract:   791.001602ms
+left_inds:         42.031µs
+factorize:         65.726993ms
+replace/update:    242.896µs
+invalidate:        179.076µs
+=== contract_fit Profiling ===
+zipup init:        1.672726583s
+canonicalize:      0ns
+sweeps total:      1.604837552s
+steps:             30
+sweeps:            1
+env get:           2.693665675s (requests=95, hits=53, misses=42)
+env leaf compute:  702.127µs
+env node compute:  728.644321ms
+2-site contract:   797.767878ms
+left_inds:         42.253µs
+factorize:         63.624417ms
+replace/update:    244.302µs
+invalidate:        170.9µs
+=== contract_fit Profiling ===
+zipup init:        174.929749ms
+canonicalize:      0ns
+sweeps total:      126.040955ms
+steps:             30
+sweeps:            1
+env get:           170.274198ms (requests=95, hits=53, misses=42)
+env leaf compute:  758.251µs
+env node compute:  46.266954ms
+2-site contract:   50.170385ms
+left_inds:         35.302µs
+factorize:         27.145728ms
+replace/update:    207.669µs
+invalidate:        143.397µs
+=== contract_fit Profiling ===
+zipup init:        26.709664ms
+canonicalize:      0ns
+sweeps total:      47.492368ms
+steps:             30
+sweeps:            1
+env get:           48.302005ms (requests=95, hits=53, misses=42)
+env leaf compute:  766.371µs
+env node compute:  15.006717ms
+2-site contract:   15.216972ms
+left_inds:         33.241µs
+factorize:         14.995141ms
+replace/update:    188.397µs
+invalidate:        96.052µs
+=== contract_fit Profiling ===
+zipup init:        157.706097ms
+canonicalize:      0ns
+sweeps total:      132.102319ms
+steps:             30
+sweeps:            1
+env get:           169.967151ms (requests=95, hits=53, misses=42)
+env leaf compute:  783.542µs
+env node compute:  46.083871ms
+2-site contract:   54.427488ms
+left_inds:         35.292µs
+factorize:         29.139531ms
+replace/update:    209.101µs
+invalidate:        137.754µs
+=== contract_fit Profiling ===
+zipup init:        155.198877ms
+canonicalize:      0ns
+sweeps total:      128.056465ms
+steps:             30
+sweeps:            1
+env get:           162.336878ms (requests=95, hits=53, misses=42)
+env leaf compute:  688.837µs
+env node compute:  44.545279ms
+2-site contract:   52.826361ms
+left_inds:         34.545µs
+factorize:         28.353429ms
+replace/update:    194.127µs
+invalidate:        140.356µs
+=== contract_fit Profiling ===
+zipup init:        25.659991ms
+canonicalize:      0ns
+sweeps total:      45.28133ms
+steps:             30
+sweeps:            1
+env get:           46.587116ms (requests=95, hits=53, misses=42)
+env leaf compute:  721.518µs
+env node compute:  14.578339ms
+2-site contract:   14.759915ms
+left_inds:         32.352µs
+factorize:         13.772813ms
+replace/update:    185.977µs
+invalidate:        97.416µs
+=== contract_fit Profiling ===
+zipup init:        61.624896ms
+canonicalize:      0ns
+sweeps total:      198.111061ms
+steps:             30
+sweeps:            1
+env get:           79.409591ms (requests=95, hits=53, misses=42)
+env leaf compute:  764.631µs
+env node compute:  26.602547ms
+2-site contract:   34.079309ms
+left_inds:         33.911µs
+factorize:         134.9736ms
+replace/update:    200.591µs
+invalidate:        143.704µs
+=== contract_fit Profiling ===
+zipup init:        59.74063ms
+canonicalize:      0ns
+sweeps total:      187.744104ms
+steps:             30
+sweeps:            1
+env get:           69.407132ms (requests=95, hits=53, misses=42)
+env leaf compute:  685.748µs
+env node compute:  22.800266ms
+2-site contract:   29.424041ms
+left_inds:         33.652µs
+factorize:         133.183222ms
+replace/update:    200.396µs
+invalidate:        136.096µs
+=== contract_fit Profiling ===
+zipup init:        76.083778ms
+canonicalize:      0ns
+sweeps total:      234.746363ms
+steps:             30
+sweeps:            1
+env get:           78.409843ms (requests=95, hits=53, misses=42)
+env leaf compute:  686.889µs
+env node compute:  26.331598ms
+2-site contract:   43.49812ms
+left_inds:         33.801µs
+factorize:         162.545568ms
+replace/update:    217.059µs
+invalidate:        141.597µs
+=== contract_fit Profiling ===
+zipup init:        74.752414ms
+canonicalize:      0ns
+sweeps total:      230.268713ms
+steps:             30
+sweeps:            1
+env get:           73.514861ms (requests=95, hits=53, misses=42)
+env leaf compute:  688.598µs
+env node compute:  24.300416ms
+2-site contract:   41.275978ms
+left_inds:         34.151µs
+factorize:         162.324983ms
+replace/update:    197.397µs
+invalidate:        140.209µs
+=== contract_fit Profiling ===
+zipup init:        59.507152ms
+canonicalize:      0ns
+sweeps total:      188.353199ms
+steps:             30
+sweeps:            1
+env get:           69.196353ms (requests=95, hits=53, misses=42)
+env leaf compute:  686.038µs
+env node compute:  22.921535ms
+2-site contract:   29.584416ms
+left_inds:         33.192µs
+factorize:         133.40906ms
+replace/update:    199.671µs
+invalidate:        140.735µs
+=== contract_fit Profiling ===
+zipup init:        59.582454ms
+canonicalize:      0ns
+sweeps total:      187.414391ms
+steps:             30
+sweeps:            1
+env get:           69.068867ms (requests=95, hits=53, misses=42)
+env leaf compute:  682.417µs
+env node compute:  22.772939ms
+2-site contract:   29.578146ms
+left_inds:         33.271µs
+factorize:         132.744838ms
+replace/update:    193.826µs
+invalidate:        132.484µs
+=== contract_fit Profiling ===
+zipup init:        74.843677ms
+canonicalize:      0ns
+sweeps total:      229.035133ms
+steps:             30
+sweeps:            1
+env get:           74.023644ms (requests=95, hits=53, misses=42)
+env leaf compute:  722.228µs
+env node compute:  24.043925ms
+2-site contract:   41.052172ms
+left_inds:         33.941µs
+factorize:         161.541001ms
+replace/update:    199.407µs
+invalidate:        139.586µs
+=== contract_fit Profiling ===
+zipup init:        76.129819ms
+canonicalize:      0ns
+sweeps total:      232.457601ms
+steps:             30
+sweeps:            1
+env get:           75.919432ms (requests=95, hits=53, misses=42)
+env leaf compute:  715.987µs
+env node compute:  24.905224ms
+2-site contract:   42.006386ms
+left_inds:         33.772µs
+factorize:         163.060871ms
+replace/update:    211.176µs
+invalidate:        161.796µs
+=== contract_fit Profiling ===
+zipup init:        74.158909ms
+canonicalize:      0ns
+sweeps total:      210.400383ms
+steps:             30
+sweeps:            1
+env get:           81.040696ms (requests=95, hits=53, misses=42)
+env leaf compute:  753.789µs
+env node compute:  27.165483ms
+2-site contract:   38.775909ms
+left_inds:         35.242µs
+factorize:         141.956866ms
+replace/update:    211.487µs
+invalidate:        149.443µs
+=== contract_fit Profiling ===
+zipup init:        71.657349ms
+canonicalize:      0ns
+sweeps total:      202.863161ms
+steps:             30
+sweeps:            1
+env get:           75.44593ms (requests=95, hits=53, misses=42)
+env leaf compute:  718.649µs
+env node compute:  24.418202ms
+2-site contract:   35.078929ms
+left_inds:         34.452µs
+factorize:         140.911241ms
+replace/update:    208.019µs
+invalidate:        142.989µs
+=== contract_fit Profiling ===
+zipup init:        86.037727ms
+canonicalize:      0ns
+sweeps total:      221.040221ms
+steps:             30
+sweeps:            1
+env get:           85.405045ms (requests=95, hits=53, misses=42)
+env leaf compute:  717.49µs
+env node compute:  28.688629ms
+2-site contract:   41.730065ms
+left_inds:         33.98µs
+factorize:         148.129502ms
+replace/update:    216.649µs
+invalidate:        156.864µs
+=== contract_fit Profiling ===
+zipup init:        84.840909ms
+canonicalize:      0ns
+sweeps total:      214.885713ms
+steps:             30
+sweeps:            1
+env get:           80.266131ms (requests=95, hits=53, misses=42)
+env leaf compute:  700.318µs
+env node compute:  26.487329ms
+2-site contract:   39.125065ms
+left_inds:         34.56µs
+factorize:         146.833957ms
+replace/update:    214.62µs
+invalidate:        153.688µs
+=== contract_fit Profiling ===
+zipup init:        71.707692ms
+canonicalize:      0ns
+sweeps total:      203.380312ms
+steps:             30
+sweeps:            1
+env get:           75.145924ms (requests=95, hits=53, misses=42)
+env leaf compute:  699.988µs
+env node compute:  24.533568ms
+2-site contract:   35.099942ms
+left_inds:         34.021µs
+factorize:         141.34435ms
+replace/update:    212.497µs
+invalidate:        143.727µs
+=== contract_fit Profiling ===
+zipup init:        71.835206ms
+canonicalize:      0ns
+sweeps total:      203.34148ms
+steps:             30
+sweeps:            1
+env get:           74.243943ms (requests=95, hits=53, misses=42)
+env leaf compute:  704.259µs
+env node compute:  24.232948ms
+2-site contract:   35.369121ms
+left_inds:         34.031µs
+factorize:         141.31387ms
+replace/update:    210.534µs
+invalidate:        144.925µs
+=== contract_fit Profiling ===
+zipup init:        86.592719ms
+canonicalize:      0ns
+sweeps total:      215.166305ms
+steps:             30
+sweeps:            1
+env get:           81.394476ms (requests=95, hits=53, misses=42)
+env leaf compute:  707.778µs
+env node compute:  26.945706ms
+2-site contract:   39.166526ms
+left_inds:         34.362µs
+factorize:         146.614367ms
+replace/update:    208.432µs
+invalidate:        148.174µs
+=== contract_fit Profiling ===
+zipup init:        85.285966ms
+canonicalize:      0ns
+sweeps total:      215.699037ms
+steps:             30
+sweeps:            1
+env get:           81.938155ms (requests=95, hits=53, misses=42)
+env leaf compute:  712.299µs
+env node compute:  26.783928ms
+2-site contract:   38.89977ms
+left_inds:         33.853µs
+factorize:         147.570782ms
+replace/update:    212.518µs
+invalidate:        144.775µs
+=== contract_fit Profiling ===
+zipup init:        24.683951ms
+canonicalize:      0ns
+sweeps total:      45.674395ms
+steps:             30
+sweeps:            1
+env get:           46.155382ms (requests=95, hits=53, misses=42)
+env leaf compute:  743.881µs
+env node compute:  14.698424ms
+2-site contract:   14.712702ms
+left_inds:         32.761µs
+factorize:         13.972213ms
+replace/update:    184.377µs
+invalidate:        118.323µs
+=== contract_fit Profiling ===
+zipup init:        173.558433ms
+canonicalize:      0ns
+sweeps total:      123.69189ms
+steps:             30
+sweeps:            1
+env get:           160.280905ms (requests=95, hits=53, misses=42)
+env leaf compute:  782.642µs
+env node compute:  44.282468ms
+2-site contract:   50.679866ms
+left_inds:         34.961µs
+factorize:         26.123301ms
+replace/update:    219.278µs
+invalidate:        152.609µs
+=== contract_fit Profiling ===
+zipup init:        164.50709ms
+canonicalize:      0ns
+sweeps total:      116.509081ms
+steps:             30
+sweeps:            1
+env get:           153.672942ms (requests=95, hits=53, misses=42)
+env leaf compute:  699.477µs
+env node compute:  41.520552ms
+2-site contract:   47.905053ms
+left_inds:         34.672µs
+factorize:         24.739523ms
+replace/update:    196.971µs
+invalidate:        142.205µs
+=== contract_fit Profiling ===
+zipup init:        24.126509ms
+canonicalize:      0ns
+sweeps total:      45.05667ms
+steps:             30
+sweeps:            1
+env get:           46.682136ms (requests=95, hits=53, misses=42)
+env leaf compute:  744.68µs
+env node compute:  14.744585ms
+2-site contract:   14.579158ms
+left_inds:         33.06µs
+factorize:         13.481986ms
+replace/update:    187.442µs
+invalidate:        102.085µs
+=== contract_fit Profiling ===
+zipup init:        152.659393ms
+canonicalize:      0ns
+sweeps total:      126.363087ms
+steps:             30
+sweeps:            1
+env get:           157.610384ms (requests=95, hits=53, misses=42)
+env leaf compute:  734.349µs
+env node compute:  44.008897ms
+2-site contract:   49.713762ms
+left_inds:         35.304µs
+factorize:         30.228585ms
+replace/update:    201.896µs
+invalidate:        147.619µs
+=== contract_fit Profiling ===
+zipup init:        1.662480301s
+canonicalize:      0ns
+sweeps total:      1.650766267s
+steps:             30
+sweeps:            1
+env get:           2.676897433s (requests=95, hits=53, misses=42)
+env leaf compute:  763.309µs
+env node compute:  750.255289ms
+2-site contract:   819.194856ms
+left_inds:         41.38µs
+factorize:         66.284674ms
+replace/update:    244.951µs
+invalidate:        177.465µs
+=== contract_fit Profiling ===
+zipup init:        1.715121489s
+canonicalize:      0ns
+sweeps total:      1.618036765s
+steps:             30
+sweeps:            1
+env get:           2.694186502s (requests=95, hits=53, misses=42)
+env leaf compute:  683.306µs
+env node compute:  733.210013ms
+2-site contract:   804.330377ms
+left_inds:         41.87µs
+factorize:         64.948265ms
+replace/update:    244.892µs
+invalidate:        178.125µs
+=== contract_fit Profiling ===
+zipup init:        155.893832ms
+canonicalize:      0ns
+sweeps total:      131.96231ms
+steps:             30
+sweeps:            1
+env get:           156.448555ms (requests=95, hits=53, misses=42)
+env leaf compute:  800.392µs
+env node compute:  44.235039ms
+2-site contract:   52.58421ms
+left_inds:         34.586µs
+factorize:         32.669226ms
+replace/update:    198.808µs
+invalidate:        149.696µs
+=== contract_fit Profiling ===
+zipup init:        57.899605ms
+canonicalize:      0ns
+sweeps total:      216.57989ms
+steps:             30
+sweeps:            1
+env get:           77.230916ms (requests=95, hits=53, misses=42)
+env leaf compute:  760.641µs
+env node compute:  25.628175ms
+2-site contract:   36.476803ms
+left_inds:         34.38µs
+factorize:         151.964225ms
+replace/update:    210.409µs
+invalidate:        153.966µs
+=== contract_fit Profiling ===
+zipup init:        54.928687ms
+canonicalize:      0ns
+sweeps total:      206.239184ms
+steps:             30
+sweeps:            1
+env get:           69.02173ms (requests=95, hits=53, misses=42)
+env leaf compute:  706.328µs
+env node compute:  22.426619ms
+2-site contract:   31.65264ms
+left_inds:         33.861µs
+factorize:         149.722928ms
+replace/update:    208.143µs
+invalidate:        149.854µs
+=== contract_fit Profiling ===
+zipup init:        68.278593ms
+canonicalize:      0ns
+sweeps total:      230.102872ms
+steps:             30
+sweeps:            1
+env get:           78.577942ms (requests=95, hits=53, misses=42)
+env leaf compute:  765.641µs
+env node compute:  26.934894ms
+2-site contract:   39.225344ms
+left_inds:         33.66µs
+factorize:         161.45856ms
+replace/update:    205.918µs
+invalidate:        153.267µs
+=== contract_fit Profiling ===
+zipup init:        65.175078ms
+canonicalize:      0ns
+sweeps total:      224.55704ms
+steps:             30
+sweeps:            1
+env get:           74.562117ms (requests=95, hits=53, misses=42)
+env leaf compute:  674.227µs
+env node compute:  24.816086ms
+2-site contract:   36.083371ms
+left_inds:         33.752µs
+factorize:         161.282689ms
+replace/update:    208.786µs
+invalidate:        146.275µs
+=== contract_fit Profiling ===
+zipup init:        55.77565ms
+canonicalize:      0ns
+sweeps total:      205.231604ms
+steps:             30
+sweeps:            1
+env get:           68.168711ms (requests=95, hits=53, misses=42)
+env leaf compute:  728.779µs
+env node compute:  22.340129ms
+2-site contract:   32.19622ms
+left_inds:         32.974µs
+factorize:         148.227715ms
+replace/update:    214.609µs
+invalidate:        160.039µs
+=== contract_fit Profiling ===
+zipup init:        55.307961ms
+canonicalize:      0ns
+sweeps total:      210.680983ms
+steps:             30
+sweeps:            1
+env get:           69.676333ms (requests=95, hits=53, misses=42)
+env leaf compute:  703.359µs
+env node compute:  22.746262ms
+2-site contract:   32.461001ms
+left_inds:         35.14µs
+factorize:         152.986036ms
+replace/update:    220.841µs
+invalidate:        155.367µs
+=== contract_fit Profiling ===
+zipup init:        67.566314ms
+canonicalize:      0ns
+sweeps total:      226.121212ms
+steps:             30
+sweeps:            1
+env get:           74.513824ms (requests=95, hits=53, misses=42)
+env leaf compute:  692.448µs
+env node compute:  24.952372ms
+2-site contract:   36.706463ms
+left_inds:         33.904µs
+factorize:         162.021918ms
+replace/update:    214.508µs
+invalidate:        154.666µs
+=== contract_fit Profiling ===
+zipup init:        67.4774ms
+canonicalize:      0ns
+sweeps total:      226.668895ms
+steps:             30
+sweeps:            1
+env get:           75.461084ms (requests=95, hits=53, misses=42)
+env leaf compute:  698.707µs
+env node compute:  25.068876ms
+2-site contract:   36.90944ms
+left_inds:         34.643µs
+factorize:         162.228678ms
+replace/update:    211.846µs
+invalidate:        150.245µs
+=== contract_fit Profiling ===
+zipup init:        155.265897ms
+canonicalize:      0ns
+sweeps total:      131.070094ms
+steps:             30
+sweeps:            1
+env get:           161.510053ms (requests=95, hits=53, misses=42)
+env leaf compute:  764.251µs
+env node compute:  45.134998ms
+2-site contract:   52.209861ms
+left_inds:         35.971µs
+factorize:         31.190583ms
+replace/update:    207.67µs
+invalidate:        154.814µs
+=== contract_fit Profiling ===
+zipup init:        1.729752224s
+canonicalize:      0ns
+sweeps total:      1.612008391s
+steps:             30
+sweeps:            1
+env get:           2.639463032s (requests=95, hits=53, misses=42)
+env leaf compute:  809.782µs
+env node compute:  716.919581ms
+2-site contract:   813.984135ms
+left_inds:         40.89µs
+factorize:         66.108504ms
+replace/update:    254.172µs
+invalidate:        180.55µs
+=== contract_fit Profiling ===
+zipup init:        1.740520289s
+canonicalize:      0ns
+sweeps total:      1.596684309s
+steps:             30
+sweeps:            1
+env get:           2.638611863s (requests=95, hits=53, misses=42)
+env leaf compute:  700.518µs
+env node compute:  713.827575ms
+2-site contract:   803.240025ms
+left_inds:         41.442µs
+factorize:         64.609102ms
+replace/update:    244.75µs
+invalidate:        179.847µs
+=== contract_fit Profiling ===
+zipup init:        155.802637ms
+canonicalize:      0ns
+sweeps total:      132.910867ms
+steps:             30
+sweeps:            1
+env get:           156.692501ms (requests=95, hits=53, misses=42)
+env leaf compute:  798.462µs
+env node compute:  44.654754ms
+2-site contract:   52.931111ms
+left_inds:         37.001µs
+factorize:         32.811524ms
+replace/update:    208.164µs
+invalidate:        150.482µs
+=== contract_fit Profiling ===
+zipup init:        24.691632ms
+canonicalize:      0ns
+sweeps total:      43.940244ms
+steps:             30
+sweeps:            1
+env get:           47.024183ms (requests=95, hits=53, misses=42)
+env leaf compute:  781.281µs
+env node compute:  14.406815ms
+2-site contract:   14.425685ms
+left_inds:         31.872µs
+factorize:         12.867308ms
+replace/update:    183.058µs
+invalidate:        96.897µs
+=== contract_fit Profiling ===
+zipup init:        164.554157ms
+canonicalize:      0ns
+sweeps total:      127.789832ms
+steps:             30
+sweeps:            1
+env get:           162.435634ms (requests=95, hits=53, misses=42)
+env leaf compute:  761.45µs
+env node compute:  45.129828ms
+2-site contract:   52.906076ms
+left_inds:         33.94µs
+factorize:         27.342407ms
+replace/update:    198.099µs
+invalidate:        146.765µs
+=== contract_fit Profiling ===
+zipup init:        160.571258ms
+canonicalize:      0ns
+sweeps total:      121.417536ms
+steps:             30
+sweeps:            1
+env get:           161.992001ms (requests=95, hits=53, misses=42)
+env leaf compute:  697.857µs
+env node compute:  44.251652ms
+2-site contract:   48.668312ms
+left_inds:         33.461µs
+factorize:         26.158502ms
+replace/update:    195.319µs
+invalidate:        155.267µs
+=== contract_fit Profiling ===
+zipup init:        25.675581ms
+canonicalize:      0ns
+sweeps total:      47.781599ms
+steps:             30
+sweeps:            1
+env get:           48.488134ms (requests=95, hits=53, misses=42)
+env leaf compute:  779.701µs
+env node compute:  15.084949ms
+2-site contract:   15.123968ms
+left_inds:         34.092µs
+factorize:         15.289725ms
+replace/update:    186.405µs
+invalidate:        109.183µs
+=== contract_fit Profiling ===
+zipup init:        73.669129ms
+canonicalize:      0ns
+sweeps total:      214.841607ms
+steps:             30
+sweeps:            1
+env get:           78.537747ms (requests=95, hits=53, misses=42)
+env leaf compute:  797.643µs
+env node compute:  27.561334ms
+2-site contract:   40.083344ms
+left_inds:         34.65µs
+factorize:         144.632801ms
+replace/update:    211.978µs
+invalidate:        158.945µs
+=== contract_fit Profiling ===
+zipup init:        71.821554ms
+canonicalize:      0ns
+sweeps total:      204.999511ms
+steps:             30
+sweeps:            1
+env get:           74.599646ms (requests=95, hits=53, misses=42)
+env leaf compute:  713.889µs
+env node compute:  24.582124ms
+2-site contract:   35.849047ms
+left_inds:         34.071µs
+factorize:         142.102586ms
+replace/update:    205.918µs
+invalidate:        153.166µs
+=== contract_fit Profiling ===
+zipup init:        86.978052ms
+canonicalize:      0ns
+sweeps total:      225.998455ms
+steps:             30
+sweeps:            1
+env get:           86.929287ms (requests=95, hits=53, misses=42)
+env leaf compute:  707.748µs
+env node compute:  29.277003ms
+2-site contract:   43.336467ms
+left_inds:         35.923µs
+factorize:         150.907398ms
+replace/update:    217.432µs
+invalidate:        156.758µs
+=== contract_fit Profiling ===
+zipup init:        85.788955ms
+canonicalize:      0ns
+sweeps total:      220.334687ms
+steps:             30
+sweeps:            1
+env get:           81.537447ms (requests=95, hits=53, misses=42)
+env leaf compute:  701.268µs
+env node compute:  27.023784ms
+2-site contract:   39.519304ms
+left_inds:         34.361µs
+factorize:         151.33528ms
+replace/update:    210.067µs
+invalidate:        154.503µs
+=== contract_fit Profiling ===
+zipup init:        73.135727ms
+canonicalize:      0ns
+sweeps total:      205.633066ms
+steps:             30
+sweeps:            1
+env get:           74.765974ms (requests=95, hits=53, misses=42)
+env leaf compute:  696.358µs
+env node compute:  24.687382ms
+2-site contract:   35.83803ms
+left_inds:         33.491µs
+factorize:         142.632877ms
+replace/update:    225.14µs
+invalidate:        158.969µs
+=== contract_fit Profiling ===
+zipup init:        70.831004ms
+canonicalize:      0ns
+sweeps total:      204.531033ms
+steps:             30
+sweeps:            1
+env get:           76.1456ms (requests=95, hits=53, misses=42)
+env leaf compute:  707.519µs
+env node compute:  24.896751ms
+2-site contract:   35.320249ms
+left_inds:         33.56µs
+factorize:         141.88377ms
+replace/update:    204.995µs
+invalidate:        161.349µs
+=== contract_fit Profiling ===
+zipup init:        85.291675ms
+canonicalize:      0ns
+sweeps total:      220.487433ms
+steps:             30
+sweeps:            1
+env get:           81.384587ms (requests=95, hits=53, misses=42)
+env leaf compute:  714.119µs
+env node compute:  26.851428ms
+2-site contract:   40.442333ms
+left_inds:         34.281µs
+factorize:         150.735293ms
+replace/update:    213.881µs
+invalidate:        156.439µs
+=== contract_fit Profiling ===
+zipup init:        85.492533ms
+canonicalize:      0ns
+sweeps total:      223.87456ms
+steps:             30
+sweeps:            1
+env get:           81.601727ms (requests=95, hits=53, misses=42)
+env leaf compute:  703.459µs
+env node compute:  27.244272ms
+2-site contract:   40.529966ms
+left_inds:         34.191µs
+factorize:         153.230066ms
+replace/update:    226.717µs
+invalidate:        536.172µs
+=== contract_fit Profiling ===
+zipup init:        26.780685ms
+canonicalize:      0ns
+sweeps total:      47.250757ms
+steps:             30
+sweeps:            1
+env get:           47.37868ms (requests=95, hits=53, misses=42)
+env leaf compute:  745.84µs
+env node compute:  15.054092ms
+2-site contract:   15.225383ms
+left_inds:         32.95µs
+factorize:         14.682922ms
+replace/update:    186.376µs
+invalidate:        110.804µs
+=== contract_fit Profiling ===
+zipup init:        186.425665ms
+canonicalize:      0ns
+sweeps total:      136.956319ms
+steps:             30
+sweeps:            1
+env get:           182.981686ms (requests=95, hits=53, misses=42)
+env leaf compute:  788.412µs
+env node compute:  49.766329ms
+2-site contract:   57.019865ms
+left_inds:         35.324µs
+factorize:         27.65203ms
+replace/update:    205.12µs
+invalidate:        149.064µs
+=== contract_fit Profiling ===
+zipup init:        180.633443ms
+canonicalize:      0ns
+sweeps total:      130.192928ms
+steps:             30
+sweeps:            1
+env get:           177.269198ms (requests=95, hits=53, misses=42)
+env leaf compute:  723.299µs
+env node compute:  47.425995ms
+2-site contract:   54.395754ms
+left_inds:         35.271µs
+factorize:         25.958702ms
+replace/update:    211.586µs
+invalidate:        145.845µs
+=== contract_fit Profiling ===
+zipup init:        25.295556ms
+canonicalize:      0ns
+sweeps total:      44.724616ms
+steps:             30
+sweeps:            1
+env get:           46.951257ms (requests=95, hits=53, misses=42)
+env leaf compute:  763.692µs
+env node compute:  14.690635ms
+2-site contract:   14.549267ms
+left_inds:         32.802µs
+factorize:         13.236311ms
+replace/update:    186.556µs
+invalidate:        99.833µs
+=== contract_fit Profiling ===
+zipup init:        163.910081ms
+canonicalize:      0ns
+sweeps total:      134.653197ms
+steps:             30
+sweeps:            1
+env get:           171.4331ms (requests=95, hits=53, misses=42)
+env leaf compute:  779.322µs
+env node compute:  47.297056ms
+2-site contract:   53.708838ms
+left_inds:         43.432µs
+factorize:         31.147479ms
+replace/update:    198.879µs
+invalidate:        146.522µs
+=== contract_fit Profiling ===
+zipup init:        1.752794266s
+canonicalize:      0ns
+sweeps total:      1.698336445s
+steps:             30
+sweeps:            1
+env get:           2.653657402s (requests=95, hits=53, misses=42)
+env leaf compute:  807.553µs
+env node compute:  729.178455ms
+2-site contract:   888.756923ms
+left_inds:         41.862µs
+factorize:         65.396745ms
+replace/update:    240.778µs
+invalidate:        178.825µs
+=== contract_fit Profiling ===
+zipup init:        1.76430516s
+canonicalize:      0ns
+sweeps total:      1.622825797s
+steps:             30
+sweeps:            1
+env get:           2.577582122s (requests=95, hits=53, misses=42)
+env leaf compute:  712.869µs
+env node compute:  714.280084ms
+2-site contract:   832.50945ms
+left_inds:         40.363µs
+factorize:         61.493368ms
+replace/update:    245.129µs
+invalidate:        178.236µs
+=== contract_fit Profiling ===
+zipup init:        151.612937ms
+canonicalize:      0ns
+sweeps total:      127.704956ms
+steps:             30
+sweeps:            1
+env get:           158.069973ms (requests=95, hits=53, misses=42)
+env leaf compute:  893.285µs
+env node compute:  43.539186ms
+2-site contract:   50.755316ms
+left_inds:         34.252µs
+factorize:         30.86361ms
+replace/update:    194.859µs
+invalidate:        145.484µs
+=== contract_fit Profiling ===
+zipup init:        57.153294ms
+canonicalize:      0ns
+sweeps total:      215.030672ms
+steps:             30
+sweeps:            1
+env get:           77.144701ms (requests=95, hits=53, misses=42)
+env leaf compute:  745.431µs
+env node compute:  25.627972ms
+2-site contract:   36.040887ms
+left_inds:         33.862µs
+factorize:         150.947328ms
+replace/update:    203.569µs
+invalidate:        139.816µs
+=== contract_fit Profiling ===
+zipup init:        55.395004ms
+canonicalize:      0ns
+sweeps total:      204.062572ms
+steps:             30
+sweeps:            1
+env get:           67.369132ms (requests=95, hits=53, misses=42)
+env leaf compute:  700.507µs
+env node compute:  21.879299ms
+2-site contract:   31.035744ms
+left_inds:         33.26µs
+factorize:         148.746173ms
+replace/update:    210.215µs
+invalidate:        140.679µs
+=== contract_fit Profiling ===
+zipup init:        66.839074ms
+canonicalize:      0ns
+sweeps total:      226.050755ms
+steps:             30
+sweeps:            1
+env get:           71.021117ms (requests=95, hits=53, misses=42)
+env leaf compute:  719.509µs
+env node compute:  26.037577ms
+2-site contract:   40.130757ms
+left_inds:         34.381µs
+factorize:         157.49896ms
+replace/update:    194.853µs
+invalidate:        145.443µs
+=== contract_fit Profiling ===
+zipup init:        64.942116ms
+canonicalize:      0ns
+sweeps total:      215.359015ms
+steps:             30
+sweeps:            1
+env get:           73.001672ms (requests=95, hits=53, misses=42)
+env leaf compute:  697.858µs
+env node compute:  23.570428ms
+2-site contract:   35.83811ms
+left_inds:         32.811µs
+factorize:         153.650424ms
+replace/update:    184.46µs
+invalidate:        138.816µs
+=== contract_fit Profiling ===
+zipup init:        55.3018ms
+canonicalize:      0ns
+sweeps total:      204.298111ms
+steps:             30
+sweeps:            1
+env get:           67.570516ms (requests=95, hits=53, misses=42)
+env leaf compute:  704.63µs
+env node compute:  21.953471ms
+2-site contract:   31.000744ms
+left_inds:         33.761µs
+factorize:         148.977387ms
+replace/update:    193.04µs
+invalidate:        138.187µs
+=== contract_fit Profiling ===
+zipup init:        56.101222ms
+canonicalize:      0ns
+sweeps total:      203.957968ms
+steps:             30
+sweeps:            1
+env get:           67.040395ms (requests=95, hits=53, misses=42)
+env leaf compute:  702.45µs
+env node compute:  21.851066ms
+2-site contract:   31.543456ms
+left_inds:         33.641µs
+factorize:         148.199811ms
+replace/update:    200.797µs
+invalidate:        137.536µs
+=== contract_fit Profiling ===
+zipup init:        67.477098ms
+canonicalize:      0ns
+sweeps total:      219.948049ms
+steps:             30
+sweeps:            1
+env get:           72.883836ms (requests=95, hits=53, misses=42)
+env leaf compute:  693.458µs
+env node compute:  24.293634ms
+2-site contract:   36.210744ms
+left_inds:         32.74µs
+factorize:         157.100796ms
+replace/update:    197.627µs
+invalidate:        152.625µs
+=== contract_fit Profiling ===
+zipup init:        67.399436ms
+canonicalize:      0ns
+sweeps total:      215.046713ms
+steps:             30
+sweeps:            1
+env get:           73.380877ms (requests=95, hits=53, misses=42)
+env leaf compute:  688.948µs
+env node compute:  24.70003ms
+2-site contract:   35.12882ms
+left_inds:         33.622µs
+factorize:         152.843571ms
+replace/update:    198.894µs
+invalidate:        152.12µs
+=== contract_fit Profiling ===
+zipup init:        161.953051ms
+canonicalize:      0ns
+sweeps total:      135.191717ms
+steps:             30
+sweeps:            1
+env get:           167.569465ms (requests=95, hits=53, misses=42)
+env leaf compute:  776.991µs
+env node compute:  46.917847ms
+2-site contract:   54.072813ms
+left_inds:         33.63µs
+factorize:         31.753324ms
+replace/update:    193.388µs
+invalidate:        145.837µs
+=== contract_fit Profiling ===
+zipup init:        1.754424461s
+canonicalize:      0ns
+sweeps total:      1.694784215s
+steps:             30
+sweeps:            1
+env get:           2.735416426s (requests=95, hits=53, misses=42)
+env leaf compute:  816.874µs
+env node compute:  757.762273ms
+2-site contract:   857.531361ms
+left_inds:         40.71µs
+factorize:         64.376888ms
+replace/update:    237.469µs
+invalidate:        176.095µs
+=== contract_fit Profiling ===
+zipup init:        1.766705617s
+canonicalize:      0ns
+sweeps total:      1.741995922s
+steps:             30
+sweeps:            1
+env get:           2.712396828s (requests=95, hits=53, misses=42)
+env leaf compute:  724.9µs
+env node compute:  763.600251ms
+2-site contract:   899.607555ms
+left_inds:         40.782µs
+factorize:         64.144354ms
+replace/update:    239.399µs
+invalidate:        175.424µs
+=== contract_fit Profiling ===
+zipup init:        165.084546ms
+canonicalize:      0ns
+sweeps total:      129.749537ms
+steps:             30
+sweeps:            1
+env get:           154.930285ms (requests=95, hits=53, misses=42)
+env leaf compute:  772.83µs
+env node compute:  43.32896ms
+2-site contract:   51.839819ms
+left_inds:         35.912µs
+factorize:         32.15217ms
+replace/update:    204.85µs
+invalidate:        140.675µs
+=== contract_fit Profiling ===
+zipup init:        26.000033ms
+canonicalize:      0ns
+sweeps total:      45.742646ms
+steps:             30
+sweeps:            1
+env get:           46.726623ms (requests=95, hits=53, misses=42)
+env leaf compute:  741.189µs
+env node compute:  14.684571ms
+2-site contract:   14.766515ms
+left_inds:         32.67µs
+factorize:         14.053416ms
+replace/update:    195.646µs
+invalidate:        99.014µs
+=== contract_fit Profiling ===
+zipup init:        174.564306ms
+canonicalize:      0ns
+sweeps total:      133.491268ms
+steps:             30
+sweeps:            1
+env get:           178.265873ms (requests=95, hits=53, misses=42)
+env leaf compute:  796.342µs
+env node compute:  48.126191ms
+2-site contract:   56.052799ms
+left_inds:         34.301µs
+factorize:         26.847575ms
+replace/update:    196.016µs
+invalidate:        144.914µs
+=== contract_fit Profiling ===
+zipup init:        171.597286ms
+canonicalize:      0ns
+sweeps total:      127.784788ms
+steps:             30
+sweeps:            1
+env get:           172.632562ms (requests=95, hits=53, misses=42)
+env leaf compute:  728.019µs
+env node compute:  46.334002ms
+2-site contract:   52.951664ms
+left_inds:         34.231µs
+factorize:         26.025178ms
+replace/update:    195.116µs
+invalidate:        141.326µs
+=== contract_fit Profiling ===
+zipup init:        25.237083ms
+canonicalize:      0ns
+sweeps total:      45.758016ms
+steps:             30
+sweeps:            1
+env get:           46.959606ms (requests=95, hits=53, misses=42)
+env leaf compute:  710.399µs
+env node compute:  14.77115ms
+2-site contract:   14.773933ms
+left_inds:         32.791µs
+factorize:         14.017635ms
+replace/update:    185.737µs
+invalidate:        95.043µs
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      3.73073ms
+sweeps total:      159.343464ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   67.556309ms
+left_inds:         35.501µs
+factorize:         14.145757ms
+replace/update:    188.409µs
+invalidate:        926.494µs
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.690658ms
+sweeps total:      194.877651ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   81.04995ms
+left_inds:         35.992µs
+factorize:         25.40811ms
+replace/update:    206.826µs
+invalidate:        1.130584ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.337824ms
+sweeps total:      195.506206ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   82.095692ms
+left_inds:         35.01µs
+factorize:         25.51138ms
+replace/update:    190.412µs
+invalidate:        1.087081ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      3.700099ms
+sweeps total:      160.4852ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   68.003961ms
+left_inds:         35.162µs
+factorize:         13.317647ms
+replace/update:    188.357µs
+invalidate:        967.76µs
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.50428ms
+sweeps total:      197.401421ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   81.99415ms
+left_inds:         35.942µs
+factorize:         27.119792ms
+replace/update:    188.397µs
+invalidate:        1.116107ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      6.701929ms
+sweeps total:      273.109358ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   107.900979ms
+left_inds:         36.611µs
+factorize:         59.14584ms
+replace/update:    192.998µs
+invalidate:        1.316043ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      6.731381ms
+sweeps total:      277.731544ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   111.379071ms
+left_inds:         36.971µs
+factorize:         59.254277ms
+replace/update:    192.208µs
+invalidate:        1.342587ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.307172ms
+sweeps total:      190.814966ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   80.505787ms
+left_inds:         35.523µs
+factorize:         23.490162ms
+replace/update:    190.14µs
+invalidate:        1.142869ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.591365ms
+sweeps total:      201.298047ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   84.35152ms
+left_inds:         36.551µs
+factorize:         27.791508ms
+replace/update:    189.818µs
+invalidate:        1.17671ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      6.74006ms
+sweeps total:      277.694552ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   110.412982ms
+left_inds:         37.69µs
+factorize:         60.35584ms
+replace/update:    192.617µs
+invalidate:        1.358315ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      6.909747ms
+sweeps total:      282.878419ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   113.209075ms
+left_inds:         39.262µs
+factorize:         60.252916ms
+replace/update:    210.785µs
+invalidate:        1.577945ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.529182ms
+sweeps total:      200.052616ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   84.549872ms
+left_inds:         40.183µs
+factorize:         24.542744ms
+replace/update:    238.623µs
+invalidate:        1.781802ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.106105ms
+sweeps total:      177.649257ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   76.548809ms
+left_inds:         40.983µs
+factorize:         14.97956ms
+replace/update:    229.508µs
+invalidate:        1.905236ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.482869ms
+sweeps total:      193.242362ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   80.587802ms
+left_inds:         35.513µs
+factorize:         24.287189ms
+replace/update:    187.169µs
+invalidate:        1.160378ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      4.374816ms
+sweeps total:      191.350826ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   80.049424ms
+left_inds:         35.401µs
+factorize:         24.697431ms
+replace/update:    195.428µs
+invalidate:        1.150617ms
+=== fit_sum Profiling ===
+zipup init:        0ns
+canonicalize:      3.757781ms
+sweeps total:      155.953256ms
+steps:             30
+sweeps:            1
+env get:           0ns (requests=0, hits=0, misses=0)
+env leaf compute:  0ns
+env node compute:  0ns
+2-site contract:   66.41387ms
+left_inds:         35.013µs
+factorize:         13.397686ms
+replace/update:    187.58µs
+invalidate:        990.19µs

@@ -23,6 +23,7 @@ The patch count is a rank-cap staircase rather than a smooth power law: one patc
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 512 | 115 | 6.755 | 2.620 | 2.578x | 1.964e-06 | 2.664e-06 | 1 | 1 |
 | 4,096 | 263 | 70.155 | 68.743 | 1.021x | 1.922e-06 | 2.080e-06 | 128 | 16 |
+| 8,192 | 381 | 514.682 | 94.893 | 5.424x | 2.462e-06 | 5.600e-06 | 128 | 16 |
 
 ## Fit/contraction timing breakdown
 
@@ -30,5 +31,6 @@ The patch count is a rank-cap staircase rather than a smooth power law: one patc
 |---:|---:|---:|---:|---:|---:|
 | 512 | 4.821 | 1.934 | 2.490 (1 calls) | 0.064 (1 calls) | 0.066 |
 | 4,096 | 46.953 | 23.160 | 56.961 (128 calls) | 3.037 (16 calls) | 8.745 |
+| 8,192 | 389.006 | 125.563 | 80.563 (128 calls) | 3.408 (16 calls) | 10.922 |
 
-At N=4096 the compatible contribution contractions dominate the patched arm; `fit_sum` is a small fraction. The current factor-4 padded input reaches χ≈263 at N=4096. Larger-N contraction timing was intentionally not run: this profile is for patch scaling plus repeatable small-N timing, with every measurement command bounded below ten minutes.
+At N=4096 and N=8192 the compatible contribution contractions dominate the patched arm; `fit_sum` remains a small fraction. The default input tolerance reaches χ≈263 at N=4096. A recorded input compression tolerance of `1e-9` reaches χ381 at N=8192, the closest global+patched point to χ418 that completes with each arm in a separate command under the hard 570-second limit; χ418 itself exceeded that limit.

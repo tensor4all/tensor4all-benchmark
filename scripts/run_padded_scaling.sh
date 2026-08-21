@@ -39,6 +39,12 @@ operation_points: [512, 4096, 8192]
 near_chi_418_input_l2_rtol: 1e-9
 patch_scaling_points: [512, 1024, 2048, 4096, 8192, 12000]
 measurement_command_timeout_seconds: 570
+notes:
+  - Patch-scaling points perform no MPO contraction or output validation.
+  - Operation timing excludes input generation, patch preparation, integrated-reference construction/cache I/O, output conversion, and center validation.
+  - Integrated references use a rigorous 1e-12 pair-omission budget plus a spatially indexed evaluator with its own 1e-12 pointwise tail budget.
+  - Global and patched arms validate at the same deterministic retained-output-Gaussian centers.
+  - The N=8192 global and patched arms run as separate bounded commands and share the same cached inputs and reference.
 EOF
 
 export RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1

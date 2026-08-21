@@ -26,7 +26,7 @@ The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache
 
 The [accuracy policy](docs/accuracy-policy.md) defines how disjoint patch errors combine and keeps fit relative-L2 tolerances separate from ACI residual tolerances.
 
-The input patch cap is fixed at 128 and has no runtime setting. Case 3 prepartitions x, y, and z, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic relative-L2 error at retained integrated-output-Gaussian centers.
+The input patch cap is fixed at 128 and has no runtime setting. Case 3 adaptively discovers the required x/y and y/z split depths, refines nonzero input leaves to regular Cartesian binary partitions, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic relative-L2 error at retained integrated-output-Gaussian centers.
 
 Case 2 compares:
 
@@ -47,7 +47,15 @@ Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. A complete single
 BENCH_CPU_CORE=0 scripts/run_all.sh linux-epyc-7713p
 ```
 
-The script pins Rayon and common BLAS implementations to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`. Set `BENCH_CASES=mpo` to generate an MPO-contraction-only profile.
+The script pins Rayon and common BLAS implementations to one thread, runs the three maintained binaries in release mode with fit profiling enabled, writes raw records and `fit-profile.log` under `result/<profile>/`, records machine metadata in `run.yaml`, and generates `report.md`. Set `BENCH_CASES=mpo` to generate an MPO-contraction-only profile.
+
+The factor-4 padded `N` versus balanced-`N_p` probe and profiled small-N MPO measurements have a dedicated bounded runner:
+
+```bash
+BENCH_CPU_CORE=0 scripts/run_padded_scaling.sh linux-epyc-7713p-padded-r16
+```
+
+Each child command is terminated at 570 seconds. Large-N rows stop after input patching and integrated-reference survivor counting.
 
 For a probe run:
 

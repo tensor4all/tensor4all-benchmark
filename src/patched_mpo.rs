@@ -17,6 +17,63 @@ fn interleave(left: &[DynIndex], right: &[DynIndex]) -> Vec<DynIndex> {
         .collect()
 }
 
+fn regularize_binary_partition(
+    partition: &tree::PartitionedTreeTN<usize>,
+    axes: &[&[DynIndex]],
+) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
+    let depths: Vec<_> = axes
+        .iter()
+        .map(|axis| {
+            partition
+                .projectors()
+                .map(|projector| {
+                    axis.iter()
+                        .take_while(|index| projector.is_projected_at(index))
+                        .count()
+                })
+                .max()
+                .unwrap_or(0)
+        })
+        .collect();
+    let indices: Vec<_> = axes
+        .iter()
+        .zip(&depths)
+        .flat_map(|(axis, &depth)| axis.iter().take(depth).cloned())
+        .collect();
+    anyhow::ensure!(
+        indices.iter().all(|index| index.dim == 2),
+        "balanced regularization requires binary physical indices"
+    );
+    let count = 1usize
+        .checked_shl(indices.len() as u32)
+        .ok_or_else(|| anyhow::anyhow!("regular patch count overflow"))?;
+    let mut patches = Vec::with_capacity(count);
+    for assignment in 0..count {
+        let target = tree::Projector::from_pairs(
+            indices
+                .iter()
+                .enumerate()
+                .map(|(bit, index)| (index.clone(), (assignment >> bit) & 1)),
+        )?;
+        let mut sources = partition
+            .values()
+            .filter(|source| source.projector().is_compatible_with(&target));
+        let Some(source) = sources.next() else {
+            continue;
+        };
+        anyhow::ensure!(
+            sources.next().is_none(),
+            "regular projector has multiple sources"
+        );
+        patches.push(
+            source
+                .project(&target)?
+                .ok_or_else(|| anyhow::anyhow!("regular projection unexpectedly vanished"))?,
+        );
+    }
+    tree::PartitionedTreeTN::from_subdomains(patches).map_err(Into::into)
+}
+
 fn itensor_cutoff_policy(rtol: f64) -> SvdTruncationPolicy {
     SvdTruncationPolicy::new(rtol * rtol)
         .with_relative()
@@ -249,14 +306,14 @@ impl PatchedMpoPair {
             split_strategy: tree::PatchSplitStrategy::Sequential,
         };
         let center = n - 1;
-        let tree_left = tree::add_with_patching(
+        let adaptive_tree_left = tree::add_with_patching(
             vec![tree::SubDomainTreeTN::from_treetn(
                 left_train.into_treetn(),
             )?],
             &center,
             &tree_input_options,
         )?;
-        let tree_right = tree::add_with_patching(
+        let adaptive_tree_right = tree::add_with_patching(
             vec![tree::SubDomainTreeTN::from_treetn(
                 right_train.into_treetn(),
             )?],
@@ -264,9 +321,12 @@ impl PatchedMpoPair {
             &tree_right_input_options,
         )?;
         anyhow::ensure!(
-            (tree_left.len(), tree_right.len()) == (tt_left.len(), tt_right.len()),
-            "TT and TreeTN patch counts differ"
+            (adaptive_tree_left.len(), adaptive_tree_right.len())
+                == (tt_left.len(), tt_right.len()),
+            "TT and TreeTN adaptive patch counts differ"
         );
+        let tree_left = regularize_binary_partition(&adaptive_tree_left, &[&x, &y])?;
+        let tree_right = regularize_binary_partition(&adaptive_tree_right, &[&y, &z])?;
         Ok(Self {
             x,
             y,
@@ -296,11 +356,11 @@ impl PatchedMpoPair {
 
     /// Left and right input patch counts.
     pub fn input_patch_counts(&self) -> (usize, usize) {
-        (self.tt_left.len(), self.tt_right.len())
+        (self.tree_left.len(), self.tree_right.len())
     }
 
-    /// Distinct x, y, and z projector regions in the prepared inputs.
-    pub fn input_axis_patch_counts(&self) -> (usize, usize, usize) {
+    /// Distinct x, left-y, right-y, and z projector regions.
+    pub fn input_axis_patch_counts(&self) -> (usize, usize, usize, usize) {
         let count = |partition: &tree::PartitionedTreeTN<usize>, indices: &[DynIndex]| {
             partition
                 .values()
@@ -311,6 +371,7 @@ impl PatchedMpoPair {
         (
             count(&self.tree_left, &self.x),
             count(&self.tree_left, &self.y),
+            count(&self.tree_right, &self.y),
             count(&self.tree_right, &self.z),
         )
     }
@@ -334,12 +395,12 @@ impl PatchedMpoPair {
     /// Largest left and right input patch bond dimensions.
     pub fn input_patch_max_bonds(&self) -> (usize, usize) {
         (
-            self.tt_left
+            self.tree_left
                 .values()
                 .map(|patch| patch.max_bond_dim())
                 .max()
                 .unwrap_or(0),
-            self.tt_right
+            self.tree_right
                 .values()
                 .map(|patch| patch.max_bond_dim())
                 .max()
@@ -350,14 +411,8 @@ impl PatchedMpoPair {
     /// Total stored parameters in the left and right patched inputs.
     pub fn input_patch_n_params(&self) -> (usize, usize) {
         (
-            self.tt_left
-                .values()
-                .map(|subdomain| tensortrain_n_params(subdomain.data()))
-                .sum(),
-            self.tt_right
-                .values()
-                .map(|subdomain| tensortrain_n_params(subdomain.data()))
-                .sum(),
+            partitioned_treetn_n_params(&self.tree_left),
+            partitioned_treetn_n_params(&self.tree_right),
         )
     }
 

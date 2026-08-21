@@ -111,7 +111,9 @@ fn run_point(
     let prepared = PatchedMpoPair::new(&left_mpo, &right_mpo, INPUT_L2_RTOL, PATCH_CAP)?;
     let patch_secs = patch_start.elapsed().as_secs_f64();
     let (left_patch_count, right_patch_count) = prepared.input_patch_counts();
-    let (x_patch_count, y_patch_count, z_patch_count) = prepared.input_axis_patch_counts();
+    let (x_patch_count, left_y_patch_count, right_y_patch_count, z_patch_count) =
+        prepared.input_axis_patch_counts();
+    let y_patch_count = left_y_patch_count.max(right_y_patch_count);
     let (compatible_pair_count, output_projector_count) =
         prepared.input_contraction_layout_counts();
     let cartesian_pair_count = x_patch_count
@@ -151,6 +153,8 @@ fn run_point(
             x_patch_count,
             y_patch_count,
             z_patch_count,
+            left_y_patch_count,
+            right_y_patch_count,
             compatible_pair_count,
             output_projector_count,
             left_patch_chi,
@@ -210,7 +214,7 @@ fn run_point(
     }
 
     let reference_cache = cache_dir.join(format!(
-        "integrated-v1-{:016x}-tol{:016x}.bin",
+        "integrated-v2-{:016x}-tol{:016x}.bin",
         stable_key_hash(&input.cache_key),
         OUTPUT_REFERENCE_ABS_TOLERANCE.to_bits()
     ));
@@ -252,6 +256,8 @@ fn run_point(
         x_patch_count,
         y_patch_count,
         z_patch_count,
+        left_y_patch_count,
+        right_y_patch_count,
         compatible_pair_count,
         output_projector_count,
         left_patch_chi,
@@ -366,6 +372,8 @@ fn common_params(
     x_patch_count: usize,
     y_patch_count: usize,
     z_patch_count: usize,
+    left_y_patch_count: usize,
+    right_y_patch_count: usize,
     compatible_pair_count: usize,
     output_projector_count: usize,
     left_patch_chi: usize,
@@ -395,6 +403,9 @@ fn common_params(
         "input_params": input_params,
         "left_input_patch_count": left_patch_count, "right_input_patch_count": right_patch_count,
         "x_patch_count": x_patch_count, "y_patch_count": y_patch_count,
+        "left_y_patch_count": left_y_patch_count,
+        "right_y_patch_count": right_y_patch_count,
+        "y_patch_layouts_match": left_y_patch_count == right_y_patch_count,
         "z_patch_count": z_patch_count,
         "compatible_pair_count": compatible_pair_count,
         "output_projector_count": output_projector_count,

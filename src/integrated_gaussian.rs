@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use crate::gaussian::{AnisoMixture2D, LocalizedAnisoField};
 
-const CACHE_MAGIC: &[u8; 8] = b"T4AIG01\0";
+const CACHE_MAGIC: &[u8; 8] = b"T4AIG02\0";
 /// Global pointwise absolute omission budget for output references.
 pub const OUTPUT_REFERENCE_ABS_TOLERANCE: f64 = 1e-12;
 
@@ -203,7 +203,11 @@ fn enumerate_significant_pairs(
         .map(|profile| profile.radius)
         .fold(0.0, f64::max);
     anyhow::ensure!(max_radius.is_finite() && max_radius > 0.0);
-    let cell_width = 2.0 * max_radius;
+    let cell_width = max_radius / 4.0;
+    let max_right_radius = right_profiles
+        .iter()
+        .map(|profile| profile.radius)
+        .fold(0.0, f64::max);
     let cell = |coordinate: f64| (coordinate / cell_width).floor() as i64;
     let mut right_cells: HashMap<i64, Vec<usize>> = HashMap::new();
     for (index, profile) in right_profiles.iter().enumerate() {
@@ -222,15 +226,19 @@ fn enumerate_significant_pairs(
     let mut retained_pair_count = 0usize;
     for (i, left_profile) in left_profiles.iter().enumerate() {
         let center_cell = cell(left_profile.center);
-        for neighbor_cell in center_cell - 1..=center_cell + 1 {
+        let cell_reach = ((left_profile.radius + max_right_radius) / cell_width).ceil() as i64 + 1;
+        for neighbor_cell in center_cell - cell_reach..=center_cell + cell_reach {
             let Some(candidates) = right_cells.get(&neighbor_cell) else {
                 continue;
             };
             for &j in candidates {
                 candidate_pair_count += 1;
                 let right_profile = right_profiles[j];
-                let q = left_profile.precision + right_profile.precision;
                 let dy = left_profile.center - right_profile.center;
+                if dy.abs() > left_profile.radius + right_profile.radius {
+                    continue;
+                }
+                let q = left_profile.precision + right_profile.precision;
                 let mismatch = left_profile.precision * right_profile.precision / q * dy * dy;
                 if mismatch > exponent_cutoff {
                     continue;

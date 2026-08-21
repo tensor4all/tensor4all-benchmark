@@ -19,7 +19,10 @@ export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export BLIS_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
+export T4A_PROFILE_FIT=1
 export OUT_DIR="$raw"
+profile_log="$out/fit-profile.log"
+: > "$profile_log"
 cases=${BENCH_CASES:-all}
 if [[ $cases != all && $cases != mpo ]]; then
   echo "BENCH_CASES must be 'all' or 'mpo'" >&2
@@ -62,8 +65,8 @@ cpu_affinity: $core
 EOF
 
 if [[ $cases == all ]]; then
-  run cargo run --release --locked --bin elementwise_fourier
-  run cargo run --release --locked --bin elementwise_gauss2d_patched
+  run cargo run --release --locked --bin elementwise_fourier 2> >(tee -a "$profile_log" >&2)
+  run cargo run --release --locked --bin elementwise_gauss2d_patched 2> >(tee -a "$profile_log" >&2)
 fi
-run cargo run --release --locked --bin mpo_mpo_aniso_patched
+run cargo run --release --locked --bin mpo_mpo_aniso_patched 2> >(tee -a "$profile_log" >&2)
 python3 scripts/report.py "$out"

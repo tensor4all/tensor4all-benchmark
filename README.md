@@ -79,6 +79,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_INPUT_CACHE_DIR` | `.cache/inputs` | shared input cache |
 | `BENCH_INPUT_CACHE_REFRESH` | `0` | rebuild cache entry when nonzero |
 | `BENCH_INPUT_ONLY` | `0` | Case 2 only: prepare and validate caches without timing operations when nonzero |
+| `BENCH_PATCH_ONLY` | `0` | Case 3 only: build balanced cap-128 input patches and record x/y/z regions, compatible pairs, predicted output patches, ranks, parameters, and construction time without contraction or output validation |
 | `OUT_DIR` | `result/dev/raw` | JSON output directory |
 
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.

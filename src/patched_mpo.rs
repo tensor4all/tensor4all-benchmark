@@ -315,6 +315,19 @@ impl PatchedMpoPair {
         )
     }
 
+    /// Number of left/right patch pairs with compatible projectors.
+    pub fn compatible_input_pair_count(&self) -> usize {
+        self.tree_left
+            .iter()
+            .map(|(left, _)| {
+                self.tree_right
+                    .iter()
+                    .filter(|(right, _)| left.is_compatible_with(right))
+                    .count()
+            })
+            .sum()
+    }
+
     /// Largest left and right input patch bond dimensions.
     pub fn input_patch_max_bonds(&self) -> (usize, usize) {
         (

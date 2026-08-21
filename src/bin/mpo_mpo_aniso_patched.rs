@@ -76,9 +76,13 @@ fn run_point(
         cache_dir: cache_dir.to_path_buf(),
         refresh,
     };
+    let patch_only = env_or("BENCH_PATCH_ONLY", 0usize) != 0;
     let input = prepare_gaussian_pair(&config)?;
-    let (left_input_error, right_input_error) =
-        sampled_input_relative_l2(&input, ERROR_SAMPLES, seed.wrapping_add(41))?;
+    let (left_input_error, right_input_error) = if patch_only {
+        (0.0, 0.0)
+    } else {
+        sampled_input_relative_l2(&input, ERROR_SAMPLES, seed.wrapping_add(41))?
+    };
     anyhow::ensure!(
         left_input_error <= ERROR_SANITY && right_input_error <= ERROR_SANITY,
         "input error exceeds sanity gate: ({left_input_error:.3e}, {right_input_error:.3e})"
@@ -96,6 +100,18 @@ fn run_point(
     let patch_secs = patch_start.elapsed().as_secs_f64();
     let (left_patch_count, right_patch_count) = prepared.input_patch_counts();
     let (x_patch_count, y_patch_count, z_patch_count) = prepared.input_axis_patch_counts();
+    let compatible_pair_count = prepared.compatible_input_pair_count();
+    let predicted_pair_count = x_patch_count
+        .checked_mul(y_patch_count)
+        .and_then(|count| count.checked_mul(z_patch_count))
+        .ok_or_else(|| anyhow::anyhow!("predicted compatible-pair count overflow"))?;
+    anyhow::ensure!(
+        compatible_pair_count == predicted_pair_count,
+        "projector-compatible pair count disagrees with balanced-axis product"
+    );
+    let predicted_output_patch_count = x_patch_count
+        .checked_mul(z_patch_count)
+        .ok_or_else(|| anyhow::anyhow!("predicted output-patch count overflow"))?;
     let (left_patch_chi, right_patch_chi) = prepared.input_patch_max_bonds();
     let (left_patch_params, right_patch_params) = prepared.input_patch_n_params();
     anyhow::ensure!(
@@ -104,6 +120,58 @@ fn run_point(
     );
     let input_chi = input.left.rank().max(input.right.rank());
     let input_params = simple_n_params(&input.left) + simple_n_params(&input.right);
+
+    if patch_only {
+        let mut params = common_params(
+            &input,
+            &config,
+            input_params,
+            left_patch_count,
+            right_patch_count,
+            x_patch_count,
+            y_patch_count,
+            z_patch_count,
+            left_patch_chi,
+            right_patch_chi,
+            left_patch_params,
+            right_patch_params,
+            patch_secs,
+            left_input_error,
+            right_input_error,
+            left_axis_error,
+            right_axis_error,
+        );
+        params["compatible_pair_count"] = serde_json::json!(compatible_pair_count);
+        params["predicted_output_patch_count"] = serde_json::json!(predicted_output_patch_count);
+        params["left_input_sampled_relative_l2"] = serde_json::Value::Null;
+        params["right_input_sampled_relative_l2"] = serde_json::Value::Null;
+        params["error_samples"] = serde_json::json!(0);
+        params["external_error_metric"] = serde_json::json!("principal_axis_relative_l2");
+        write_record(
+            out_dir,
+            &format!("gaussian_mpo_patch_scaling-n{n}-chi{input_chi}"),
+            &RunRecord {
+                schema_version: SCHEMA_VERSION,
+                case: "gaussian_mpo_patch_scaling".into(),
+                algorithm: "balanced_input_patching".into(),
+                params,
+                seed,
+                tolerance: INPUT_L2_RTOL,
+                wall_time_median_secs: patch_secs,
+                wall_times_secs: vec![patch_secs],
+                max_error: left_axis_error.max(right_axis_error),
+                input_max_bond_dim: input_chi,
+                output_max_bond_dim: left_patch_chi.max(right_patch_chi),
+                output_bond_dims: vec![left_patch_chi, right_patch_chi],
+                n_params: Some(left_patch_params + right_patch_params),
+                n_patches: Some(left_patch_count + right_patch_count),
+                max_patch_bond: Some(left_patch_chi.max(right_patch_chi)),
+                rtol: Some(INPUT_L2_RTOL),
+                input_build_secs: Some(input.build.as_secs_f64()),
+            },
+        )?;
+        return Ok(());
+    }
 
     let (global_result, global_timing) = time_median(warmups, runs, || {
         prepared.contract_fit_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)
@@ -260,7 +328,10 @@ fn common_params(
         "input_params": input_params,
         "left_input_patch_count": left_patch_count, "right_input_patch_count": right_patch_count,
         "x_patch_count": x_patch_count, "y_patch_count": y_patch_count,
-        "z_patch_count": z_patch_count, "patch_layout": "balanced_xyz",
+        "z_patch_count": z_patch_count,
+        "compatible_pair_count": x_patch_count * y_patch_count * z_patch_count,
+        "predicted_output_patch_count": x_patch_count * z_patch_count,
+        "patch_layout": "balanced_xyz",
         "output_sum_method": "cap_initial_then_fit_sum",
         "output_max_bond_dim": serde_json::Value::Null,
         "left_input_max_patch_chi": left_patch_chi, "right_input_max_patch_chi": right_patch_chi,

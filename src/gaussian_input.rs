@@ -13,6 +13,8 @@ use crate::hdf5_export::{load_tt_from_mps, save_tt_as_mps};
 
 /// Fixed quantics bit count per physical axis.
 pub const GAUSSIAN_R: usize = 16;
+/// Ratio of computational half-width to the active Gaussian-center half-width.
+pub const GAUSSIAN_PADDING_FACTOR: f64 = 4.0;
 /// Fixed patch rank cap used by every patched benchmark arm.
 pub const PATCH_CAP: usize = 128;
 /// Final global relative-L2 input tolerance.
@@ -25,7 +27,7 @@ pub const INPUT_TCI_MAX_BOND: usize = 1024;
 pub const INPUT_LOCAL_ABS_TOLERANCE: f64 = 1e-12;
 /// Gaussian components supplying deterministic center and principal-axis pivots.
 pub const INPUT_TCI_PIVOT_COMPONENTS: usize = 16;
-const CACHE_SCHEMA: &str = "global-tci-gaussian-pair-v3";
+const CACHE_SCHEMA: &str = "global-tci-gaussian-pair-v4-padded";
 const TENSOR4ALL_REV: &str = "9e9aedaebe0d3918b34dd399ff0981e337f3835b";
 
 /// Parameters that uniquely define one cached input pair.
@@ -51,6 +53,9 @@ pub struct GaussianInputPair {
     pub left_mixture: AnisoMixture2D,
     pub right_mixture: AnisoMixture2D,
     pub r: usize,
+    /// Half-width containing the generated Gaussian centers.
+    pub active_box_l: f64,
+    /// Half-width of the padded quantics computational domain.
     pub box_l: f64,
     pub cache_key: String,
     pub cache_hit: bool,
@@ -63,9 +68,14 @@ pub struct GaussianInputPair {
     pub raw_right_params: usize,
 }
 
-/// Choose the box while keeping the quantics bit count fixed.
-pub fn box_and_bits(n: usize, sigma_minor: f64, spacing: f64) -> (f64, usize) {
-    (0.5 * spacing * sigma_minor * (n as f64).sqrt(), GAUSSIAN_R)
+/// Choose the active and padded boxes while keeping the bit count fixed.
+pub fn boxes_and_bits(n: usize, sigma_minor: f64, spacing: f64) -> (f64, f64, usize) {
+    let active_box_l = 0.5 * spacing * sigma_minor * (n as f64).sqrt();
+    (
+        active_box_l,
+        GAUSSIAN_PADDING_FACTOR * active_box_l,
+        GAUSSIAN_R,
+    )
 }
 
 /// Number of stored scalar entries in a tensor train.
@@ -153,24 +163,25 @@ pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<Gau
         config.tci_pivot_components > 0,
         "TCI pivot count must be positive"
     );
-    let (box_l, r) = box_and_bits(config.n, config.sigma_minor, config.spacing);
+    let (active_box_l, box_l, r) = boxes_and_bits(config.n, config.sigma_minor, config.spacing);
     let left_mixture = AnisoMixture2D::random(
         config.n,
-        box_l,
+        active_box_l,
         config.sigma_minor,
         config.rho_max,
         config.seed.wrapping_add(1),
     );
     let right_mixture = AnisoMixture2D::random(
         config.n,
-        box_l,
+        active_box_l,
         config.sigma_minor,
         config.rho_max,
         config.seed.wrapping_add(2),
     );
     let cache_key = format!(
-        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
+        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-padding{:016x}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
         config.n,
+        GAUSSIAN_PADDING_FACTOR.to_bits(),
         config.sigma_minor.to_bits(),
         config.rho_max.to_bits(),
         config.spacing.to_bits(),
@@ -234,6 +245,7 @@ pub fn prepare_gaussian_pair(config: &GaussianInputConfig) -> anyhow::Result<Gau
         left_mixture,
         right_mixture,
         r,
+        active_box_l,
         box_l,
         cache_key,
         cache_hit,
@@ -381,6 +393,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn padded_production_box_makes_boundary_tail_negligible() {
+        let n = 512;
+        let sigma_minor = 0.05;
+        let rho_max = 8.0;
+        let (active, padded, r) = boxes_and_bits(n, sigma_minor, 3.0);
+        assert_eq!(r, GAUSSIAN_R);
+        assert_eq!(padded, GAUSSIAN_PADDING_FACTOR * active);
+        let boundary_gap = padded - 0.9 * active;
+        let sigma_major = rho_max * sigma_minor;
+        let worst_component_tail = (-(boundary_gap / sigma_major).powi(2) / 2.0).exp();
+        assert!(1.5 * n as f64 * worst_component_tail < 1e-30);
+    }
+
+    #[test]
     fn cached_pair_round_trip_preserves_values_and_rank() {
         let cache_dir =
             std::env::temp_dir().join(format!("t4a-gaussian-cache-{}", std::process::id()));
@@ -406,6 +432,7 @@ mod tests {
         assert!(!first.cache_hit);
         assert!(second.cache_hit);
         assert_eq!(first.r, GAUSSIAN_R);
+        assert_eq!(first.box_l, GAUSSIAN_PADDING_FACTOR * first.active_box_l);
         let sampled = sampled_input_relative_l2(&first, 64, 41).unwrap();
         let principal = principal_axis_input_relative_l2(&first, 2).unwrap();
         assert!(sampled.0 < 1e-4 && sampled.1 < 1e-4, "sampled={sampled:?}");

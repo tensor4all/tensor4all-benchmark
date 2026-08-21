@@ -333,7 +333,9 @@ fn common_params(
     tolerance_metric: &str,
 ) -> serde_json::Value {
     serde_json::json!({
-        "n_gauss": config.n, "r": input.r, "box_l": input.box_l,
+        "n_gauss": config.n, "r": input.r,
+        "active_box_l": input.active_box_l, "box_l": input.box_l,
+        "padding_factor": input.box_l / input.active_box_l,
         "sigma_minor": config.sigma_minor, "rho_max": config.rho_max,
         "spacing": config.spacing, "input_generator": "global_tci",
         "input_tci_tolerance": config.tci_tolerance,

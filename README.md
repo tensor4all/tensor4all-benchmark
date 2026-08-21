@@ -16,7 +16,7 @@ The MPO-contraction profile through compressed χ418 is in [`result/linux-epyc-7
 
 ## Gaussian input
 
-Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. The production generator applies global TCI directly to the whole mixture. A spatially indexed evaluator omits Gaussian tails only under a rigorous global pointwise absolute bound. Deterministic centers and principal-axis points seed TCI so narrow rotated ridges are represented.
+Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. Centers occupy a central active square; the fixed-`R=16` computational square has four times its half-width, making boundary tails negligible even at the smallest production Gaussian count. The production generator applies global TCI directly to the whole padded mixture. A spatially indexed evaluator omits Gaussian tails only under a rigorous global pointwise absolute bound. Deterministic centers and principal-axis points seed TCI so narrow rotated ridges are represented.
 
 The raw global-TCI result is compressed once with relative-L2/SVD tolerance `1e-6`. The independent two-dimensional `interpolate_multi_scale_nd` builder and deterministic balanced pairwise reduction remain in the test suite as a reference for individual Gaussian and small-mixture accuracy.
 

@@ -1,5 +1,6 @@
 //! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
 
+use std::collections::HashSet;
 use tensor4all_core::{DynIndex, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
@@ -8,6 +9,13 @@ use tensor4all_simplett::mpo::MPO;
 use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
 
 use crate::mpo_contract::{mpo_to_tensortrain, tensortrain_to_mpo};
+
+fn interleave(left: &[DynIndex], right: &[DynIndex]) -> Vec<DynIndex> {
+    left.iter()
+        .zip(right)
+        .flat_map(|(left, right)| [left.clone(), right.clone()])
+        .collect()
+}
 
 fn itensor_cutoff_policy(rtol: f64) -> SvdTruncationPolicy {
     SvdTruncationPolicy::new(rtol * rtol)
@@ -19,6 +27,7 @@ fn itensor_cutoff_policy(rtol: f64) -> SvdTruncationPolicy {
 /// Prepared copies of one MPO pair for a fair TT versus chain TreeTN comparison.
 pub struct PatchedMpoPair {
     x: Vec<DynIndex>,
+    y: Vec<DynIndex>,
     z: Vec<DynIndex>,
     global_left: TensorTrain,
     global_right: TensorTrain,
@@ -194,8 +203,9 @@ impl PatchedMpoPair {
 
         let n = left_train.len();
         let input_max_bond = left_train.max_bond_dim().max(right_train.max_bond_dim());
-        let left_order = y.iter().chain(&x).cloned().collect::<Vec<_>>();
-        let right_order = y.iter().chain(&z).cloned().collect::<Vec<_>>();
+        let left_order = interleave(&y, &x);
+        let right_order = interleave(&y, &z);
+        let output_order = interleave(&x, &z);
         let tt_input_options = tt::PatchingOptions {
             rtol: input_rtol,
             max_bond_dim: Some(patch_max_bond),
@@ -217,7 +227,7 @@ impl PatchedMpoPair {
         let global_left = left_train.clone();
         let global_right = right_train.clone();
         let tree_input_options = tree::PatchingOptions {
-            rtol: input_rtol,
+            cutoff: input_rtol * input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -233,9 +243,9 @@ impl PatchedMpoPair {
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
         let tree_options = tree::PatchingOptions {
-            rtol: contract_rtol,
-            max_bond_dim: Some(patch_max_bond),
-            patch_order: left_order,
+            cutoff: contract_rtol * contract_rtol,
+            max_bond_dim: None,
+            patch_order: output_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
         };
         let center = n - 1;
@@ -259,6 +269,7 @@ impl PatchedMpoPair {
         );
         Ok(Self {
             x,
+            y,
             z,
             global_left,
             global_right,
@@ -286,6 +297,22 @@ impl PatchedMpoPair {
     /// Left and right input patch counts.
     pub fn input_patch_counts(&self) -> (usize, usize) {
         (self.tt_left.len(), self.tt_right.len())
+    }
+
+    /// Distinct x, y, and z projector regions in the prepared inputs.
+    pub fn input_axis_patch_counts(&self) -> (usize, usize, usize) {
+        let count = |partition: &tree::PartitionedTreeTN<usize>, indices: &[DynIndex]| {
+            partition
+                .values()
+                .map(|patch| patch.projector().filter_indices(indices))
+                .collect::<HashSet<_>>()
+                .len()
+        };
+        (
+            count(&self.tree_left, &self.x),
+            count(&self.tree_left, &self.y),
+            count(&self.tree_right, &self.z),
+        )
     }
 
     /// Largest left and right input patch bond dimensions.
@@ -386,21 +413,18 @@ impl PatchedMpoPair {
     pub fn contract_fit_treetn_partitioned(
         &self,
         rtol: f64,
-        output_max_bond: usize,
+        contribution_max_bond: usize,
     ) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
         let output_options = tree::PatchingOptions {
-            rtol,
-            max_bond_dim: Some(output_max_bond),
+            cutoff: rtol * rtol,
+            max_bond_dim: None,
             ..self.tree_options.clone()
         };
-        // Performance note: upstream `contract_adaptive` groups the compatible
-        // shared-y patch contributions, then probes and splits the output domain.
-        // Every recursive child projects the original operands and reruns their fit
-        // contractions instead of slicing a cached parent contribution. For P
-        // compatible y patches and L output leaves, work therefore scales roughly
-        // as P * L, with cap-detection probes reaching up to P * (2 * L - 1).
+        // Balanced x/y/z input projectors already define disjoint x/z output
+        // patches. Keep those groups uncapped, exact-add their y contributions,
+        // then spend the output cutoff once in the final adaptive truncation.
         let options = TreeContractOptions::fit()
-            .with_max_bond_dim(output_max_bond)
+            .with_max_bond_dim(contribution_max_bond)
             .with_svd_policy(itensor_cutoff_policy(rtol))
             .with_nfullsweeps(1);
         tree::contract_adaptive(

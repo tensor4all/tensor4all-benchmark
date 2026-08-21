@@ -1532,7 +1532,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-aci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "num-complex",
  "rand",
@@ -1547,7 +1546,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-core"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1572,7 +1570,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-hdf5"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "hdf5-metno",
@@ -1588,7 +1585,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-interpolativeqtt"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "tensor4all-simplett",
  "tensor4all-tensorbackend",
@@ -1598,7 +1594,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-itensorlike"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1612,11 +1607,9 @@ dependencies = [
 [[package]]
 name = "tensor4all-partitionedtreetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "tensor4all-core",
- "tensor4all-tensorbackend",
  "tensor4all-treetn",
  "thiserror 2.0.20",
 ]
@@ -1624,7 +1617,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-partitionedtt"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1642,7 +1634,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-quanticstci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1660,7 +1651,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-simplett"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1677,7 +1667,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorbackend"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1697,7 +1686,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1712,7 +1700,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-treetci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1729,7 +1716,6 @@ dependencies = [
 [[package]]
 name = "tensor4all-treetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
 dependencies = [
  "anyhow",
  "dyn-clone",

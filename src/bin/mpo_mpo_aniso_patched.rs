@@ -1,5 +1,7 @@
 //! Case 3: global and patched fit contraction of interpolative Gaussian MPOs.
 
+#![recursion_limit = "256"]
+
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -93,6 +95,7 @@ fn run_point(
     let prepared = PatchedMpoPair::new(&left_mpo, &right_mpo, INPUT_L2_RTOL, PATCH_CAP)?;
     let patch_secs = patch_start.elapsed().as_secs_f64();
     let (left_patch_count, right_patch_count) = prepared.input_patch_counts();
+    let (x_patch_count, y_patch_count, z_patch_count) = prepared.input_axis_patch_counts();
     let (left_patch_chi, right_patch_chi) = prepared.input_patch_max_bonds();
     let (left_patch_params, right_patch_params) = prepared.input_patch_n_params();
     anyhow::ensure!(
@@ -130,6 +133,9 @@ fn run_point(
         input_params,
         left_patch_count,
         right_patch_count,
+        x_patch_count,
+        y_patch_count,
+        z_patch_count,
         left_patch_chi,
         right_patch_chi,
         left_patch_params,
@@ -224,6 +230,9 @@ fn common_params(
     input_params: usize,
     left_patch_count: usize,
     right_patch_count: usize,
+    x_patch_count: usize,
+    y_patch_count: usize,
+    z_patch_count: usize,
     left_patch_chi: usize,
     right_patch_chi: usize,
     left_patch_params: usize,
@@ -248,6 +257,10 @@ fn common_params(
         "raw_left_params": input.raw_left_params, "raw_right_params": input.raw_right_params,
         "input_params": input_params,
         "left_input_patch_count": left_patch_count, "right_input_patch_count": right_patch_count,
+        "x_patch_count": x_patch_count, "y_patch_count": y_patch_count,
+        "z_patch_count": z_patch_count, "patch_layout": "balanced_xyz",
+        "output_sum_method": "cap_initial_then_fit_sum",
+        "output_max_bond_dim": serde_json::Value::Null,
         "left_input_max_patch_chi": left_patch_chi, "right_input_max_patch_chi": right_patch_chi,
         "left_input_patch_params": left_patch_params, "right_input_patch_params": right_patch_params,
         "cache_key": input.cache_key, "cache_hit": input.cache_hit,

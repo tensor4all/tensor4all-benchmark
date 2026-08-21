@@ -16,7 +16,7 @@ quantics_bits_per_axis: 16
 padding_factor: 4
 patch_cap: 128
 patch_input_rtol: 1e-6
-patch_local_sweep_rtol: 1.8257418583505538e-7
+patch_local_sweep_rtol: 1.8257418583505536e-7
 patch_local_svd_cutoff: 3.333333333333333e-14
 patch_svd_visit_budget_count: 30
 contraction_performed: false
@@ -38,7 +38,7 @@ notes:
   - Integrated-output Gaussian counting is disabled; this profile measures patch layouts only.
   - Patch construction time excludes input load/build, input compression, format conversion, and exact patch reconstruction validation.
   - Reconstruction validation exactly compares each summed partition against its compressed global input.
-  - The requested patch-input squared budget is divided over the TreeTN truncation plan's two visits to each of 15 chain edges; exact residual validation remains authoritative.
+  - The requested patch-input squared budget is divided over one TreeTN truncation sweep's two visits to each of 15 chain edges; exact residual validation remains authoritative.
   - Structural contraction proxies are not measured FLOP counts or speedups.
   - The cache-key revision is the input-generator compatibility baseline; tensor4all_rs_revision is the actual patched worktree used for this run.
   - Raw padded input tensors are gitignored and are not part of this artifact; exact regeneration rebuilds or supplies the v4 padded caches.

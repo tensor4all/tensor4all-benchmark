@@ -1,5 +1,7 @@
 # Factor-4 padded Gaussian patch scaling and small-N MPO contraction
 
+> **Archived pre-tolerance-correction profile.** These measurements reused the requested whole-input cutoff at every local SVD. They are retained as historical contraction evidence and are not reproducible under the corrected per-sweep local cutoff allocation.
+
 All values use fixed `R=16`, patch cap 128, one pinned EPYC 7713P core, and single-threaded Rayon/BLAS. Gaussian centers occupy the central active box; the computational half-width is four times larger. Patch-scaling rows perform no MPO contraction. Operation timings exclude input generation, patch preparation, reference construction/cache I/O, output conversion, and validation.
 
 ## N versus balanced patch layout

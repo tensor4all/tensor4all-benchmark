@@ -46,7 +46,7 @@ These are contraction-free measurements on factor-4 padded, fixed-`R=16` inputs.
 - Shared-y-only reaches 32 patches/operand at N=4,096. From that point onward it has 32 compatible pairs and one output group, versus balanced 128 and 16.
 - At N=12,000, shared-y-only has 0.361× the balanced parameter-product proxy and 0.339× the cubed max-bond proxy. This suggests less pairwise contraction work, but it does not include the rank of each contracted contribution or the cost of fitting all y contributions into one global x/z output group.
 - At N=8,192, increasing compressed input χ from 283 to 418 does not change either patch layout. The higher-rank inputs remain within the independently checked patch tolerance. N=12,000 χ≥423 probes exceeded the 570-second construction/validation bound and are not reported as measurements.
-- The requested whole-input `patch_input_rtol=1e-6` is converted to a local SVD tolerance by distributing its squared budget over two visits to each of the 15 chain edges. Every recorded exact reconstruction residual is at most 8.94e-7 and has `patch_tolerance_met=true`.
+- The requested whole-input `patch_input_rtol=1e-6` is converted to a local SVD tolerance by distributing its squared budget over one sweep's two visits to each of the 15 chain edges. Every recorded exact reconstruction residual is at most 8.94e-7 and has `patch_tolerance_met=true`.
 - The bounded N=16,384 attempt timed out during padded global-TCI input construction before producing a patch record. Therefore the next N-driven staircase is only bounded as greater than 12,000 in this single-core, 570-second workflow.
 
 The compatible-pair and structural proxy ratios are not measured contraction speedups.

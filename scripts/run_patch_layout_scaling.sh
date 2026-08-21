@@ -16,6 +16,15 @@ if [[ -z $tensor4all_rev && -d $local_tensor4all/.git ]]; then
   tensor4all_rev=$(git -C "$local_tensor4all" rev-parse HEAD)
 fi
 tensor4all_rev=${tensor4all_rev:-9e9aedaebe0d3918b34dd399ff0981e337f3835b}
+read -r patch_local_rtol patch_local_cutoff patch_visit_count < <(
+  python3 - <<'PY'
+import math
+rtol, nodes = 1e-6, 16
+visits = 2 * max(nodes - 1, 1)
+local = rtol / math.sqrt(visits)
+print(repr(local), repr(local * local), visits)
+PY
+)
 cat >"$out/run.yaml" <<EOF
 profile: $profile
 date: $(date -I)
@@ -30,9 +39,9 @@ quantics_bits_per_axis: 16
 padding_factor: 4
 patch_cap: 128
 patch_input_rtol: 1e-6
-patch_local_sweep_rtol: 1.8257418583505538e-7
-patch_local_svd_cutoff: 3.333333333333333e-14
-patch_svd_visit_budget_count: 30
+patch_local_sweep_rtol: $patch_local_rtol
+patch_local_svd_cutoff: $patch_local_cutoff
+patch_svd_visit_budget_count: $patch_visit_count
 contraction_performed: false
 patch_build_repetitions: 1
 layouts: [balanced_xyz, shared_y_only]
@@ -43,7 +52,7 @@ notes:
   - The cache-key revision is the input-generator compatibility baseline; tensor4all_rs_revision is the actual patched worktree used for this run.
   - Raw padded input tensors are gitignored and are not part of this artifact; exact regeneration rebuilds or supplies the v4 padded caches.
   - Patch build values are single measurements; the report does not label them medians.
-  - The requested patch-input squared budget is divided over two visits to each of 15 chain edges; exact residual validation remains authoritative.
+  - The requested patch-input squared budget is divided over two visits to each of 15 chain edges per truncation sweep; exact residual validation remains authoritative.
 EOF
 
 export RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1

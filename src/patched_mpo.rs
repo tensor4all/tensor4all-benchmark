@@ -387,7 +387,7 @@ impl PatchedMpoPair {
         let tt_options = tt::PatchingOptions {
             rtol: local_contract_rtol,
             max_bond_dim: Some(patch_max_bond),
-            patch_order: left_order.clone(),
+            patch_order: output_order.clone(),
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
         let tree_options = tree::PatchingOptions {

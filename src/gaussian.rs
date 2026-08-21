@@ -201,6 +201,16 @@ pub struct LocalizedAnisoField {
 }
 
 impl LocalizedAnisoField {
+    /// Borrow the indexed mixture.
+    pub fn mixture(&self) -> &AnisoMixture2D {
+        &self.mixture
+    }
+
+    /// Number of occupied spatial cells.
+    pub fn bin_count(&self) -> usize {
+        self.bins.len()
+    }
+
     /// Build a local evaluator for one positive anisotropic mixture.
     pub fn new(mixture: AnisoMixture2D, absolute_tolerance: f64) -> anyhow::Result<Self> {
         anyhow::ensure!(

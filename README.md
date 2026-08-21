@@ -26,7 +26,7 @@ The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache
 
 The [accuracy policy](docs/accuracy-policy.md) defines how disjoint patch errors combine and keeps fit relative-L2 tolerances separate from ACI residual tolerances.
 
-The input patch cap is fixed at 128 and has no runtime setting. Case 3 prepartitions x, y, and z, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic holdout sampled relative-L2 error.
+The input patch cap is fixed at 128 and has no runtime setting. Case 3 prepartitions x, y, and z, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic relative-L2 error at retained integrated-output-Gaussian centers.
 
 Case 2 compares:
 
@@ -35,7 +35,7 @@ Case 2 compares:
 - global ACI with scale-relative residual
 - patched ACI with patch-local absolute residual followed by global L2 budgeting
 
-Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Its reference is the finite left-endpoint quantics grid contraction, evaluated analytically with endpoint corrections.
+Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Factor-4 padding makes the finite-domain tail negligible. Its reference integrates significant Gaussian pairs over the infinite y axis, finds them with a linked-cell neighbor list, caches each retained output Gaussian's center, precision, and weight, and evaluates both arms at the same deterministic retained centers through a spatial index.
 
 Input construction, cache I/O, global input compression, format conversion, patch preparation, output conversion, and accuracy evaluation are outside timed regions.
 

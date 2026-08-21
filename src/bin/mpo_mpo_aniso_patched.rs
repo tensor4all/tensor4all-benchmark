@@ -16,7 +16,10 @@ use t4a_bench::gaussian_input::{
     PATCH_CAP,
 };
 use t4a_bench::harness::time_median;
-use t4a_bench::mpo_contract::sampled_relative_l2_vs_aniso_grid;
+use t4a_bench::integrated_gaussian::{
+    count_integrated_components, prepare_integrated_reference, OUTPUT_REFERENCE_ABS_TOLERANCE,
+};
+use t4a_bench::mpo_contract::center_errors_vs_integrated_gaussians;
 use t4a_bench::patched_mpo::{partitioned_treetn_n_params, tensortrain_n_params, PatchedMpoPair};
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
 
@@ -24,6 +27,15 @@ const CASE: &str = "gaussian_mpo_contraction";
 const GLOBAL_MAX_BOND: usize = 4096;
 const ERROR_SAMPLES: usize = 256;
 const ERROR_SANITY: f64 = 1e-4;
+
+fn stable_key_hash(value: &str) -> u64 {
+    value
+        .as_bytes()
+        .iter()
+        .fold(0xcbf29ce484222325, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x100000001b3)
+        })
+}
 
 fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
     std::env::var(name)
@@ -100,18 +112,15 @@ fn run_point(
     let patch_secs = patch_start.elapsed().as_secs_f64();
     let (left_patch_count, right_patch_count) = prepared.input_patch_counts();
     let (x_patch_count, y_patch_count, z_patch_count) = prepared.input_axis_patch_counts();
-    let compatible_pair_count = prepared.compatible_input_pair_count();
-    let predicted_pair_count = x_patch_count
+    let (compatible_pair_count, output_projector_count) =
+        prepared.input_contraction_layout_counts();
+    let cartesian_pair_count = x_patch_count
         .checked_mul(y_patch_count)
         .and_then(|count| count.checked_mul(z_patch_count))
-        .ok_or_else(|| anyhow::anyhow!("predicted compatible-pair count overflow"))?;
-    anyhow::ensure!(
-        compatible_pair_count == predicted_pair_count,
-        "projector-compatible pair count disagrees with balanced-axis product"
-    );
-    let predicted_output_patch_count = x_patch_count
+        .ok_or_else(|| anyhow::anyhow!("Cartesian compatible-pair estimate overflow"))?;
+    let cartesian_output_patch_count = x_patch_count
         .checked_mul(z_patch_count)
-        .ok_or_else(|| anyhow::anyhow!("predicted output-patch count overflow"))?;
+        .ok_or_else(|| anyhow::anyhow!("Cartesian output-patch estimate overflow"))?;
     let (left_patch_chi, right_patch_chi) = prepared.input_patch_max_bonds();
     let (left_patch_params, right_patch_params) = prepared.input_patch_n_params();
     anyhow::ensure!(
@@ -122,6 +131,17 @@ fn run_point(
     let input_params = simple_n_params(&input.left) + simple_n_params(&input.right);
 
     if patch_only {
+        let reference_count_start = Instant::now();
+        let integrated_stats = count_integrated_components(
+            &input.left_mixture,
+            &input.right_mixture,
+            OUTPUT_REFERENCE_ABS_TOLERANCE,
+        )?;
+        let reference_count_secs = reference_count_start.elapsed().as_secs_f64();
+        let estimated_component_bytes = integrated_stats
+            .retained_pair_count
+            .checked_mul(6 * std::mem::size_of::<f64>())
+            .ok_or_else(|| anyhow::anyhow!("integrated Gaussian storage estimate overflow"))?;
         let mut params = common_params(
             &input,
             &config,
@@ -131,6 +151,8 @@ fn run_point(
             x_patch_count,
             y_patch_count,
             z_patch_count,
+            compatible_pair_count,
+            output_projector_count,
             left_patch_chi,
             right_patch_chi,
             left_patch_params,
@@ -142,7 +164,21 @@ fn run_point(
             right_axis_error,
         );
         params["compatible_pair_count"] = serde_json::json!(compatible_pair_count);
-        params["predicted_output_patch_count"] = serde_json::json!(predicted_output_patch_count);
+        params["output_projector_count"] = serde_json::json!(output_projector_count);
+        params["cartesian_pair_count"] = serde_json::json!(cartesian_pair_count);
+        params["cartesian_output_patch_count"] = serde_json::json!(cartesian_output_patch_count);
+        params["integrated_total_pair_count"] =
+            serde_json::json!(integrated_stats.total_pair_count);
+        params["integrated_candidate_pair_count"] =
+            serde_json::json!(integrated_stats.candidate_pair_count);
+        params["integrated_retained_pair_count"] =
+            serde_json::json!(integrated_stats.retained_pair_count);
+        params["integrated_count_secs"] = serde_json::json!(reference_count_secs);
+        params["integrated_y_cell_width"] = serde_json::json!(integrated_stats.y_cell_width);
+        params["integrated_estimated_component_bytes"] =
+            serde_json::json!(estimated_component_bytes);
+        params["integrated_omitted_absolute_bound"] =
+            serde_json::json!(integrated_stats.omitted_absolute_bound);
         params["left_input_sampled_relative_l2"] = serde_json::Value::Null;
         params["right_input_sampled_relative_l2"] = serde_json::Value::Null;
         params["error_samples"] = serde_json::json!(0);
@@ -173,6 +209,20 @@ fn run_point(
         return Ok(());
     }
 
+    let reference_cache = cache_dir.join(format!(
+        "integrated-v1-{:016x}-tol{:016x}.bin",
+        stable_key_hash(&input.cache_key),
+        OUTPUT_REFERENCE_ABS_TOLERANCE.to_bits()
+    ));
+    let reference = prepare_integrated_reference(
+        &input.left_mixture,
+        &input.right_mixture,
+        OUTPUT_REFERENCE_ABS_TOLERANCE,
+        &reference_cache,
+        refresh,
+    )?;
+    let reference_cache_bytes = std::fs::metadata(&reference.cache_path)?.len();
+
     let (global_result, global_timing) = time_median(warmups, runs, || {
         prepared.contract_fit_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)
     });
@@ -181,21 +231,19 @@ fn run_point(
     let global_chi = global.max_bond_dim();
     let global_mpo = prepared.finish_global_output(&global)?;
     let grid_step = 2.0 * input.box_l / (1usize << input.r) as f64;
-    let global_error = sampled_relative_l2_vs_aniso_grid(
+    let (global_error, global_max_scaled_error) = center_errors_vs_integrated_gaussians(
         &global_mpo,
         grid_step,
-        &input.left_mixture,
-        &input.right_mixture,
+        &reference.field,
         input.r,
         input.box_l,
         ERROR_SAMPLES,
-        seed.wrapping_add(99),
     )?;
     anyhow::ensure!(
         global_error <= ERROR_SANITY,
         "global contraction error {global_error:.3e}"
     );
-    let common = common_params(
+    let mut common = common_params(
         &input,
         &config,
         input_params,
@@ -204,6 +252,8 @@ fn run_point(
         x_patch_count,
         y_patch_count,
         z_patch_count,
+        compatible_pair_count,
+        output_projector_count,
         left_patch_chi,
         right_patch_chi,
         left_patch_params,
@@ -214,6 +264,22 @@ fn run_point(
         left_axis_error,
         right_axis_error,
     );
+    common["integrated_reference_cache_hit"] = serde_json::json!(reference.cache_hit);
+    common["integrated_reference_cache_load_secs"] =
+        serde_json::json!(reference.cache_load.as_secs_f64());
+    common["integrated_reference_build_secs"] = serde_json::json!(reference.build.as_secs_f64());
+    common["integrated_reference_cache_bytes"] = serde_json::json!(reference_cache_bytes);
+    common["integrated_reference_components"] =
+        serde_json::json!(reference.stats.retained_pair_count);
+    common["integrated_reference_candidate_pairs"] =
+        serde_json::json!(reference.stats.candidate_pair_count);
+    common["integrated_reference_spatial_bins"] = serde_json::json!(reference.field.bin_count());
+    common["integrated_reference_absolute_tolerance"] =
+        serde_json::json!(OUTPUT_REFERENCE_ABS_TOLERANCE);
+    common["center_error_samples"] =
+        serde_json::json!(ERROR_SAMPLES.min(reference.stats.retained_pair_count));
+    common["external_error_metric"] = serde_json::json!("retained_center_relative_l2");
+    common["global_max_rms_scaled_error"] = serde_json::json!(global_max_scaled_error);
     write_record(
         out_dir,
         &format!("{CASE}-global_fit-chi{input_chi}"),
@@ -248,15 +314,13 @@ fn run_point(
         patched_finished.max_patch_bond <= PATCH_CAP,
         "output patch cap exceeded"
     );
-    let patched_error = sampled_relative_l2_vs_aniso_grid(
+    let (patched_error, patched_max_scaled_error) = center_errors_vs_integrated_gaussians(
         &patched_finished.mpo,
         grid_step,
-        &input.left_mixture,
-        &input.right_mixture,
+        &reference.field,
         input.r,
         input.box_l,
         ERROR_SAMPLES,
-        seed.wrapping_add(99),
     )?;
     anyhow::ensure!(
         patched_error <= ERROR_SANITY,
@@ -265,6 +329,7 @@ fn run_point(
     let mut patched_common = common;
     patched_common["speedup_vs_global"] =
         serde_json::json!(global_timing.median_secs / patched_timing.median_secs);
+    patched_common["patched_max_rms_scaled_error"] = serde_json::json!(patched_max_scaled_error);
     write_record(
         out_dir,
         &format!("{CASE}-patched_fit-chi{input_chi}"),
@@ -301,6 +366,8 @@ fn common_params(
     x_patch_count: usize,
     y_patch_count: usize,
     z_patch_count: usize,
+    compatible_pair_count: usize,
+    output_projector_count: usize,
     left_patch_chi: usize,
     right_patch_chi: usize,
     left_patch_params: usize,
@@ -329,8 +396,10 @@ fn common_params(
         "left_input_patch_count": left_patch_count, "right_input_patch_count": right_patch_count,
         "x_patch_count": x_patch_count, "y_patch_count": y_patch_count,
         "z_patch_count": z_patch_count,
-        "compatible_pair_count": x_patch_count * y_patch_count * z_patch_count,
-        "predicted_output_patch_count": x_patch_count * z_patch_count,
+        "compatible_pair_count": compatible_pair_count,
+        "output_projector_count": output_projector_count,
+        "cartesian_pair_count": x_patch_count * y_patch_count * z_patch_count,
+        "cartesian_output_patch_count": x_patch_count * z_patch_count,
         "patch_layout": "balanced_xyz",
         "output_sum_method": "cap_initial_then_fit_sum",
         "output_max_bond_dim": serde_json::Value::Null,

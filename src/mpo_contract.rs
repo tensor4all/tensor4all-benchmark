@@ -4,7 +4,9 @@ use tensor4all_core::{DynIndex, IdxTensor, IndexLike, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain};
 use tensor4all_simplett::mpo::{tensor4_from_data, Tensor4Ops, MPO};
 
-use crate::gaussian::{discrete_contraction_aniso_reference, grid_coord, AnisoMixture2D};
+use crate::gaussian::{
+    discrete_contraction_aniso_reference, grid_coord, AnisoMixture2D, LocalizedAnisoField,
+};
 use crate::harness::{index_to_bits, sample_grid_indices};
 
 /// Full variational sweeps used by every fit contraction arm.
@@ -175,6 +177,58 @@ pub fn sampled_relative_l2_vs_aniso_grid(
     }
     anyhow::ensure!(squared_reference > 0.0, "zero contraction reference norm");
     Ok((squared_error / squared_reference).sqrt())
+}
+
+/// Relative-L2 and maximum RMS-scaled errors at retained output-Gaussian centers.
+pub fn center_errors_vs_integrated_gaussians(
+    output: &MPO<f64>,
+    grid_step: f64,
+    reference: &LocalizedAnisoField,
+    r: usize,
+    box_l: f64,
+    samples: usize,
+) -> anyhow::Result<(f64, f64)> {
+    anyhow::ensure!(samples > 0, "center sample count must be positive");
+    let centers = &reference.mixture().centers;
+    anyhow::ensure!(!centers.is_empty(), "integrated reference has no centers");
+    let count = samples.min(centers.len());
+    let grid_size = 1u64 << r;
+    let to_index = |coordinate: f64| {
+        (((coordinate + box_l) * grid_size as f64 / (2.0 * box_l)).floor() as i64)
+            .clamp(0, grid_size as i64 - 1) as u64
+    };
+    let mut squared_error = 0.0;
+    let mut squared_reference = 0.0;
+    let mut maximum_absolute_error = 0.0_f64;
+    for sample in 0..count {
+        let component = if count == 1 {
+            0
+        } else {
+            sample * (centers.len() - 1) / (count - 1)
+        };
+        let (cx, cz) = centers[component];
+        anyhow::ensure!(
+            cx.abs() < box_l && cz.abs() < box_l,
+            "retained output-Gaussian center lies outside the padded box"
+        );
+        let (ix, iz) = (to_index(cx), to_index(cz));
+        let bits: Vec<_> = index_to_bits(ix, r)
+            .into_iter()
+            .zip(index_to_bits(iz, r))
+            .flat_map(|(x, z)| [x, z])
+            .collect();
+        let expected = reference.eval(grid_coord(ix, r, box_l), grid_coord(iz, r, box_l));
+        let error = output.evaluate(&bits)? * grid_step - expected;
+        squared_error += error * error;
+        squared_reference += expected * expected;
+        maximum_absolute_error = maximum_absolute_error.max(error.abs());
+    }
+    anyhow::ensure!(squared_reference > 0.0, "zero center reference norm");
+    let rms_reference = (squared_reference / count as f64).sqrt();
+    Ok((
+        (squared_error / squared_reference).sqrt(),
+        maximum_absolute_error / rms_reference,
+    ))
 }
 
 /// Sampled maximum relative difference between two MPOs.

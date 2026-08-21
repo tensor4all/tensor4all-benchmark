@@ -4,6 +4,7 @@ pub mod gaussian;
 pub mod gaussian_input;
 pub mod harness;
 pub mod hdf5_export;
+pub mod integrated_gaussian;
 pub mod mpo_contract;
 pub mod patched;
 pub mod patched_mpo;

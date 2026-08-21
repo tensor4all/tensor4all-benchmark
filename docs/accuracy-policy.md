@@ -4,7 +4,7 @@ This repository distinguishes approximation metrics instead of treating every nu
 
 ## Fit on disjoint patches
 
-This section's single-budget bound governs only the elementwise patched-fit arm. The MPO-contraction arm uses balanced input patches, cap-bounded pair fits and initial sums, `fit_sum` for each existing x/z output patch, no hard output cap, and one final adaptive truncation over the completed partition. Those multiple lossy stages are best effort rather than one global `rtol` guarantee; the external sampled relative-L2 error is authoritative.
+This section's single-budget bound governs only the elementwise patched-fit arm. The MPO-contraction arm uses balanced input patches, cap-bounded pair fits and initial sums, `fit_sum` for each existing x/z output patch, no hard output cap, and one final adaptive truncation over the completed partition. Those multiple lossy stages are best effort rather than one global `rtol` guarantee; the external relative-L2 error at deterministic retained output-Gaussian centers is authoritative.
 
 Fit uses a relative L2 SVD policy:
 
@@ -36,7 +36,7 @@ ACI's stopping value is an interpolation residual, not a relative L2 tolerance. 
 ACI output may receive a separate relative-L2 SVD compression. Records keep both metrics:
 
 - the ACI residual tolerance used to construct the product;
-- the achieved deterministic sampled relative-L2 error against the common reference.
+- the achieved deterministic relative-L2 error against the common reference at retained output-Gaussian centers.
 
 No claim equates these two values. The sampled error is the comparison metric across fit and ACI arms.
 
@@ -44,7 +44,7 @@ No claim equates these two values. The sampled error is the comparison metric ac
 
 Whole-mixture global TCI and final input compression happen before the timed operation. The TCI residual, localized-evaluator absolute tail bound, final relative-L2 SVD tolerance, random holdout error, and principal-axis holdout error are recorded separately. The per-Gaussian two-dimensional interpolative builder remains a focused reference test and is not the production generator.
 
-Operation tolerances describe only the elementwise product or contraction. End-to-end sampled error includes both input and operation approximation.
+Operation tolerances describe only the elementwise product or contraction. End-to-end error includes both input and operation approximation. For the padded MPO case, significant infinite-y integrated Gaussian pairs are enumerated with a linked-cell neighbor list under a rigorous positive absolute tail budget, cached as center/precision/weight records, and indexed spatially. Global and patched arms use the same deterministic bounded subset of retained centers; neither validation arm performs an all-pairs scan.
 
 ## Timing boundary
 

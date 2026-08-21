@@ -315,17 +315,20 @@ impl PatchedMpoPair {
         )
     }
 
-    /// Number of left/right patch pairs with compatible projectors.
-    pub fn compatible_input_pair_count(&self) -> usize {
-        self.tree_left
-            .iter()
-            .map(|(left, _)| {
-                self.tree_right
-                    .iter()
-                    .filter(|(right, _)| left.is_compatible_with(right))
-                    .count()
-            })
-            .sum()
+    /// Compatible input-pair and distinct x/z output-projector counts.
+    pub fn input_contraction_layout_counts(&self) -> (usize, usize) {
+        let output_indices: Vec<_> = self.x.iter().chain(&self.z).cloned().collect();
+        let mut compatible_pairs = 0usize;
+        let mut output_projectors = HashSet::new();
+        for (left, _) in self.tree_left.iter() {
+            for (right, _) in self.tree_right.iter() {
+                if let Some(merged) = left.intersection(right) {
+                    compatible_pairs += 1;
+                    output_projectors.insert(merged.filter_indices(&output_indices));
+                }
+            }
+        }
+        (compatible_pairs, output_projectors.len())
     }
 
     /// Largest left and right input patch bond dimensions.

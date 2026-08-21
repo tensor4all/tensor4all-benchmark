@@ -5,7 +5,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use crate::gaussian::{AnisoMixture2D, LocalizedAnisoField};
+use crate::gaussian::AnisoMixture2D;
 
 const CACHE_MAGIC: &[u8; 8] = b"T4AIG02\0";
 /// Global pointwise absolute omission budget for output references.
@@ -26,10 +26,90 @@ pub struct IntegratedGaussianStats {
     pub y_cell_width: f64,
 }
 
+/// Center-only spatial hash for a positive integrated Gaussian mixture.
+pub struct IntegratedGaussianField {
+    mixture: AnisoMixture2D,
+    cutoff_squared: Vec<f64>,
+    exponent_cutoff: f64,
+    bin_width: f64,
+    cell_reach: i64,
+    bins: HashMap<(i64, i64), Vec<usize>>,
+}
+
+impl IntegratedGaussianField {
+    fn new(mixture: AnisoMixture2D, absolute_tolerance: f64) -> anyhow::Result<Self> {
+        let total_weight = mixture.weights.iter().sum::<f64>();
+        anyhow::ensure!(total_weight.is_finite() && total_weight > absolute_tolerance);
+        let exponent_cutoff = (total_weight / absolute_tolerance).ln();
+        let cutoff_squared = mixture
+            .quad
+            .iter()
+            .map(|&(a, b, c)| {
+                let lambda_min = 0.5 * (a + c - ((a - c).powi(2) + 4.0 * b * b).sqrt());
+                anyhow::ensure!(lambda_min.is_finite() && lambda_min > 0.0);
+                Ok(exponent_cutoff / lambda_min)
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let max_radius = cutoff_squared.iter().copied().fold(0.0, f64::max).sqrt();
+        let bin_width = max_radius / 4.0;
+        anyhow::ensure!(bin_width.is_finite() && bin_width > 0.0);
+        let cell = |value: f64| (value / bin_width).floor() as i64;
+        let mut bins: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
+        for (index, &(x, z)) in mixture.centers.iter().enumerate() {
+            bins.entry((cell(x), cell(z))).or_default().push(index);
+        }
+        Ok(Self {
+            mixture,
+            cutoff_squared,
+            exponent_cutoff,
+            bin_width,
+            cell_reach: (max_radius / bin_width).ceil() as i64 + 1,
+            bins,
+        })
+    }
+
+    /// Borrow the retained mixture metadata.
+    pub fn mixture(&self) -> &AnisoMixture2D {
+        &self.mixture
+    }
+
+    /// Number of occupied center cells.
+    pub fn bin_count(&self) -> usize {
+        self.bins.len()
+    }
+
+    /// Evaluate with a rigorous pointwise omission bound.
+    pub fn eval(&self, x: f64, z: f64) -> f64 {
+        let cell = |value: f64| (value / self.bin_width).floor() as i64;
+        let (cx, cz) = (cell(x), cell(z));
+        let mut sum = 0.0;
+        for bx in cx - self.cell_reach..=cx + self.cell_reach {
+            for bz in cz - self.cell_reach..=cz + self.cell_reach {
+                let Some(indices) = self.bins.get(&(bx, bz)) else {
+                    continue;
+                };
+                for &index in indices {
+                    let (mx, mz) = self.mixture.centers[index];
+                    let (a, b, c) = self.mixture.quad[index];
+                    let (dx, dz) = (x - mx, z - mz);
+                    if dx * dx + dz * dz > self.cutoff_squared[index] {
+                        continue;
+                    }
+                    let exponent = a * dx * dx + 2.0 * b * dx * dz + c * dz * dz;
+                    if exponent <= self.exponent_cutoff {
+                        sum += self.mixture.weights[index] * (-exponent).exp();
+                    }
+                }
+            }
+        }
+        sum
+    }
+}
+
 /// Cached and spatially indexed integrated-mixture reference.
 pub struct IntegratedGaussianReference {
-    /// Localized x/z evaluator containing the retained Gaussian metadata.
-    pub field: LocalizedAnisoField,
+    /// Center-cell x/z evaluator containing the retained Gaussian metadata.
+    pub field: IntegratedGaussianField,
     /// Pair-enumeration statistics from cache construction.
     pub stats: IntegratedGaussianStats,
     /// Whether the retained mixture was loaded from disk.
@@ -65,7 +145,7 @@ pub fn prepare_integrated_reference(
         let (mixture, stats, build) = build_cache(left, right, absolute_tolerance, cache_path)?;
         (mixture, stats, false, Duration::ZERO, build)
     };
-    let field = LocalizedAnisoField::new(mixture, absolute_tolerance)?;
+    let field = IntegratedGaussianField::new(mixture, absolute_tolerance)?;
     Ok(IntegratedGaussianReference {
         field,
         stats,
@@ -455,9 +535,11 @@ mod tests {
         let (output, stats) = integrate_mixtures(&left, &right, 1e-14).unwrap();
         assert_eq!(stats.retained_pair_count, output.weights.len());
         assert!(stats.candidate_pair_count <= stats.total_pair_count);
+        let field = IntegratedGaussianField::new(output.clone(), 1e-14).unwrap();
         for (x, z) in [(-0.8, 0.3), (0.1, -0.2), (1.2, 0.9)] {
             let expected = analytic_contraction_aniso(&left, &right, x, z);
             assert!((output.eval(x, z) - expected).abs() < 1e-11);
+            assert!((field.eval(x, z) - expected).abs() < 2e-11);
         }
     }
 

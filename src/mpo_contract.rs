@@ -4,10 +4,9 @@ use tensor4all_core::{DynIndex, IdxTensor, IndexLike, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain};
 use tensor4all_simplett::mpo::{tensor4_from_data, Tensor4Ops, MPO};
 
-use crate::gaussian::{
-    discrete_contraction_aniso_reference, grid_coord, AnisoMixture2D, LocalizedAnisoField,
-};
+use crate::gaussian::{discrete_contraction_aniso_reference, grid_coord, AnisoMixture2D};
 use crate::harness::{index_to_bits, sample_grid_indices};
+use crate::integrated_gaussian::IntegratedGaussianField;
 
 /// Full variational sweeps used by every fit contraction arm.
 pub const FIT_NSWEEPS: usize = 1;
@@ -183,7 +182,7 @@ pub fn sampled_relative_l2_vs_aniso_grid(
 pub fn center_errors_vs_integrated_gaussians(
     output: &MPO<f64>,
     grid_step: f64,
-    reference: &LocalizedAnisoField,
+    reference: &IntegratedGaussianField,
     r: usize,
     box_l: f64,
     samples: usize,

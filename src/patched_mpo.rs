@@ -390,11 +390,13 @@ impl PatchedMpoPair {
             &center,
             &tree_right_input_options,
         )?;
-        anyhow::ensure!(
-            (adaptive_tree_left.len(), adaptive_tree_right.len())
-                == (tt_left.len(), tt_right.len()),
-            "TT and TreeTN adaptive patch counts differ"
-        );
+        if layout == MpoPatchLayout::BalancedXyz {
+            anyhow::ensure!(
+                (adaptive_tree_left.len(), adaptive_tree_right.len())
+                    == (tt_left.len(), tt_right.len()),
+                "TT and TreeTN adaptive patch counts differ"
+            );
+        }
         let tree_left = match layout {
             MpoPatchLayout::BalancedXyz => {
                 regularize_binary_partition(&adaptive_tree_left, &[&x, &y])?

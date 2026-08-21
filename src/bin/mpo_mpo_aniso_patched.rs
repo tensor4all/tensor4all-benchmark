@@ -63,6 +63,9 @@ struct PatchProbe {
     left_relative_error: f64,
     right_relative_error: f64,
     validation_secs: f64,
+    parameter_product_proxy: u64,
+    bond_product_proxy: u64,
+    cubed_bond_product_proxy: f64,
 }
 
 fn build_patch_probe(
@@ -90,6 +93,8 @@ fn build_patch_probe(
     } else {
         0.0
     };
+    let (parameter_product_proxy, bond_product_proxy, cubed_bond_product_proxy) =
+        prepared.input_contraction_proxies()?;
     Ok(PatchProbe {
         prepared,
         build_secs,
@@ -108,6 +113,9 @@ fn build_patch_probe(
         left_relative_error,
         right_relative_error,
         validation_secs,
+        parameter_product_proxy,
+        bond_product_proxy,
+        cubed_bond_product_proxy,
     })
 }
 
@@ -277,6 +285,12 @@ fn run_point(
                 probe.left_relative_error <= INPUT_L2_RTOL
                     && probe.right_relative_error <= INPUT_L2_RTOL
             );
+            params["compatible_parameter_product_proxy"] =
+                serde_json::json!(probe.parameter_product_proxy);
+            params["compatible_max_bond_product_proxy"] =
+                serde_json::json!(probe.bond_product_proxy);
+            params["compatible_max_bond_product_cubed_proxy"] =
+                serde_json::json!(probe.cubed_bond_product_proxy);
             if let Some((stats, count_secs)) = &integrated_stats {
                 params["integrated_total_pair_count"] = serde_json::json!(stats.total_pair_count);
                 params["integrated_candidate_pair_count"] =
@@ -344,6 +358,9 @@ fn run_point(
         left_relative_error: _,
         right_relative_error: _,
         validation_secs: _,
+        parameter_product_proxy: _,
+        bond_product_proxy: _,
+        cubed_bond_product_proxy: _,
     } = probe;
     let y_patch_count = left_y_patch_count.max(right_y_patch_count);
     let cartesian_pair_count = x_patch_count

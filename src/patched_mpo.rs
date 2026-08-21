@@ -189,27 +189,26 @@ pub fn tensortrain_n_params(tt: &TensorTrain) -> usize {
         .sum()
 }
 
-/// Total stored scalar entries across a patched chain TreeTN.
-pub fn partitioned_treetn_n_params(output: &tree::PartitionedTreeTN<usize>) -> usize {
-    output
-        .values()
-        .map(|subdomain| {
-            let network = subdomain.data();
-            network
-                .node_names()
-                .into_iter()
-                .filter_map(|node| network.node_index(&node))
-                .filter_map(|node| network.tensor(node))
-                .map(|tensor| {
-                    tensor
-                        .indices()
-                        .iter()
-                        .map(|index| index.dim)
-                        .product::<usize>()
-                })
-                .sum::<usize>()
+fn subdomain_treetn_n_params(subdomain: &tree::SubDomainTreeTN<usize>) -> usize {
+    let network = subdomain.data();
+    network
+        .node_names()
+        .into_iter()
+        .filter_map(|node| network.node_index(&node))
+        .filter_map(|node| network.tensor(node))
+        .map(|tensor| {
+            tensor
+                .indices()
+                .iter()
+                .map(|index| index.dim)
+                .product::<usize>()
         })
         .sum()
+}
+
+/// Total stored scalar entries across a patched chain TreeTN.
+pub fn partitioned_treetn_n_params(output: &tree::PartitionedTreeTN<usize>) -> usize {
+    output.values().map(subdomain_treetn_n_params).sum()
 }
 
 impl PatchedMpoPair {
@@ -476,6 +475,42 @@ impl PatchedMpoPair {
         (compatible_pairs, output_projectors.len())
     }
 
+    /// Coarse work proxies summed over actual compatible input pairs.
+    ///
+    /// Returns `(parameter_product_sum, max_bond_product_sum,
+    /// max_bond_product_cubed_sum)`. These are structural proxies, not measured
+    /// floating-point operation counts.
+    pub fn input_contraction_proxies(&self) -> anyhow::Result<(u64, u64, f64)> {
+        let mut parameter_products = 0u64;
+        let mut bond_products = 0u64;
+        let mut cubed_bond_products = 0.0;
+        for (left_projector, left) in self.tree_left.iter() {
+            for (right_projector, right) in self.tree_right.iter() {
+                if !left_projector.is_compatible_with(right_projector) {
+                    continue;
+                }
+                let parameter_product = subdomain_treetn_n_params(left)
+                    .checked_mul(subdomain_treetn_n_params(right))
+                    .and_then(|value| u64::try_from(value).ok())
+                    .ok_or_else(|| anyhow::anyhow!("parameter-product proxy overflow"))?;
+                parameter_products = parameter_products
+                    .checked_add(parameter_product)
+                    .ok_or_else(|| anyhow::anyhow!("parameter-product proxy sum overflow"))?;
+                let bond_product = left
+                    .max_bond_dim()
+                    .checked_mul(right.max_bond_dim())
+                    .and_then(|value| u64::try_from(value).ok())
+                    .ok_or_else(|| anyhow::anyhow!("bond-product proxy overflow"))?;
+                bond_products = bond_products
+                    .checked_add(bond_product)
+                    .ok_or_else(|| anyhow::anyhow!("bond-product proxy sum overflow"))?;
+                cubed_bond_products += (bond_product as f64).powi(3);
+            }
+        }
+        anyhow::ensure!(cubed_bond_products.is_finite(), "cubed bond proxy overflow");
+        Ok((parameter_products, bond_products, cubed_bond_products))
+    }
+
     /// Sorted maximum bond dimensions of every left and right input patch.
     pub fn input_patch_bond_dims(&self) -> (Vec<usize>, Vec<usize>) {
         let sorted = |partition: &tree::PartitionedTreeTN<usize>| {
@@ -508,25 +543,7 @@ impl PatchedMpoPair {
     /// Sorted parameter counts of every left and right input patch.
     pub fn input_patch_param_counts(&self) -> (Vec<usize>, Vec<usize>) {
         let sorted = |partition: &tree::PartitionedTreeTN<usize>| {
-            let mut values: Vec<_> = partition
-                .values()
-                .map(|patch| {
-                    patch
-                        .data()
-                        .node_names()
-                        .into_iter()
-                        .filter_map(|node| patch.data().node_index(&node))
-                        .filter_map(|node| patch.data().tensor(node))
-                        .map(|tensor| {
-                            tensor
-                                .indices()
-                                .iter()
-                                .map(|index| index.dim)
-                                .product::<usize>()
-                        })
-                        .sum()
-                })
-                .collect();
+            let mut values: Vec<_> = partition.values().map(subdomain_treetn_n_params).collect();
             values.sort_unstable();
             values
         };

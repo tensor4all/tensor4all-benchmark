@@ -12,7 +12,7 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
-The MPO-contraction profile through compressed χ418 is in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md).
+The current factor-4 padded patch-scaling and profiled small-N MPO results are in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
 
 ## Gaussian input
 

@@ -1,6 +1,6 @@
 profile: linux-epyc-7713p-patch-layout-scaling-r16
 date: 2026-08-22
-repository_revision: eec00261cdeedce9a1e34f5e4c23da7974089029
+repository_revision: dbdab7f39affed22a1e4dc647e01e7c854df2636
 tensor4all_rs_revision: 1b3ebb74ea40d5aa0c44f39d7bcfba34710e038b
 input_cache_compatibility_revision: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
 cpu: AMD EPYC 7713P 64-Core Processor
@@ -16,21 +16,29 @@ quantics_bits_per_axis: 16
 padding_factor: 4
 patch_cap: 128
 patch_input_rtol: 1e-6
+patch_local_sweep_rtol: 1.8257418583505538e-7
+patch_local_svd_cutoff: 3.333333333333333e-14
+patch_svd_visit_budget_count: 30
 contraction_performed: false
 patch_build_repetitions: 1
 layouts:
   - balanced_xyz
   - shared_y_only
 default_n_points: [512, 1024, 2048, 4096, 8192, 12000]
-fixed_n_chi_sweep:
+fixed_n_chi_checks:
+  n: 8192
+  input_l2_rtols: [1e-6, 3e-10]
+  achieved_chi: [283, 418]
+bounded_chi_attempts:
   n: 12000
-  input_l2_rtols: [1e-6, 1e-8, 1e-9, 1e-10]
-  achieved_chi: [282, 423, 499, 583]
+  input_l2_rtols: [1e-7, 1e-8]
+  status: timeout
 measurement_command_timeout_seconds: 570
 notes:
   - Integrated-output Gaussian counting is disabled; this profile measures patch layouts only.
   - Patch construction time excludes input load/build, input compression, format conversion, and exact patch reconstruction validation.
   - Reconstruction validation exactly compares each summed partition against its compressed global input.
+  - The requested patch-input squared budget is divided over the TreeTN truncation plan's two visits to each of 15 chain edges; exact residual validation remains authoritative.
   - Structural contraction proxies are not measured FLOP counts or speedups.
   - The cache-key revision is the input-generator compatibility baseline; tensor4all_rs_revision is the actual patched worktree used for this run.
   - Raw padded input tensors are gitignored and are not part of this artifact; exact regeneration rebuilds or supplies the v4 padded caches.

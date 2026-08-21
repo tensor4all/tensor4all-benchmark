@@ -64,25 +64,34 @@ def main() -> None:
                 f"{p['left_patch_relative_error']:.3e}/{p['right_patch_relative_error']:.3e} | "
                 f"{record['wall_time_median_secs']:.3f} | {p['patch_validation_secs']:.3f} |"
             )
+    chi_ns = {
+        record["params"]["n_gauss"]
+        for record in records
+        if record["params"]["input_l2_rtol"] != 1e-6
+    }
     chi_records = sorted(
         (
             record
             for record in records
-            if record["params"]["n_gauss"] == 12000
+            if record["params"]["n_gauss"] in chi_ns
         ),
-        key=lambda record: (record["input_max_bond_dim"], record["algorithm"]),
+        key=lambda record: (
+            record["params"]["n_gauss"],
+            record["input_max_bond_dim"],
+            record["algorithm"],
+        ),
     )
     lines += [
         "",
-        "## Fixed-N compressed-χ sweep (N=12,000)",
+        "## Selected fixed-N compressed-χ checks",
         "",
-        "| input rtol | χ | layout | patches L/R | pairs | outputs | max χ L/R | parameter-product proxy | cubed max-bond proxy | reconstruction error max |",
-        "|---:|---:|:---|---:|---:|---:|---:|---:|---:|---:|",
+        "| N | input rtol | χ | layout | patches L/R | pairs | outputs | max χ L/R | parameter-product proxy | cubed max-bond proxy | reconstruction error max |",
+        "|---:|---:|---:|:---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for record in chi_records:
         p = record["params"]
         lines.append(
-            f"| {p['input_l2_rtol']:.0e} | {record['input_max_bond_dim']} | {record['algorithm']} | "
+            f"| {p['n_gauss']:,} | {p['input_l2_rtol']:.0e} | {record['input_max_bond_dim']} | {record['algorithm']} | "
             f"{p['left_input_patch_count']}/{p['right_input_patch_count']} | "
             f"{p['compatible_pair_count']} | {p['output_projector_count']} | "
             f"{p['left_input_max_patch_chi']}/{p['right_input_max_patch_chi']} | "
@@ -96,12 +105,12 @@ def main() -> None:
         "",
         "## Interpretation",
         "",
-        "- At N=512 and N=1,024 the layouts are identical because no x/z refinement is selected; the balanced-versus-y-only comparison becomes nontrivial at N=2,048.",
+        "- The layouts are identical only at N=512. At N=1,024, balanced uses 4/4 patches while shared-y-only uses 8/12, although both still have eight compatible pairs.",
         "- The observed balanced staircase reaches 32 patches/operand, 128 compatible pairs, and 16 output groups at N=4,096, then remains unchanged through N=12,000.",
-        "- Shared-y-only reaches 16 patches/operand at N=4,096 and 32 at N=8,192. From N=8,192 onward it has 32 compatible pairs and one output group, versus balanced 128 and 16.",
+        "- Shared-y-only reaches 32 patches/operand at N=4,096. From that point onward it has 32 compatible pairs and one output group, versus balanced 128 and 16.",
         f"- At N=12,000, shared-y-only has {ratio(y['compatible_parameter_product_proxy'], b['compatible_parameter_product_proxy']):.3f}× the balanced parameter-product proxy and {ratio(y['compatible_max_bond_product_cubed_proxy'], b['compatible_max_bond_product_cubed_proxy']):.3f}× the cubed max-bond proxy. This suggests less pairwise contraction work, but it does not include the rank of each contracted contribution or the cost of fitting all y contributions into one global x/z output group.",
-        "- Increasing compressed input χ from 282 to 583 at fixed N does not change either patch layout. The patch representation is truncated with its separate fixed `patch_input_rtol=1e-6`, so additional global-input precision is discarded before the hypothetical contraction.",
-        "- Exact reconstruction errors are approximately 1.3e-6 to 4.8e-6 and therefore exceed the nominal 1e-6 patch tolerance. The records mark `patch_tolerance_met=false`; no contraction estimate should hide this effective patch-error floor.",
+        "- At N=8,192, increasing compressed input χ from 283 to 418 does not change either patch layout. The higher-rank inputs remain within the independently checked patch tolerance. N=12,000 χ≥423 probes exceeded the 570-second construction/validation bound and are not reported as measurements.",
+        "- The requested whole-input `patch_input_rtol=1e-6` is converted to a local SVD tolerance by distributing its squared budget over two visits to each of the 15 chain edges. Every recorded exact reconstruction residual is at most 8.94e-7 and has `patch_tolerance_met=true`.",
         "- The bounded N=16,384 attempt timed out during padded global-TCI input construction before producing a patch record. Therefore the next N-driven staircase is only bounded as greater than 12,000 in this single-core, 570-second workflow.",
         "",
         "The compatible-pair and structural proxy ratios are not measured contraction speedups.",

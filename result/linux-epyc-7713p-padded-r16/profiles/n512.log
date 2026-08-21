@@ -1,42 +1,42 @@
 === contract_fit Profiling ===
-zipup init:        4.98994016s
+zipup init:        4.820756628s
 canonicalize:      0ns
-sweeps total:      2.183051177s
+sweeps total:      1.933624798s
 steps:             30
 sweeps:            1
-env get:           7.016956983s (requests=95, hits=53, misses=42)
-env leaf compute:  730.996µs
-env node compute:  1.108921977s
-2-site contract:   972.326239ms
-left_inds:         45.292µs
-factorize:         65.154894ms
-replace/update:    228.987µs
-invalidate:        11.689298ms
+env get:           6.519694573s (requests=95, hits=53, misses=42)
+env leaf compute:  873.018µs
+env node compute:  1.002062684s
+2-site contract:   851.863274ms
+left_inds:         42.605µs
+factorize:         62.921507ms
+replace/update:    226.438µs
+invalidate:        3.713503ms
 === contract_fit Profiling ===
-zipup init:        1.512067451s
+zipup init:        1.2620822s
 canonicalize:      0ns
-sweeps total:      1.444491799s
+sweeps total:      1.227799472s
 steps:             30
 sweeps:            1
-env get:           2.979374352s (requests=95, hits=53, misses=42)
-env leaf compute:  670.352µs
-env node compute:  603.839497ms
-2-site contract:   772.44655ms
-left_inds:         65.782µs
-factorize:         55.728513ms
-replace/update:    233.548µs
-invalidate:        154.574µs
+env get:           2.370366s (requests=95, hits=53, misses=42)
+env leaf compute:  614.048µs
+env node compute:  509.29151ms
+2-site contract:   654.220886ms
+left_inds:         37.421µs
+factorize:         51.898389ms
+replace/update:    205.26µs
+invalidate:        150.62µs
 === fit_sum Profiling ===
 zipup init:        0ns
-canonicalize:      6.109253ms
-sweeps total:      64.865212ms
+canonicalize:      5.132781ms
+sweeps total:      58.863043ms
 steps:             30
 sweeps:            1
 env get:           0ns (requests=0, hits=0, misses=0)
 env leaf compute:  0ns
 env node compute:  0ns
-2-site contract:   12.154368ms
-left_inds:         36.35µs
-factorize:         42.875426ms
-replace/update:    185.253µs
-invalidate:        111.142µs
+2-site contract:   10.937393ms
+left_inds:         28.152µs
+factorize:         38.929776ms
+replace/update:    155.98µs
+invalidate:        98.954µs

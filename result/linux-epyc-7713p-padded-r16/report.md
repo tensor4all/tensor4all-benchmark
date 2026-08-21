@@ -21,14 +21,14 @@ The patch count is a rank-cap staircase rather than a smooth power law: one patc
 
 | N | input χ | global (s) | patched (s) | speedup | global error | patched error | compatible contributions | output patches |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 512 | 115 | 7.180 | 3.105 | 2.312x | 1.964e-06 | 2.664e-06 | 1 | 1 |
-| 4,096 | 263 | 73.252 | 72.097 | 1.016x | 1.922e-06 | 2.080e-06 | 128 | 16 |
+| 512 | 115 | 6.755 | 2.620 | 2.578x | 1.964e-06 | 2.664e-06 | 1 | 1 |
+| 4,096 | 263 | 70.155 | 68.743 | 1.021x | 1.922e-06 | 2.080e-06 | 128 | 16 |
 
 ## Fit/contraction timing breakdown
 
 | N | global zipup init (s) | global sweep (s) | contribution contractions (s) | fit_sum (s) | patched remainder (s) |
 |---:|---:|---:|---:|---:|---:|
-| 512 | 4.990 | 2.183 | 2.957 (1 calls) | 0.071 (1 calls) | 0.077 |
-| 4,096 | 49.170 | 24.037 | 58.370 (128 calls) | 3.019 (16 calls) | 10.708 |
+| 512 | 4.821 | 1.934 | 2.490 (1 calls) | 0.064 (1 calls) | 0.066 |
+| 4,096 | 46.953 | 23.160 | 56.961 (128 calls) | 3.037 (16 calls) | 8.745 |
 
 At N=4096 the compatible contribution contractions dominate the patched arm; `fit_sum` is a small fraction. The current factor-4 padded input reaches χ≈263 at N=4096. Larger-N contraction timing was intentionally not run: this profile is for patch scaling plus repeatable small-N timing, with every measurement command bounded below ten minutes.

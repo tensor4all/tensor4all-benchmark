@@ -1,0 +1,32 @@
+profile: linux-epyc-7713p-patch-layout-scaling-r16
+date: 2026-08-22
+repository_revision: eec00261cdeedce9a1e34f5e4c23da7974089029
+tensor4all_rs_revision: 1b3ebb74ea40d5aa0c44f39d7bcfba34710e038b
+cpu: AMD EPYC 7713P 64-Core Processor
+cpu_affinity: 0
+threads:
+  rayon: 1
+  omp: 1
+  openblas: 1
+  mkl: 1
+  blis: 1
+build: cargo release locked
+quantics_bits_per_axis: 16
+padding_factor: 4
+patch_cap: 128
+patch_input_rtol: 1e-6
+contraction_performed: false
+layouts:
+  - balanced_xyz
+  - shared_y_only
+default_n_points: [512, 1024, 2048, 4096, 8192, 12000]
+fixed_n_chi_sweep:
+  n: 12000
+  input_l2_rtols: [1e-6, 1e-8, 1e-9, 1e-10]
+  achieved_chi: [282, 423, 499, 583]
+measurement_command_timeout_seconds: 570
+notes:
+  - Integrated-output Gaussian counting is disabled; this profile measures patch layouts only.
+  - Patch construction time excludes input load/build, input compression, format conversion, and exact patch reconstruction validation.
+  - Reconstruction validation exactly compares each summed partition against its compressed global input.
+  - Structural contraction proxies are not measured FLOP counts or speedups.

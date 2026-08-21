@@ -35,6 +35,12 @@ run() {
 }
 
 repo_rev=$(git rev-parse HEAD)
+local_tensor4all="../tensor4all-rs/.worktrees/adaptive-contract-scheduling"
+tensor4all_rev=${TENSOR4ALL_RS_REV:-}
+if [[ -z $tensor4all_rev && -d $local_tensor4all/.git ]]; then
+  tensor4all_rev=$(git -C "$local_tensor4all" rev-parse HEAD)
+fi
+tensor4all_rev=${tensor4all_rev:-9e9aedaebe0d3918b34dd399ff0981e337f3835b}
 if [[ -n $(git status --porcelain --untracked-files=no -- . ':!result') ]]; then
   repo_rev="${repo_rev}-dirty"
 fi
@@ -50,7 +56,7 @@ os: $(uname -s)
 chip: ${chip:-unknown}
 memory_gb: ${memory_gb:-unknown}
 repo_rev: $repo_rev
-tensor4all_rs_rev: ${TENSOR4ALL_RS_REV:-9e9aedaebe0d3918b34dd399ff0981e337f3835b}
+tensor4all_rs_rev: $tensor4all_rev
 threads: 1
 cpu_affinity: $core
 EOF

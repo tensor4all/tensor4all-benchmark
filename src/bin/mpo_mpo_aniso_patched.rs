@@ -19,7 +19,9 @@ use t4a_bench::integrated_gaussian::{
     count_integrated_components, prepare_integrated_reference, OUTPUT_REFERENCE_ABS_TOLERANCE,
 };
 use t4a_bench::mpo_contract::center_errors_vs_integrated_gaussians;
-use t4a_bench::patched_mpo::{partitioned_treetn_n_params, tensortrain_n_params, PatchedMpoPair};
+use t4a_bench::patched_mpo::{
+    partitioned_treetn_n_params, tensortrain_n_params, MpoPatchLayout, PatchedMpoPair,
+};
 use t4a_bench::record::{write_record, RunRecord, SCHEMA_VERSION};
 
 const CASE: &str = "gaussian_mpo_contraction";
@@ -41,6 +43,76 @@ fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(default)
+}
+
+struct PatchProbe {
+    prepared: PatchedMpoPair,
+    build_secs: f64,
+    left_count: usize,
+    right_count: usize,
+    x_count: usize,
+    left_y_count: usize,
+    right_y_count: usize,
+    z_count: usize,
+    compatible_pairs: usize,
+    output_projectors: usize,
+    left_bonds: Vec<usize>,
+    right_bonds: Vec<usize>,
+    left_params: Vec<usize>,
+    right_params: Vec<usize>,
+    left_relative_error: f64,
+    right_relative_error: f64,
+    validation_secs: f64,
+}
+
+fn build_patch_probe(
+    left: &tensor4all_simplett::mpo::MPO<f64>,
+    right: &tensor4all_simplett::mpo::MPO<f64>,
+    layout: MpoPatchLayout,
+    validate: bool,
+) -> anyhow::Result<PatchProbe> {
+    let start = Instant::now();
+    let prepared = PatchedMpoPair::new_with_layout(left, right, INPUT_L2_RTOL, PATCH_CAP, layout)?;
+    let build_secs = start.elapsed().as_secs_f64();
+    let (left_count, right_count) = prepared.input_patch_counts();
+    let (x_count, left_y_count, right_y_count, z_count) = prepared.input_axis_patch_counts();
+    let (compatible_pairs, output_projectors) = prepared.input_contraction_layout_counts();
+    let (left_bonds, right_bonds) = prepared.input_patch_bond_dims();
+    let (left_params, right_params) = prepared.input_patch_param_counts();
+    let validation_start = Instant::now();
+    let (left_relative_error, right_relative_error) = if validate {
+        prepared.input_patch_relative_errors()?
+    } else {
+        (0.0, 0.0)
+    };
+    let validation_secs = if validate {
+        validation_start.elapsed().as_secs_f64()
+    } else {
+        0.0
+    };
+    Ok(PatchProbe {
+        prepared,
+        build_secs,
+        left_count,
+        right_count,
+        x_count,
+        left_y_count,
+        right_y_count,
+        z_count,
+        compatible_pairs,
+        output_projectors,
+        left_bonds,
+        right_bonds,
+        left_params,
+        right_params,
+        left_relative_error,
+        right_relative_error,
+        validation_secs,
+    })
+}
+
+fn quantile(sorted: &[usize], numerator: usize, denominator: usize) -> usize {
+    sorted[(sorted.len() - 1) * numerator / denominator]
 }
 
 fn main() -> anyhow::Result<()> {
@@ -107,15 +179,173 @@ fn run_point(
     );
     let left_mpo = fused_qtt_to_mpo(&input.left)?;
     let right_mpo = fused_qtt_to_mpo(&input.right)?;
-    let patch_start = Instant::now();
-    let prepared = PatchedMpoPair::new(&left_mpo, &right_mpo, INPUT_L2_RTOL, PATCH_CAP)?;
-    let patch_secs = patch_start.elapsed().as_secs_f64();
-    let (left_patch_count, right_patch_count) = prepared.input_patch_counts();
-    let (x_patch_count, left_y_patch_count, right_y_patch_count, z_patch_count) =
-        prepared.input_axis_patch_counts();
+    let input_chi = input.left.rank().max(input.right.rank());
+    let input_params = simple_n_params(&input.left) + simple_n_params(&input.right);
+
+    if patch_only {
+        let layouts = std::env::var("BENCH_PATCH_LAYOUTS")
+            .unwrap_or_else(|_| "balanced_xyz".into())
+            .split(',')
+            .map(|token| match token.trim() {
+                "balanced_xyz" | "balanced" => Ok(MpoPatchLayout::BalancedXyz),
+                "shared_y_only" | "y_only" => Ok(MpoPatchLayout::SharedYOnly),
+                other => anyhow::bail!("unknown BENCH_PATCH_LAYOUTS token: {other}"),
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        anyhow::ensure!(!layouts.is_empty(), "BENCH_PATCH_LAYOUTS is empty");
+        let integrated_stats = if env_or("BENCH_SKIP_REFERENCE_COUNT", 0usize) == 0 {
+            let start = Instant::now();
+            let stats = count_integrated_components(
+                &input.left_mixture,
+                &input.right_mixture,
+                OUTPUT_REFERENCE_ABS_TOLERANCE,
+            )?;
+            Some((stats, start.elapsed().as_secs_f64()))
+        } else {
+            None
+        };
+        for layout in layouts {
+            let probe = build_patch_probe(&left_mpo, &right_mpo, layout, true)?;
+            let left_patch_chi = *probe.left_bonds.last().unwrap_or(&0);
+            let right_patch_chi = *probe.right_bonds.last().unwrap_or(&0);
+            anyhow::ensure!(
+                left_patch_chi.max(right_patch_chi) <= PATCH_CAP,
+                "input patch cap exceeded"
+            );
+            let left_patch_params: usize = probe.left_params.iter().sum();
+            let right_patch_params: usize = probe.right_params.iter().sum();
+            let y_patch_count = probe.left_y_count.max(probe.right_y_count);
+            let cartesian_pair_count = probe
+                .x_count
+                .checked_mul(y_patch_count)
+                .and_then(|count| count.checked_mul(probe.z_count))
+                .ok_or_else(|| anyhow::anyhow!("Cartesian compatible-pair estimate overflow"))?;
+            let cartesian_output_patch_count = probe
+                .x_count
+                .checked_mul(probe.z_count)
+                .ok_or_else(|| anyhow::anyhow!("Cartesian output-patch estimate overflow"))?;
+            let mut params = common_params(
+                &input,
+                &config,
+                input_params,
+                input_l2_rtol,
+                probe.left_count,
+                probe.right_count,
+                probe.x_count,
+                y_patch_count,
+                probe.z_count,
+                probe.left_y_count,
+                probe.right_y_count,
+                probe.compatible_pairs,
+                probe.output_projectors,
+                cartesian_pair_count,
+                cartesian_output_patch_count,
+                left_patch_chi,
+                right_patch_chi,
+                left_patch_params,
+                right_patch_params,
+                probe.build_secs,
+                left_input_error,
+                right_input_error,
+                left_axis_error,
+                right_axis_error,
+            );
+            params["patch_layout"] = serde_json::json!(layout.as_str());
+            params["left_patch_bond_dims"] = serde_json::json!(probe.left_bonds);
+            params["right_patch_bond_dims"] = serde_json::json!(probe.right_bonds);
+            params["left_patch_param_counts"] = serde_json::json!(probe.left_params);
+            params["right_patch_param_counts"] = serde_json::json!(probe.right_params);
+            params["left_patch_chi_median"] = serde_json::json!(quantile(&probe.left_bonds, 1, 2));
+            params["right_patch_chi_median"] =
+                serde_json::json!(quantile(&probe.right_bonds, 1, 2));
+            params["left_patch_chi_p90"] = serde_json::json!(quantile(&probe.left_bonds, 9, 10));
+            params["right_patch_chi_p90"] = serde_json::json!(quantile(&probe.right_bonds, 9, 10));
+            params["left_cap_saturated_patches"] = serde_json::json!(probe
+                .left_bonds
+                .iter()
+                .filter(|&&bond| bond == PATCH_CAP)
+                .count());
+            params["right_cap_saturated_patches"] = serde_json::json!(probe
+                .right_bonds
+                .iter()
+                .filter(|&&bond| bond == PATCH_CAP)
+                .count());
+            params["left_patch_relative_error"] = serde_json::json!(probe.left_relative_error);
+            params["right_patch_relative_error"] = serde_json::json!(probe.right_relative_error);
+            params["patch_validation_secs"] = serde_json::json!(probe.validation_secs);
+            params["patch_tolerance_met"] = serde_json::json!(
+                probe.left_relative_error <= INPUT_L2_RTOL
+                    && probe.right_relative_error <= INPUT_L2_RTOL
+            );
+            if let Some((stats, count_secs)) = &integrated_stats {
+                params["integrated_total_pair_count"] = serde_json::json!(stats.total_pair_count);
+                params["integrated_candidate_pair_count"] =
+                    serde_json::json!(stats.candidate_pair_count);
+                params["integrated_retained_pair_count"] =
+                    serde_json::json!(stats.retained_pair_count);
+                params["integrated_count_secs"] = serde_json::json!(count_secs);
+                params["integrated_y_cell_width"] = serde_json::json!(stats.y_cell_width);
+                params["integrated_estimated_component_bytes"] =
+                    serde_json::json!(stats.retained_pair_count * 6 * std::mem::size_of::<f64>());
+                params["integrated_omitted_absolute_bound"] =
+                    serde_json::json!(stats.omitted_absolute_bound);
+            }
+            params["left_input_sampled_relative_l2"] = serde_json::Value::Null;
+            params["right_input_sampled_relative_l2"] = serde_json::Value::Null;
+            params["error_samples"] = serde_json::json!(0);
+            params["external_error_metric"] = serde_json::json!("principal_axis_relative_l2");
+            let suffix = match layout {
+                MpoPatchLayout::BalancedXyz => "",
+                MpoPatchLayout::SharedYOnly => "-y-only",
+            };
+            write_record(
+                out_dir,
+                &format!("gaussian_mpo_patch_scaling{suffix}-n{n}-chi{input_chi}"),
+                &RunRecord {
+                    schema_version: SCHEMA_VERSION,
+                    case: "gaussian_mpo_patch_scaling".into(),
+                    algorithm: layout.as_str().into(),
+                    params,
+                    seed,
+                    tolerance: INPUT_L2_RTOL,
+                    wall_time_median_secs: probe.build_secs,
+                    wall_times_secs: vec![probe.build_secs],
+                    max_error: left_axis_error.max(right_axis_error),
+                    input_max_bond_dim: input_chi,
+                    output_max_bond_dim: left_patch_chi.max(right_patch_chi),
+                    output_bond_dims: vec![left_patch_chi, right_patch_chi],
+                    n_params: Some(left_patch_params + right_patch_params),
+                    n_patches: Some(probe.left_count + probe.right_count),
+                    max_patch_bond: Some(left_patch_chi.max(right_patch_chi)),
+                    rtol: Some(INPUT_L2_RTOL),
+                    input_build_secs: Some(input.build.as_secs_f64()),
+                },
+            )?;
+        }
+        return Ok(());
+    }
+
+    let probe = build_patch_probe(&left_mpo, &right_mpo, MpoPatchLayout::BalancedXyz, false)?;
+    let PatchProbe {
+        prepared,
+        build_secs: patch_secs,
+        left_count: left_patch_count,
+        right_count: right_patch_count,
+        x_count: x_patch_count,
+        left_y_count: left_y_patch_count,
+        right_y_count: right_y_patch_count,
+        z_count: z_patch_count,
+        compatible_pairs: compatible_pair_count,
+        output_projectors: output_projector_count,
+        left_bonds,
+        right_bonds,
+        left_params,
+        right_params,
+        left_relative_error: _,
+        right_relative_error: _,
+        validation_secs: _,
+    } = probe;
     let y_patch_count = left_y_patch_count.max(right_y_patch_count);
-    let (compatible_pair_count, output_projector_count) =
-        prepared.input_contraction_layout_counts();
     let cartesian_pair_count = x_patch_count
         .checked_mul(y_patch_count)
         .and_then(|count| count.checked_mul(z_patch_count))
@@ -123,98 +353,10 @@ fn run_point(
     let cartesian_output_patch_count = x_patch_count
         .checked_mul(z_patch_count)
         .ok_or_else(|| anyhow::anyhow!("Cartesian output-patch estimate overflow"))?;
-    let (left_patch_chi, right_patch_chi) = prepared.input_patch_max_bonds();
-    let (left_patch_params, right_patch_params) = prepared.input_patch_n_params();
-    anyhow::ensure!(
-        left_patch_chi.max(right_patch_chi) <= PATCH_CAP,
-        "input patch cap exceeded"
-    );
-    let input_chi = input.left.rank().max(input.right.rank());
-    let input_params = simple_n_params(&input.left) + simple_n_params(&input.right);
-
-    if patch_only {
-        let reference_count_start = Instant::now();
-        let integrated_stats = count_integrated_components(
-            &input.left_mixture,
-            &input.right_mixture,
-            OUTPUT_REFERENCE_ABS_TOLERANCE,
-        )?;
-        let reference_count_secs = reference_count_start.elapsed().as_secs_f64();
-        let estimated_component_bytes = integrated_stats
-            .retained_pair_count
-            .checked_mul(6 * std::mem::size_of::<f64>())
-            .ok_or_else(|| anyhow::anyhow!("integrated Gaussian storage estimate overflow"))?;
-        let mut params = common_params(
-            &input,
-            &config,
-            input_params,
-            input_l2_rtol,
-            left_patch_count,
-            right_patch_count,
-            x_patch_count,
-            y_patch_count,
-            z_patch_count,
-            left_y_patch_count,
-            right_y_patch_count,
-            compatible_pair_count,
-            output_projector_count,
-            cartesian_pair_count,
-            cartesian_output_patch_count,
-            left_patch_chi,
-            right_patch_chi,
-            left_patch_params,
-            right_patch_params,
-            patch_secs,
-            left_input_error,
-            right_input_error,
-            left_axis_error,
-            right_axis_error,
-        );
-        params["compatible_pair_count"] = serde_json::json!(compatible_pair_count);
-        params["output_projector_count"] = serde_json::json!(output_projector_count);
-        params["cartesian_pair_count"] = serde_json::json!(cartesian_pair_count);
-        params["cartesian_output_patch_count"] = serde_json::json!(cartesian_output_patch_count);
-        params["integrated_total_pair_count"] =
-            serde_json::json!(integrated_stats.total_pair_count);
-        params["integrated_candidate_pair_count"] =
-            serde_json::json!(integrated_stats.candidate_pair_count);
-        params["integrated_retained_pair_count"] =
-            serde_json::json!(integrated_stats.retained_pair_count);
-        params["integrated_count_secs"] = serde_json::json!(reference_count_secs);
-        params["integrated_y_cell_width"] = serde_json::json!(integrated_stats.y_cell_width);
-        params["integrated_estimated_component_bytes"] =
-            serde_json::json!(estimated_component_bytes);
-        params["integrated_omitted_absolute_bound"] =
-            serde_json::json!(integrated_stats.omitted_absolute_bound);
-        params["left_input_sampled_relative_l2"] = serde_json::Value::Null;
-        params["right_input_sampled_relative_l2"] = serde_json::Value::Null;
-        params["error_samples"] = serde_json::json!(0);
-        params["external_error_metric"] = serde_json::json!("principal_axis_relative_l2");
-        write_record(
-            out_dir,
-            &format!("gaussian_mpo_patch_scaling-n{n}-chi{input_chi}"),
-            &RunRecord {
-                schema_version: SCHEMA_VERSION,
-                case: "gaussian_mpo_patch_scaling".into(),
-                algorithm: "balanced_input_patching".into(),
-                params,
-                seed,
-                tolerance: INPUT_L2_RTOL,
-                wall_time_median_secs: patch_secs,
-                wall_times_secs: vec![patch_secs],
-                max_error: left_axis_error.max(right_axis_error),
-                input_max_bond_dim: input_chi,
-                output_max_bond_dim: left_patch_chi.max(right_patch_chi),
-                output_bond_dims: vec![left_patch_chi, right_patch_chi],
-                n_params: Some(left_patch_params + right_patch_params),
-                n_patches: Some(left_patch_count + right_patch_count),
-                max_patch_bond: Some(left_patch_chi.max(right_patch_chi)),
-                rtol: Some(INPUT_L2_RTOL),
-                input_build_secs: Some(input.build.as_secs_f64()),
-            },
-        )?;
-        return Ok(());
-    }
+    let left_patch_chi = *left_bonds.last().unwrap_or(&0);
+    let right_patch_chi = *right_bonds.last().unwrap_or(&0);
+    let left_patch_params = left_params.iter().sum();
+    let right_patch_params = right_params.iter().sum();
 
     let arm = std::env::var("BENCH_ARM").unwrap_or_else(|_| "both".into());
     anyhow::ensure!(

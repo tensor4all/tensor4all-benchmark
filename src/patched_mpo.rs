@@ -1,7 +1,7 @@
 //! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
 
 use std::collections::HashSet;
-use tensor4all_core::{DynIndex, SvdTruncationPolicy};
+use tensor4all_core::{AnyScalar, DynIndex, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
 use tensor4all_partitionedtt as tt;
@@ -85,6 +85,25 @@ fn itensor_cutoff_policy(rtol: f64) -> SvdTruncationPolicy {
         .with_relative()
         .with_squared_values()
         .with_discarded_tail_sum()
+}
+
+/// Input axes eligible for adaptive patching.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MpoPatchLayout {
+    /// Interleaved shared/output axes: left y/x and right y/z.
+    BalancedXyz,
+    /// Shared y indices only; x and z remain unprojected.
+    SharedYOnly,
+}
+
+impl MpoPatchLayout {
+    /// Stable record token.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::BalancedXyz => "balanced_xyz",
+            Self::SharedYOnly => "shared_y_only",
+        }
+    }
 }
 
 /// Prepared copies of one MPO pair for a fair TT versus chain TreeTN comparison.
@@ -201,8 +220,32 @@ impl PatchedMpoPair {
         rtol: f64,
         patch_max_bond: usize,
     ) -> anyhow::Result<Self> {
+        Self::new_with_layout(
+            left,
+            right,
+            rtol,
+            patch_max_bond,
+            MpoPatchLayout::BalancedXyz,
+        )
+    }
+
+    /// Build patched representations with an explicit eligible-axis layout.
+    pub fn new_with_layout(
+        left: &MPO<f64>,
+        right: &MPO<f64>,
+        rtol: f64,
+        patch_max_bond: usize,
+        layout: MpoPatchLayout,
+    ) -> anyhow::Result<Self> {
         let (left_train, right_train) = mpo_pair_to_tensortrains(left, right)?;
-        Self::from_tensortrains(left_train, right_train, rtol, patch_max_bond)
+        Self::from_tensortrains_with_layout(
+            left_train,
+            right_train,
+            rtol,
+            rtol,
+            patch_max_bond,
+            layout,
+        )
     }
 
     /// Build patched representations from cached global tensor trains.
@@ -222,6 +265,25 @@ impl PatchedMpoPair {
         input_rtol: f64,
         contract_rtol: f64,
         patch_max_bond: usize,
+    ) -> anyhow::Result<Self> {
+        Self::from_tensortrains_with_layout(
+            left_train,
+            right_train,
+            input_rtol,
+            contract_rtol,
+            patch_max_bond,
+            MpoPatchLayout::BalancedXyz,
+        )
+    }
+
+    /// Build patched inputs with an explicit eligible-axis layout.
+    pub fn from_tensortrains_with_layout(
+        left_train: TensorTrain,
+        right_train: TensorTrain,
+        input_rtol: f64,
+        contract_rtol: f64,
+        patch_max_bond: usize,
+        layout: MpoPatchLayout,
     ) -> anyhow::Result<Self> {
         anyhow::ensure!(!left_train.is_empty(), "cached MPO input is empty");
         anyhow::ensure!(
@@ -266,8 +328,10 @@ impl PatchedMpoPair {
 
         let n = left_train.len();
         let input_max_bond = left_train.max_bond_dim().max(right_train.max_bond_dim());
-        let left_order = interleave(&y, &x);
-        let right_order = interleave(&y, &z);
+        let (left_order, right_order) = match layout {
+            MpoPatchLayout::BalancedXyz => (interleave(&y, &x), interleave(&y, &z)),
+            MpoPatchLayout::SharedYOnly => (y.clone(), y.clone()),
+        };
         let output_order = interleave(&x, &z);
         let tt_input_options = tt::PatchingOptions {
             rtol: input_rtol,
@@ -331,8 +395,20 @@ impl PatchedMpoPair {
                 == (tt_left.len(), tt_right.len()),
             "TT and TreeTN adaptive patch counts differ"
         );
-        let tree_left = regularize_binary_partition(&adaptive_tree_left, &[&x, &y])?;
-        let tree_right = regularize_binary_partition(&adaptive_tree_right, &[&y, &z])?;
+        let tree_left = match layout {
+            MpoPatchLayout::BalancedXyz => {
+                regularize_binary_partition(&adaptive_tree_left, &[&x, &y])?
+            }
+            MpoPatchLayout::SharedYOnly => regularize_binary_partition(&adaptive_tree_left, &[&y])?,
+        };
+        let tree_right = match layout {
+            MpoPatchLayout::BalancedXyz => {
+                regularize_binary_partition(&adaptive_tree_right, &[&y, &z])?
+            }
+            MpoPatchLayout::SharedYOnly => {
+                regularize_binary_partition(&adaptive_tree_right, &[&y])?
+            }
+        };
         Ok(Self {
             x,
             y,
@@ -398,6 +474,19 @@ impl PatchedMpoPair {
         (compatible_pairs, output_projectors.len())
     }
 
+    /// Sorted maximum bond dimensions of every left and right input patch.
+    pub fn input_patch_bond_dims(&self) -> (Vec<usize>, Vec<usize>) {
+        let sorted = |partition: &tree::PartitionedTreeTN<usize>| {
+            let mut values: Vec<_> = partition
+                .values()
+                .map(|patch| patch.max_bond_dim())
+                .collect();
+            values.sort_unstable();
+            values
+        };
+        (sorted(&self.tree_left), sorted(&self.tree_right))
+    }
+
     /// Largest left and right input patch bond dimensions.
     pub fn input_patch_max_bonds(&self) -> (usize, usize) {
         (
@@ -414,12 +503,59 @@ impl PatchedMpoPair {
         )
     }
 
+    /// Sorted parameter counts of every left and right input patch.
+    pub fn input_patch_param_counts(&self) -> (Vec<usize>, Vec<usize>) {
+        let sorted = |partition: &tree::PartitionedTreeTN<usize>| {
+            let mut values: Vec<_> = partition
+                .values()
+                .map(|patch| {
+                    patch
+                        .data()
+                        .node_names()
+                        .into_iter()
+                        .filter_map(|node| patch.data().node_index(&node))
+                        .filter_map(|node| patch.data().tensor(node))
+                        .map(|tensor| {
+                            tensor
+                                .indices()
+                                .iter()
+                                .map(|index| index.dim)
+                                .product::<usize>()
+                        })
+                        .sum()
+                })
+                .collect();
+            values.sort_unstable();
+            values
+        };
+        (sorted(&self.tree_left), sorted(&self.tree_right))
+    }
+
     /// Total stored parameters in the left and right patched inputs.
     pub fn input_patch_n_params(&self) -> (usize, usize) {
         (
             partitioned_treetn_n_params(&self.tree_left),
             partitioned_treetn_n_params(&self.tree_right),
         )
+    }
+
+    /// Exact relative norm errors of the reconstructed patched inputs.
+    pub fn input_patch_relative_errors(&self) -> anyhow::Result<(f64, f64)> {
+        let relative_error = |global: &TensorTrain,
+                              partition: &tree::PartitionedTreeTN<usize>|
+         -> anyhow::Result<f64> {
+            let reconstructed = TensorTrain::from_treetn(partition.to_treetn()?)?;
+            let difference = global.axpby(
+                AnyScalar::new_real(1.0),
+                &reconstructed,
+                AnyScalar::new_real(-1.0),
+            )?;
+            Ok(difference.norm()? / global.norm()?)
+        };
+        Ok((
+            relative_error(&self.global_left, &self.tree_left)?,
+            relative_error(&self.global_right, &self.tree_right)?,
+        ))
     }
 
     /// Run one full-sweep global fit on the prepared unpatched inputs.

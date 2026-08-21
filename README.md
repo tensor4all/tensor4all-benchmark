@@ -89,7 +89,9 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_INPUT_CACHE_DIR` | `.cache/inputs` | shared input cache |
 | `BENCH_INPUT_CACHE_REFRESH` | `0` | rebuild cache entry when nonzero |
 | `BENCH_INPUT_ONLY` | `0` | Case 2 only: prepare and validate caches without timing operations when nonzero |
-| `BENCH_PATCH_ONLY` | `0` | Case 3 only: build balanced cap-128 input patches and record x/y/z regions, compatible pairs, predicted output patches, ranks, parameters, and construction time without contraction or output validation |
+| `BENCH_PATCH_ONLY` | `0` | Case 3 only: build selected cap-128 input layouts and record projector, rank, parameter, exact reconstruction-error, and construction metrics without contraction |
+| `BENCH_PATCH_LAYOUTS` | `balanced_xyz` | Comma-separated Case 3 patch-only layouts: `balanced_xyz`, `shared_y_only` |
+| `BENCH_SKIP_REFERENCE_COUNT` | `0` | Skip integrated-output Gaussian survivor counting during layout-only sweeps when nonzero |
 | `BENCH_ARM` | `both` | Case 3 only: `global`, `patched`, or `both`; the bounded runner separates the largest point into two commands |
 | `BENCH_INPUT_L2_RTOL` | `1e-6` | Case 3 only: explicit input compression tolerance, recorded in every result; the near-χ418 point uses `1e-9` and reaches χ381 |
 | `OUT_DIR` | `result/dev/raw` | JSON output directory |

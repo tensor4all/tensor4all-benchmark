@@ -124,6 +124,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_3D_FIXED_BOX_N` | `0` | 3D input-only mode: nonzero reference N whose active-box size is held fixed while `BENCH_NS` changes |
 | `BENCH_DIRECT_PRODUCT_INPUT_ONLY` | `0` | Case 3 only: form exact doubled-space self-direct-products of both 2D Gaussian MPO factors and record χ² scaling without patching or contraction |
 | `BENCH_DIRECT_PRODUCT_MAX_BYTES` | `2147483648` | Total dense-memory guard for the two direct-product MPOs |
+| `BENCH_PATCH_CAP` | `128` | Case 3 input-patch and local contracted-output bond cap |
 | `BENCH_PATCH_LAYOUTS` | `balanced_xyz` | Comma-separated Case 3 patch-only layouts: `balanced_xyz`, `shared_y_only` |
 | `BENCH_SKIP_REFERENCE_COUNT` | `0` | Skip integrated-output Gaussian survivor counting during layout-only sweeps when nonzero |
 | `BENCH_ARM` | `both` | Case 3 only: `global`, `patched`, or `both`; the bounded runner separates the largest point into two commands |

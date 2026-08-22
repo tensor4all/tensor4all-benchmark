@@ -75,11 +75,12 @@ struct PatchProbe {
 fn build_patch_probe(
     left: &tensor4all_simplett::mpo::MPO<f64>,
     right: &tensor4all_simplett::mpo::MPO<f64>,
+    patch_cap: usize,
     layout: MpoPatchLayout,
     validate: bool,
 ) -> anyhow::Result<PatchProbe> {
     let start = Instant::now();
-    let prepared = PatchedMpoPair::new_with_layout(left, right, INPUT_L2_RTOL, PATCH_CAP, layout)?;
+    let prepared = PatchedMpoPair::new_with_layout(left, right, INPUT_L2_RTOL, patch_cap, layout)?;
     let build_secs = start.elapsed().as_secs_f64();
     let (left_count, right_count) = prepared.input_patch_counts();
     let (x_count, left_y_count, right_y_count, z_count) = prepared.input_axis_patch_counts();
@@ -414,6 +415,8 @@ fn run_point(
         refresh,
     };
     let patch_only = env_or("BENCH_PATCH_ONLY", 0usize) != 0;
+    let patch_cap = env_or("BENCH_PATCH_CAP", PATCH_CAP);
+    anyhow::ensure!(patch_cap > 0, "BENCH_PATCH_CAP must be positive");
     let input_l2_rtol = env_or("BENCH_INPUT_L2_RTOL", INPUT_L2_RTOL);
     let input = prepare_gaussian_pair_with_l2_rtol(&config, input_l2_rtol)?;
     let (left_input_error, right_input_error) = if patch_only {
@@ -459,11 +462,11 @@ fn run_point(
             None
         };
         for layout in layouts {
-            let probe = build_patch_probe(&left_mpo, &right_mpo, layout, true)?;
+            let probe = build_patch_probe(&left_mpo, &right_mpo, patch_cap, layout, true)?;
             let left_patch_chi = *probe.left_bonds.last().unwrap_or(&0);
             let right_patch_chi = *probe.right_bonds.last().unwrap_or(&0);
             anyhow::ensure!(
-                left_patch_chi.max(right_patch_chi) <= PATCH_CAP,
+                left_patch_chi.max(right_patch_chi) <= patch_cap,
                 "input patch cap exceeded"
             );
             let left_patch_params: usize = probe.left_params.iter().sum();
@@ -483,6 +486,7 @@ fn run_point(
                 &config,
                 input_params,
                 input_l2_rtol,
+                patch_cap,
                 probe.left_count,
                 probe.right_count,
                 probe.x_count,
@@ -517,12 +521,12 @@ fn run_point(
             params["left_cap_saturated_patches"] = serde_json::json!(probe
                 .left_bonds
                 .iter()
-                .filter(|&&bond| bond == PATCH_CAP)
+                .filter(|&&bond| bond == patch_cap)
                 .count());
             params["right_cap_saturated_patches"] = serde_json::json!(probe
                 .right_bonds
                 .iter()
-                .filter(|&&bond| bond == PATCH_CAP)
+                .filter(|&&bond| bond == patch_cap)
                 .count());
             params["left_patch_relative_error"] = serde_json::json!(probe.left_relative_error);
             params["right_patch_relative_error"] = serde_json::json!(probe.right_relative_error);
@@ -585,7 +589,13 @@ fn run_point(
         return Ok(());
     }
 
-    let probe = build_patch_probe(&left_mpo, &right_mpo, MpoPatchLayout::BalancedXyz, false)?;
+    let probe = build_patch_probe(
+        &left_mpo,
+        &right_mpo,
+        patch_cap,
+        MpoPatchLayout::BalancedXyz,
+        false,
+    )?;
     let PatchProbe {
         prepared,
         build_secs: patch_secs,
@@ -636,7 +646,7 @@ fn run_point(
     };
     let patched_measurement = if arm != "global" {
         let (result, timing) = time_median(warmups, runs, || {
-            prepared.contract_fit_treetn_partitioned(INPUT_L2_RTOL, PATCH_CAP)
+            prepared.contract_fit_treetn_partitioned(INPUT_L2_RTOL, patch_cap)
         });
         Some((result?, timing))
     } else {
@@ -664,6 +674,7 @@ fn run_point(
         &config,
         input_params,
         input_l2_rtol,
+        patch_cap,
         left_patch_count,
         right_patch_count,
         x_patch_count,
@@ -802,6 +813,7 @@ fn common_params(
     config: &GaussianInputConfig,
     input_params: usize,
     input_l2_rtol: f64,
+    patch_cap: usize,
     left_patch_count: usize,
     right_patch_count: usize,
     x_patch_count: usize,
@@ -838,7 +850,7 @@ fn common_params(
         "patch_local_sweep_rtol": local_sweep_rtol(INPUT_L2_RTOL, input.r),
         "patch_local_svd_cutoff": local_sweep_rtol(INPUT_L2_RTOL, input.r).powi(2),
         "patch_svd_visit_budget_count": 2 * input.r.saturating_sub(1).max(1),
-        "patch_cap": PATCH_CAP,
+        "patch_cap": patch_cap,
         "raw_left_chi": input.raw_left_chi, "raw_right_chi": input.raw_right_chi,
         "left_chi": input.left.rank(), "right_chi": input.right.rank(),
         "raw_left_params": input.raw_left_params, "raw_right_params": input.raw_right_params,

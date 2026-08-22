@@ -22,6 +22,9 @@ pub fn mpo_n_params(mpo: &MPO<f64>) -> usize {
 }
 
 /// Form the exact sitewise direct product of two equally long MPOs.
+///
+/// At each fused leg, the first operand is the low-position factor:
+/// `combined = first + first_dimension * second`.
 pub fn direct_product_mpo(
     first: &MPO<f64>,
     second: &MPO<f64>,
@@ -364,13 +367,32 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
-        assert!(direct_product_mpo(&left, &left, 0).is_err());
-        let direct = direct_product_mpo(&left, &left, usize::MAX).unwrap();
-        assert_eq!(direct.rank(), left.rank() * left.rank());
-        let zero = vec![0; 2 * r];
-        assert!(
-            (direct.evaluate(&zero).unwrap() - left.evaluate(&zero).unwrap().powi(2)).abs() < 1e-12
+        assert!(direct_product_mpo(&left, &right, 0).is_err());
+        let direct = direct_product_mpo(&left, &right, usize::MAX).unwrap();
+        assert_eq!(
+            direct.link_dims(),
+            left.link_dims()
+                .into_iter()
+                .zip(right.link_dims())
+                .map(|(a, b)| a * b)
+                .collect::<Vec<_>>()
         );
+        let first = (0..r)
+            .flat_map(|site| [site % 2, (site / 2) % 2])
+            .collect::<Vec<_>>();
+        let second = (0..r)
+            .flat_map(|site| [(site / 2) % 2, (site + 1) % 2])
+            .collect::<Vec<_>>();
+        let combined = (0..r)
+            .flat_map(|site| {
+                [
+                    first[2 * site] + 2 * second[2 * site],
+                    first[2 * site + 1] + 2 * second[2 * site + 1],
+                ]
+            })
+            .collect::<Vec<_>>();
+        let expected = left.evaluate(&first).unwrap() * right.evaluate(&second).unwrap();
+        assert!((direct.evaluate(&combined).unwrap() - expected).abs() < 1e-12);
         let output = fit_mpo_contract(&left, &right, 1e-8, 128).unwrap();
         let error = sampled_relative_l2_vs_aniso_grid(
             &output,

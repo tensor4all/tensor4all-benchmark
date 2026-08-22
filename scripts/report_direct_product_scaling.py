@@ -25,8 +25,10 @@ def main() -> None:
     for record in records:
         p = record["params"]
         identity = (
-            p["left_direct_product_chi"] == p["left_factor_chi"] ** 2
-            and p["right_direct_product_chi"] == p["right_factor_chi"] ** 2
+            p["left_direct_product_bond_dims"]
+            == [bond * bond for bond in p["left_factor_bond_dims"]]
+            and p["right_direct_product_bond_dims"]
+            == [bond * bond for bond in p["right_factor_bond_dims"]]
         )
         lines.append(
             f"| {p['n_gauss']} | {record['tolerance']:.0e} | "

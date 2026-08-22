@@ -310,9 +310,19 @@ fn run_direct_product_input_rank_point(
     let left_product_chi = left_product.rank();
     let right_product_chi = right_product.rank();
     anyhow::ensure!(
-        left_product_chi == left_factor_chi * left_factor_chi
-            && right_product_chi == right_factor_chi * right_factor_chi,
-        "exact direct product did not square the factor bond dimension"
+        left_product.link_dims()
+            == left_factor
+                .link_dims()
+                .into_iter()
+                .map(|bond| bond * bond)
+                .collect::<Vec<_>>()
+            && right_product.link_dims()
+                == right_factor
+                    .link_dims()
+                    .into_iter()
+                    .map(|bond| bond * bond)
+                    .collect::<Vec<_>>(),
+        "exact self-direct-product did not square every factor bond dimension"
     );
     let left_product_params = mpo_n_params(&left_product);
     let right_product_params = mpo_n_params(&right_product);

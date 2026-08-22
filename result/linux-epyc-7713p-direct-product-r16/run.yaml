@@ -15,5 +15,5 @@ patching_performed: false
 contraction_performed: false
 notes:
   - Each left and right product MPO is the exact self-direct-product of one compressed 2D Gaussian factor MPO.
-  - The N8 rtol 3e-5 point failed the existing 1e-4 factor-input sanity gate and is omitted.
+  - An exploratory N8 rtol 3e-5 point exceeded the existing 1e-4 factor-input sanity gate before product materialization and is omitted; see attempts/README.md.
   - Raw 2D Gaussian inputs were loaded from the deterministic input cache; direct-product materialization was repeated for every record.

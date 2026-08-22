@@ -12,7 +12,9 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
-The pre-tolerance-correction factor-4 padded patch-scaling and profiled small-N MPO results are archived in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The current contraction-free balanced versus shared-y-only N/χ study is in [`result/linux-epyc-7713p-patch-layout-scaling-r16/report.md`](result/linux-epyc-7713p-patch-layout-scaling-r16/report.md). The input-only fully correlated 3D Gaussian rank sweep is in [`result/linux-epyc-7713p-gaussian3d-rank-r16/report.md`](result/linux-epyc-7713p-gaussian3d-rank-r16/report.md). The exact doubled-space χ² input sweep is in [`result/linux-epyc-7713p-direct-product-r16/report.md`](result/linux-epyc-7713p-direct-product-r16/report.md). The factor-level cap-128 patching proxy is in [`result/linux-epyc-7713p-direct-product-cap128-proxy-r16/report.md`](result/linux-epyc-7713p-direct-product-cap128-proxy-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
+The experiment history, invalidated interpretations, current evidence boundary, Hataori pause decision, and restart criteria are recorded in [`docs/gaussian-patching-decision-log.md`](docs/gaussian-patching-decision-log.md).
+
+The pre-tolerance-correction factor-4 padded patch-scaling and profiled small-N MPO results are archived in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The current contraction-free balanced versus shared-y-only N/χ study is in [`result/linux-epyc-7713p-patch-layout-scaling-r16/report.md`](result/linux-epyc-7713p-patch-layout-scaling-r16/report.md). The input-only fully correlated 3D Gaussian rank sweep is in [`result/linux-epyc-7713p-gaussian3d-rank-r16/report.md`](result/linux-epyc-7713p-gaussian3d-rank-r16/report.md). The exact doubled-space χ² input sweep is in [`result/linux-epyc-7713p-direct-product-r16/report.md`](result/linux-epyc-7713p-direct-product-r16/report.md). The factor-level cap diagnostic, which does not compare generic doubled-space contractions, is in [`result/linux-epyc-7713p-direct-product-cap128-proxy-r16/report.md`](result/linux-epyc-7713p-direct-product-cap128-proxy-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
 
 ## Gaussian input
 
@@ -26,7 +28,7 @@ The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache
 
 The [accuracy policy](docs/accuracy-policy.md) defines how disjoint patch errors combine and keeps fit relative-L2 tolerances separate from ACI residual tolerances.
 
-The input patch cap is fixed at 128 and has no runtime setting. Case 3 adaptively discovers the required x/y and y/z split depths, refines nonzero input leaves to regular Cartesian binary partitions, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic relative-L2 error at retained integrated-output-Gaussian centers.
+Maintained profiles use input patch cap 128. `BENCH_PATCH_CAP` is reserved for explicitly labeled diagnostics and does not change that production definition. Case 3 adaptively discovers the required x/y and y/z split depths, refines nonzero input leaves to regular Cartesian binary partitions, forms each x/z output patch with a cap-bounded initial sum and `fit_sum`, applies no hard output cap or recursive splitting, then performs one final adaptive truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records carry both the internal tolerance metric and a common deterministic relative-L2 error at retained integrated-output-Gaussian centers.
 
 Case 2 compares:
 
@@ -128,7 +130,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_PATCH_LAYOUTS` | `balanced_xyz` | Comma-separated Case 3 patch-only layouts: `balanced_xyz`, `shared_y_only` |
 | `BENCH_SKIP_REFERENCE_COUNT` | `0` | Skip integrated-output Gaussian survivor counting during layout-only sweeps when nonzero |
 | `BENCH_ARM` | `both` | Case 3 only: `global`, `patched`, or `both`; the bounded runner separates the largest point into two commands |
-| `BENCH_INPUT_L2_RTOL` | `1e-6` | Case 3 only: explicit input compression tolerance, recorded in every result; the near-χ418 point uses `1e-9` and reaches χ381 |
+| `BENCH_INPUT_L2_RTOL` | `1e-6` | Case 3 only: explicit input compression tolerance, recorded in every result; the corrected fixed-N layout check uses `3e-10` and reaches χ418 |
 | `OUT_DIR` | `result/dev/raw` | JSON output directory |
 
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.

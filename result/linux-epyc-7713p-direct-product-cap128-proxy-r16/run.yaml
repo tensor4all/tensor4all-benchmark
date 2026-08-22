@@ -1,0 +1,22 @@
+profile: linux-epyc-7713p-direct-product-cap128-proxy-r16
+date: 2026-08-22
+repository_revision: 36e3b7420a1be5a934a2a34f12d158ed74bb9b5c
+tensor4all_rs_revision: 1b3ebb74ea40d5aa0c44f39d7bcfba34710e038b
+input_cache_compatibility_revision: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
+cpu: AMD EPYC 7713P 64-Core Processor
+cpu_affinity: 0
+threads: {rayon: 1, omp: 1, openblas: 1, mkl: 1, blis: 1}
+build: cargo release locked
+quantics_bits_per_axis: 16
+n_gauss: 1
+factor_input_l2_rtol: 1e-6
+factor_patch_cap: 11
+implied_product_patch_cap: 121
+runs: 3
+warmups: 1
+timeout_seconds_per_command: 570
+timing_excludes: [input_generation, input_compression, patch_preparation, reference_construction, accuracy_evaluation]
+notes:
+  - Timings are measured only for the original 2D factor contraction.
+  - Squared patch and pair counts are exact Cartesian-product structural counts, not doubled-space timings or FLOPs.
+  - N2 global-plus-patched and patch-only commands both reached status 124; see attempts/.

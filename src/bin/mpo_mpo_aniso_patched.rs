@@ -173,6 +173,11 @@ fn run_gaussian3d_input_rank_point(
         cache_dir: cache_dir.to_path_buf(),
         refresh,
     })?;
+    anyhow::ensure!(
+        input.principal_axis_relative_l2 <= ERROR_SANITY,
+        "3D input principal-axis error {:.3e} exceeds sanity gate",
+        input.principal_axis_relative_l2
+    );
     let qtt_chi = input.qtt.rank();
     let mpo_chi = input.batch_diagonal_mpo.rank();
     anyhow::ensure!(
@@ -203,6 +208,8 @@ fn run_gaussian3d_input_rank_point(
         "input_localized_absolute_tolerance": INPUT_LOCAL_ABS_TOLERANCE,
         "input_tci_pivot_components": INPUT_TCI_PIVOT_COMPONENTS,
         "input_l2_rtol": input_l2_rtol,
+        "local_compression_rtol": input.local_compression_rtol,
+        "compression_bond_budget_count": input.r.saturating_sub(1).max(1),
         "raw_qtt_chi": input.raw_chi,
         "compressed_qtt_chi": qtt_chi,
         "batch_diagonal_mpo_chi": mpo_chi,
@@ -217,7 +224,8 @@ fn run_gaussian3d_input_rank_point(
         "input_build_secs": input.build.as_secs_f64(),
         "input_compression_secs": input.compression.as_secs_f64(),
         "diagonal_embedding_secs": input.embedding.as_secs_f64(),
-        "validation": "rank_and_batch_diagonal_structure_only"
+        "principal_axis_relative_l2": input.principal_axis_relative_l2,
+        "validation": "off_pivot_principal_axis_relative_l2_and_batch_diagonal_structure"
     });
     write_record(
         out_dir,

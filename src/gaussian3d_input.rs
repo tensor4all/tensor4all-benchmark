@@ -15,6 +15,7 @@ use tensor4all_simplett::{
 };
 
 use crate::gaussian_input::{tensortrain_n_params, GAUSSIAN_PADDING_FACTOR, GAUSSIAN_R};
+use crate::harness::index_to_bits;
 use crate::hdf5_export::{load_tt_from_mps, save_tt_as_mps};
 
 const CACHE_SCHEMA: &str = "global-tci-gaussian-3d-batch-diagonal-v2";
@@ -52,6 +53,8 @@ pub struct PreparedGaussian3dInput {
     pub embedding: Duration,
     pub raw_chi: usize,
     pub raw_params: usize,
+    pub local_compression_rtol: f64,
+    pub principal_axis_relative_l2: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -90,7 +93,6 @@ impl GaussianMixture3d {
         }
     }
 
-    #[cfg(test)]
     fn eval(&self, point: [f64; 3]) -> f64 {
         (0..self.weights.len())
             .map(|i| self.component(i, point))
@@ -261,6 +263,52 @@ fn grid_pivots(mixture: &GaussianMixture3d, count: usize, r: usize, box_l: f64) 
     pivots
 }
 
+fn principal_axis_relative_l2(
+    qtt: &SimpleTensorTrain<f64>,
+    mixture: &GaussianMixture3d,
+    r: usize,
+    box_l: f64,
+) -> anyhow::Result<f64> {
+    let grid_size = 1usize << r;
+    let mut numerator = 0.0;
+    let mut denominator = 0.0;
+    for component in 0..mixture.centers.len() {
+        let center = mixture.centers[component];
+        let points = std::iter::once(center).chain((0..3).flat_map(|axis| {
+            let sigma = (2.0 * mixture.lambdas[component][axis]).sqrt().recip();
+            let direction = mixture.axes[component][axis];
+            [-0.5, 0.5].map(move |sign| {
+                [
+                    center[0] + sign * sigma * direction[0],
+                    center[1] + sign * sigma * direction[1],
+                    center[2] + sign * sigma * direction[2],
+                ]
+            })
+        }));
+        for point in points {
+            let indices = point.map(|coordinate| {
+                let scaled = ((coordinate + box_l) * grid_size as f64 / (2.0 * box_l)).floor();
+                scaled.clamp(0.0, (grid_size - 1) as f64) as usize
+            });
+            let bits = indices.map(|index| index_to_bits(index as u64, r));
+            let local = (0..r)
+                .map(|site| bits[0][site] + 2 * bits[1][site] + 4 * bits[2][site])
+                .collect::<Vec<_>>();
+            let grid_point =
+                indices.map(|index| -box_l + index as f64 * (2.0 * box_l / grid_size as f64));
+            let expected = mixture.eval(grid_point);
+            let error = qtt.evaluate(&local)? - expected;
+            numerator += error * error;
+            denominator += expected * expected;
+        }
+    }
+    anyhow::ensure!(
+        denominator > 0.0 && denominator.is_finite(),
+        "invalid validation norm"
+    );
+    Ok((numerator / denominator).sqrt())
+}
+
 fn global_tci_qtt(
     field: &LocalizedGaussianMixture3d,
     r: usize,
@@ -405,14 +453,16 @@ fn prepare_gaussian3d_input_with_r(
     };
     let raw_chi = qtt.rank();
     let raw_params = tensortrain_n_params(&qtt);
+    let local_compression_rtol = config.input_l2_rtol / (r.saturating_sub(1).max(1) as f64).sqrt();
     let compression_start = Instant::now();
     qtt.compress(&CompressionOptions {
         method: CompressionMethod::SVD,
-        tolerance: config.input_l2_rtol,
+        tolerance: local_compression_rtol,
         max_bond_dim: None,
         normalize_error: true,
     })?;
     let compression = compression_start.elapsed();
+    let principal_axis_relative_l2 = principal_axis_relative_l2(&qtt, &mixture, r, box_l)?;
     let embedding_start = Instant::now();
     let batch_diagonal_mpo = batch_diagonal_mpo(&qtt)?;
     let embedding = embedding_start.elapsed();
@@ -430,6 +480,8 @@ fn prepare_gaussian3d_input_with_r(
         embedding,
         raw_chi,
         raw_params,
+        local_compression_rtol,
+        principal_axis_relative_l2,
     })
 }
 

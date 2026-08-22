@@ -35,7 +35,7 @@ Case 2 compares:
 - global ACI with scale-relative residual
 - patched ACI with patch-local absolute residual followed by global L2 budgeting
 
-Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Its input-only 3D rank probe embeds a fully correlated mixture `A(b,x,y)` as the batch-diagonal MPO `A(b,x;b',y) = delta(b,b') A(b,x,y)` and records ranks without patching or contraction. Factor-4 padding makes the finite-domain tail negligible for the production 2D input family. Its reference integrates significant Gaussian pairs over the infinite y axis, finds them with a linked-cell neighbor list, caches each retained output Gaussian's center, precision, and weight, and evaluates both arms at the same deterministic retained centers through a spatial index.
+Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Its input-only 3D rank probe uses positive weights uniform in `[0.5, 1.5)`, embeds a fully correlated mixture `A(b,x,y)` as the batch-diagonal MPO `A(b,x;b',y) = delta(b,b') A(b,x,y)` and records ranks without patching or contraction. Factor-4 padding makes the finite-domain tail negligible for the production 2D input family. Its reference integrates significant Gaussian pairs over the infinite y axis, finds them with a linked-cell neighbor list, caches each retained output Gaussian's center, precision, and weight, and evaluates both arms at the same deterministic retained centers through a spatial index.
 
 Input construction, cache I/O, global input compression, format conversion, patch preparation, output conversion, and accuracy evaluation are outside timed regions.
 
@@ -114,6 +114,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | `BENCH_INPUT_ONLY` | `0` | Case 2 only: prepare and validate caches without timing operations when nonzero |
 | `BENCH_PATCH_ONLY` | `0` | Case 3 only: build selected cap-128 input layouts and record projector, rank, parameter, exact reconstruction-error, and construction metrics without contraction |
 | `BENCH_3D_INPUT_ONLY` | `0` | Case 3 only: construct a fully correlated `A(b,x,y)` mixture and its batch-diagonal MPO embedding, recording input ranks without patching or contraction |
+| `BENCH_3D_FIXED_BOX_N` | `0` | 3D input-only mode: nonzero reference N whose active-box size is held fixed while `BENCH_NS` changes |
 | `BENCH_PATCH_LAYOUTS` | `balanced_xyz` | Comma-separated Case 3 patch-only layouts: `balanced_xyz`, `shared_y_only` |
 | `BENCH_SKIP_REFERENCE_COUNT` | `0` | Skip integrated-output Gaussian survivor counting during layout-only sweeps when nonzero |
 | `BENCH_ARM` | `both` | Case 3 only: `global`, `patched`, or `both`; the bounded runner separates the largest point into two commands |

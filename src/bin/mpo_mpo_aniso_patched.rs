@@ -159,6 +159,10 @@ fn run_gaussian3d_input_rank_point(
     out_dir: &Path,
 ) -> anyhow::Result<()> {
     let input_l2_rtol = env_or("BENCH_INPUT_L2_RTOL", INPUT_L2_RTOL);
+    let fixed_box_n = match env_or("BENCH_3D_FIXED_BOX_N", 0usize) {
+        0 => None,
+        n => Some(n),
+    };
     let input = prepare_gaussian3d_input(&Gaussian3dInputConfig {
         n,
         sigma_minor: 0.05,
@@ -169,6 +173,7 @@ fn run_gaussian3d_input_rank_point(
         localized_absolute_tolerance: INPUT_LOCAL_ABS_TOLERANCE,
         tci_pivot_components: INPUT_TCI_PIVOT_COMPONENTS,
         input_l2_rtol,
+        fixed_box_n,
         seed,
         cache_dir: cache_dir.to_path_buf(),
         refresh,
@@ -193,6 +198,9 @@ fn run_gaussian3d_input_rank_point(
         "n_gauss": n,
         "r": input.r,
         "dimensions": ["batch", "x", "y"],
+        "placement_mode": if fixed_box_n.is_some() { "fixed_box_uniform_random" } else { "constant_density_expanding_box" },
+        "fixed_box_reference_n": fixed_box_n,
+        "weight_distribution": "uniform_positive_[0.5,1.5)",
         "batch_diagonal_operator": "A(b,x;b_prime,y)=delta(b,b_prime)A(b,x,y)",
         "active_box_l": input.active_box_l,
         "box_l": input.box_l,

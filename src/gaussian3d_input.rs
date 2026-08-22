@@ -18,7 +18,7 @@ use crate::gaussian_input::{tensortrain_n_params, GAUSSIAN_PADDING_FACTOR, GAUSS
 use crate::harness::index_to_bits;
 use crate::hdf5_export::{load_tt_from_mps, save_tt_as_mps};
 
-const CACHE_SCHEMA: &str = "global-tci-gaussian-3d-batch-diagonal-v2";
+const CACHE_SCHEMA: &str = "global-tci-gaussian-3d-batch-diagonal-v3";
 const TENSOR4ALL_REV: &str = "9e9aedaebe0d3918b34dd399ff0981e337f3835b";
 
 /// Parameters for one input-only 3D Gaussian rank probe.
@@ -33,6 +33,8 @@ pub struct Gaussian3dInputConfig {
     pub localized_absolute_tolerance: f64,
     pub tci_pivot_components: usize,
     pub input_l2_rtol: f64,
+    /// Optional Gaussian count whose constant-density box size is reused.
+    pub fixed_box_n: Option<usize>,
     pub seed: u64,
     pub cache_dir: PathBuf,
     pub refresh: bool,
@@ -383,6 +385,10 @@ fn prepare_gaussian3d_input_with_r(
 ) -> anyhow::Result<PreparedGaussian3dInput> {
     anyhow::ensure!(config.n > 0, "Gaussian count must be positive");
     anyhow::ensure!(
+        config.fixed_box_n.is_none_or(|n| n > 0),
+        "fixed-box reference count must be positive"
+    );
+    anyhow::ensure!(
         config.sigma_minor > 0.0 && config.sigma_minor.is_finite(),
         "invalid width"
     );
@@ -401,7 +407,8 @@ fn prepare_gaussian3d_input_with_r(
     anyhow::ensure!(config.tci_max_bond_dim > 0, "invalid TCI rank cap");
     anyhow::ensure!(config.tci_pivot_components > 0, "invalid pivot count");
 
-    let active_box_l = 0.5 * config.spacing * config.sigma_minor * (config.n as f64).cbrt();
+    let box_n = config.fixed_box_n.unwrap_or(config.n);
+    let active_box_l = 0.5 * config.spacing * config.sigma_minor * (box_n as f64).cbrt();
     let box_l = GAUSSIAN_PADDING_FACTOR * active_box_l;
     let mixture = GaussianMixture3d::random(
         config.n,
@@ -411,8 +418,9 @@ fn prepare_gaussian3d_input_with_r(
         config.seed,
     );
     let cache_identity = format!(
-        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-padding{:016x}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
+        "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-boxn{}-r{r}-padding{:016x}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
         config.n,
+        box_n,
         GAUSSIAN_PADDING_FACTOR.to_bits(),
         config.sigma_minor.to_bits(),
         config.rho_max.to_bits(),
@@ -548,6 +556,7 @@ mod tests {
             localized_absolute_tolerance: 1.0e-12,
             tci_pivot_components: 2,
             input_l2_rtol: INPUT_L2_RTOL,
+            fixed_box_n: Some(8),
             seed: 13,
             cache_dir: cache_dir.clone(),
             refresh: true,
@@ -562,6 +571,7 @@ mod tests {
         )
         .unwrap();
         assert!(!first.cache_hit && second.cache_hit);
+        assert_eq!(first.active_box_l, 0.5 * 3.0 * 0.12 * (8.0_f64).cbrt());
         assert_eq!(first.raw_chi, second.raw_chi);
         assert_eq!(second.qtt.rank(), second.batch_diagonal_mpo.rank());
         for site in 0..second.batch_diagonal_mpo.len() {

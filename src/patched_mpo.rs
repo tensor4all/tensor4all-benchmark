@@ -1,10 +1,9 @@
-//! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
+//! Patched MPO-MPO contraction on chain TreeTN wrappers.
 
 use std::collections::HashSet;
 use tensor4all_core::{AnyScalar, DynIndex, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
-use tensor4all_partitionedtt as tt;
 use tensor4all_simplett::mpo::MPO;
 use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
 
@@ -122,19 +121,16 @@ impl MpoPatchLayout {
     }
 }
 
-/// Prepared copies of one MPO pair for a fair TT versus chain TreeTN comparison.
+/// Prepared global and patched copies of one MPO pair.
 pub struct PatchedMpoPair {
     x: Vec<DynIndex>,
     y: Vec<DynIndex>,
     z: Vec<DynIndex>,
     global_left: TensorTrain,
     global_right: TensorTrain,
-    tt_left: tt::PartitionedTT,
-    tt_right: tt::PartitionedTT,
     tree_left: tree::PartitionedTreeTN<usize>,
     tree_right: tree::PartitionedTreeTN<usize>,
-    tt_options: tt::PatchingOptions,
-    tree_options: tree::PatchingOptions,
+    output_order: Vec<DynIndex>,
     center: usize,
     input_max_bond: usize,
 }
@@ -253,39 +249,20 @@ impl PatchedMpoPair {
         layout: MpoPatchLayout,
     ) -> anyhow::Result<Self> {
         let (left_train, right_train) = mpo_pair_to_tensortrains(left, right)?;
-        Self::from_tensortrains_with_layout(
-            left_train,
-            right_train,
-            rtol,
-            rtol,
-            patch_max_bond,
-            layout,
-        )
+        Self::from_tensortrains_with_layout(left_train, right_train, rtol, patch_max_bond, layout)
     }
 
     /// Build patched representations from cached global tensor trains.
     pub fn from_tensortrains(
         left_train: TensorTrain,
         right_train: TensorTrain,
-        rtol: f64,
-        patch_max_bond: usize,
-    ) -> anyhow::Result<Self> {
-        Self::from_tensortrains_with_input_rtol(left_train, right_train, rtol, rtol, patch_max_bond)
-    }
-
-    /// Build patched inputs with a tolerance independent of contraction truncation.
-    pub fn from_tensortrains_with_input_rtol(
-        left_train: TensorTrain,
-        right_train: TensorTrain,
         input_rtol: f64,
-        contract_rtol: f64,
         patch_max_bond: usize,
     ) -> anyhow::Result<Self> {
         Self::from_tensortrains_with_layout(
             left_train,
             right_train,
             input_rtol,
-            contract_rtol,
             patch_max_bond,
             MpoPatchLayout::BalancedXyz,
         )
@@ -296,7 +273,6 @@ impl PatchedMpoPair {
         left_train: TensorTrain,
         right_train: TensorTrain,
         input_rtol: f64,
-        contract_rtol: f64,
         patch_max_bond: usize,
         layout: MpoPatchLayout,
     ) -> anyhow::Result<Self> {
@@ -353,25 +329,6 @@ impl PatchedMpoPair {
         // relative-L2 budget over those visits. Patch probes verify the exact
         // reconstructed-input residual independently.
         let local_input_rtol = local_sweep_rtol(input_rtol, n);
-        let local_contract_rtol = local_sweep_rtol(contract_rtol, n);
-        let tt_input_options = tt::PatchingOptions {
-            rtol: local_input_rtol,
-            max_bond_dim: Some(patch_max_bond),
-            patch_order: left_order.clone(),
-            split_strategy: tt::PatchSplitStrategy::Sequential,
-        };
-        let tt_right_input_options = tt::PatchingOptions {
-            patch_order: right_order.clone(),
-            ..tt_input_options.clone()
-        };
-        let tt_left = tt::add_with_patching(
-            vec![tt::SubDomainTT::from_tt(left_train.clone())],
-            &tt_input_options,
-        )?;
-        let tt_right = tt::add_with_patching(
-            vec![tt::SubDomainTT::from_tt(right_train.clone())],
-            &tt_right_input_options,
-        )?;
         let global_left = left_train.clone();
         let global_right = right_train.clone();
         let tree_input_options = tree::PatchingOptions {
@@ -381,20 +338,8 @@ impl PatchedMpoPair {
             split_strategy: tree::PatchSplitStrategy::Sequential,
         };
         let tree_right_input_options = tree::PatchingOptions {
-            patch_order: right_order.clone(),
+            patch_order: right_order,
             ..tree_input_options.clone()
-        };
-        let tt_options = tt::PatchingOptions {
-            rtol: local_contract_rtol,
-            max_bond_dim: Some(patch_max_bond),
-            patch_order: output_order.clone(),
-            split_strategy: tt::PatchSplitStrategy::Sequential,
-        };
-        let tree_options = tree::PatchingOptions {
-            cutoff: local_contract_rtol * local_contract_rtol,
-            max_bond_dim: None,
-            patch_order: output_order,
-            split_strategy: tree::PatchSplitStrategy::Sequential,
         };
         let center = n - 1;
         let adaptive_tree_left = tree::add_with_patching(
@@ -431,12 +376,9 @@ impl PatchedMpoPair {
             z,
             global_left,
             global_right,
-            tt_left,
-            tt_right,
             tree_left,
             tree_right,
-            tt_options,
-            tree_options,
+            output_order,
             center,
             input_max_bond,
         })
@@ -612,50 +554,6 @@ impl PatchedMpoPair {
         tensortrain_to_mpo(output, &self.x, &self.z)
     }
 
-    /// Run one full-sweep fit through `tensor4all-partitionedtt`.
-    pub fn contract_fit_tt_partitioned(
-        &self,
-        rtol: f64,
-        output_max_bond: usize,
-    ) -> anyhow::Result<tt::PartitionedTT> {
-        let output_options = tt::PatchingOptions {
-            rtol: local_sweep_rtol(rtol, self.global_left.len()),
-            max_bond_dim: Some(output_max_bond),
-            ..self.tt_options.clone()
-        };
-        let options = ContractOptions::fit()
-            .with_max_bond_dim(output_max_bond)
-            .with_svd_policy(itensor_cutoff_policy(rtol))
-            .with_nsweeps(1);
-        tt::contract_adaptive(&self.tt_left, &self.tt_right, &options, &output_options)
-            .map_err(Into::into)
-    }
-
-    /// Sum and convert a legacy partitioned result outside the timed region.
-    pub fn finish_tt_output(&self, output: tt::PartitionedTT) -> anyhow::Result<PatchedMpoOutput> {
-        let max_patch_bond = output
-            .values()
-            .map(|patch| patch.max_bond_dim())
-            .max()
-            .unwrap_or(0);
-        let mpo = tensortrain_to_mpo(&output.to_tensor_train()?, &self.x, &self.z)?;
-        Ok(PatchedMpoOutput {
-            mpo,
-            n_patches: output.len(),
-            max_patch_bond,
-        })
-    }
-
-    /// Run and convert one legacy partitioned fit contraction.
-    pub fn contract_fit_tt(
-        &self,
-        rtol: f64,
-        output_max_bond: usize,
-    ) -> anyhow::Result<PatchedMpoOutput> {
-        let output = self.contract_fit_tt_partitioned(rtol, output_max_bond)?;
-        self.finish_tt_output(output)
-    }
-
     /// Run one full-sweep fit through `tensor4all-partitionedtreetn` on a chain.
     pub fn contract_fit_treetn_partitioned(
         &self,
@@ -666,7 +564,8 @@ impl PatchedMpoPair {
         let output_options = tree::PatchingOptions {
             cutoff: local_rtol * local_rtol,
             max_bond_dim: None,
-            ..self.tree_options.clone()
+            patch_order: self.output_order.clone(),
+            split_strategy: tree::PatchSplitStrategy::Sequential,
         };
         // Balanced x/y/z input projectors already define disjoint x/z output
         // patches. Keep those groups uncapped, exact-add their y contributions,

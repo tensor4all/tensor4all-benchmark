@@ -8,6 +8,7 @@ use std::time::Instant;
 use tensor4all_simplett::AbstractTensorTrain;
 
 use t4a_bench::gaussian::fused_qtt_to_mpo;
+use t4a_bench::gaussian3d_input::{prepare_gaussian3d_input, Gaussian3dInputConfig};
 use t4a_bench::gaussian_input::{
     prepare_gaussian_pair_with_l2_rtol, principal_axis_input_relative_l2,
     sampled_input_relative_l2, tensortrain_n_params as simple_n_params, GaussianInputConfig,
@@ -18,7 +19,7 @@ use t4a_bench::harness::time_median;
 use t4a_bench::integrated_gaussian::{
     count_integrated_components, prepare_integrated_reference, OUTPUT_REFERENCE_ABS_TOLERANCE,
 };
-use t4a_bench::mpo_contract::center_errors_vs_integrated_gaussians;
+use t4a_bench::mpo_contract::{center_errors_vs_integrated_gaussians, mpo_n_params};
 use t4a_bench::patched_mpo::{
     local_sweep_rtol, partitioned_treetn_n_params, tensortrain_n_params, MpoPatchLayout,
     PatchedMpoPair,
@@ -139,10 +140,108 @@ fn main() -> anyhow::Result<()> {
     let runs = env_or("BENCH_RUNS", 1usize);
     let warmups = env_or("BENCH_WARMUPS", 0usize);
     let seed = env_or("BENCH_SEED", 0u64);
+    let gaussian3d_input_only = env_or("BENCH_3D_INPUT_ONLY", 0usize) != 0;
     for n in ns {
-        run_point(n, seed, runs, warmups, &cache_dir, refresh, &out_dir)?;
+        if gaussian3d_input_only {
+            run_gaussian3d_input_rank_point(n, seed, &cache_dir, refresh, &out_dir)?;
+        } else {
+            run_point(n, seed, runs, warmups, &cache_dir, refresh, &out_dir)?;
+        }
     }
     Ok(())
+}
+
+fn run_gaussian3d_input_rank_point(
+    n: usize,
+    seed: u64,
+    cache_dir: &Path,
+    refresh: bool,
+    out_dir: &Path,
+) -> anyhow::Result<()> {
+    let input_l2_rtol = env_or("BENCH_INPUT_L2_RTOL", INPUT_L2_RTOL);
+    let input = prepare_gaussian3d_input(&Gaussian3dInputConfig {
+        n,
+        sigma_minor: 0.05,
+        rho_max: 8.0,
+        spacing: 3.0,
+        tci_tolerance: INPUT_TCI_TOLERANCE,
+        tci_max_bond_dim: INPUT_TCI_MAX_BOND,
+        localized_absolute_tolerance: INPUT_LOCAL_ABS_TOLERANCE,
+        tci_pivot_components: INPUT_TCI_PIVOT_COMPONENTS,
+        input_l2_rtol,
+        seed,
+        cache_dir: cache_dir.to_path_buf(),
+        refresh,
+    })?;
+    let qtt_chi = input.qtt.rank();
+    let mpo_chi = input.batch_diagonal_mpo.rank();
+    anyhow::ensure!(
+        qtt_chi == mpo_chi,
+        "batch-diagonal embedding changed the bond dimensions"
+    );
+    let qtt_params = simple_n_params(&input.qtt);
+    let diagonal_mpo_params = mpo_n_params(&input.batch_diagonal_mpo);
+    let params = serde_json::json!({
+        "mode": "batch_diagonal_3d_input_only",
+        "contraction_performed": false,
+        "patching_performed": false,
+        "n_gauss": n,
+        "r": input.r,
+        "dimensions": ["batch", "x", "y"],
+        "batch_diagonal_operator": "A(b,x;b_prime,y)=delta(b,b_prime)A(b,x,y)",
+        "active_box_l": input.active_box_l,
+        "box_l": input.box_l,
+        "padding_factor": input.box_l / input.active_box_l,
+        "sigma_minor": 0.05,
+        "rho_max": 8.0,
+        "spacing": 3.0,
+        "input_generator": "global_tci_fully_correlated_3d_gaussian_mixture",
+        "precision_eigenvalues": "lambda_minor*[rho^-2,rho^-1,1]",
+        "orientation_distribution": "uniform_so3_quaternion",
+        "input_tci_tolerance": INPUT_TCI_TOLERANCE,
+        "input_tci_max_bond_dim": INPUT_TCI_MAX_BOND,
+        "input_localized_absolute_tolerance": INPUT_LOCAL_ABS_TOLERANCE,
+        "input_tci_pivot_components": INPUT_TCI_PIVOT_COMPONENTS,
+        "input_l2_rtol": input_l2_rtol,
+        "raw_qtt_chi": input.raw_chi,
+        "compressed_qtt_chi": qtt_chi,
+        "batch_diagonal_mpo_chi": mpo_chi,
+        "raw_qtt_params": input.raw_params,
+        "compressed_qtt_params": qtt_params,
+        "batch_diagonal_mpo_params": diagonal_mpo_params,
+        "base_qtt_bond_dims": input.qtt.link_dims(),
+        "batch_diagonal_mpo_bond_dims": input.batch_diagonal_mpo.link_dims(),
+        "cache_key": input.cache_key,
+        "cache_hit": input.cache_hit,
+        "cache_load_secs": input.cache_load.as_secs_f64(),
+        "input_build_secs": input.build.as_secs_f64(),
+        "input_compression_secs": input.compression.as_secs_f64(),
+        "diagonal_embedding_secs": input.embedding.as_secs_f64(),
+        "validation": "rank_and_batch_diagonal_structure_only"
+    });
+    write_record(
+        out_dir,
+        &format!("{CASE}-batch_diagonal_3d_input-n{n}-chi{qtt_chi}"),
+        &RunRecord {
+            schema_version: SCHEMA_VERSION,
+            case: CASE.into(),
+            algorithm: "batch_diagonal_3d_input".into(),
+            params,
+            seed,
+            tolerance: input_l2_rtol,
+            wall_time_median_secs: 0.0,
+            wall_times_secs: Vec::new(),
+            max_error: 0.0,
+            input_max_bond_dim: qtt_chi,
+            output_max_bond_dim: mpo_chi,
+            output_bond_dims: input.batch_diagonal_mpo.link_dims(),
+            n_params: Some(diagonal_mpo_params),
+            n_patches: None,
+            max_patch_bond: None,
+            rtol: Some(input_l2_rtol),
+            input_build_secs: Some(input.build.as_secs_f64()),
+        },
+    )
 }
 
 #[allow(clippy::too_many_arguments)]

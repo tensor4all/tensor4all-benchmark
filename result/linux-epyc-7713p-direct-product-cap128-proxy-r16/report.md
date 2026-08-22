@@ -7,7 +7,7 @@ For the doubled input `F=f tensor_product f`, a Cartesian product of factor patc
 | global fit | 0.0792 | 7.70e-7 | - | - | - |
 | patched fit | 110.508 | 3.07e-6 | 128 / 64 | 1,024 | 64 |
 
-The patched factor contraction is 1,395x slower, before adding the excluded 11.39 s patch preparation. Its exact Cartesian lift to the doubled problem would contain:
+The patched factor contraction is 1,396x slower, before adding the excluded 11.39 s patch preparation. Both measured errors pass the benchmark's `1e-4` external sanity gate; the patched result is not claimed to meet a `1e-6` end-to-end output-error bound. Its exact Cartesian lift to the doubled problem would contain:
 
 - left product patches: `128^2 = 16,384`;
 - right product patches: `64^2 = 4,096`;

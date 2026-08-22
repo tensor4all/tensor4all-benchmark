@@ -17,7 +17,7 @@ use tensor4all_simplett::{
 use crate::gaussian_input::{tensortrain_n_params, GAUSSIAN_PADDING_FACTOR, GAUSSIAN_R};
 use crate::hdf5_export::{load_tt_from_mps, save_tt_as_mps};
 
-const CACHE_SCHEMA: &str = "global-tci-gaussian-3d-batch-diagonal-v1";
+const CACHE_SCHEMA: &str = "global-tci-gaussian-3d-batch-diagonal-v2";
 const TENSOR4ALL_REV: &str = "9e9aedaebe0d3918b34dd399ff0981e337f3835b";
 
 /// Parameters for one input-only 3D Gaussian rank probe.
@@ -210,6 +210,15 @@ fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
+fn stable_key_hash(value: &str) -> u64 {
+    value
+        .as_bytes()
+        .iter()
+        .fold(0xcbf29ce484222325, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x100000001b3)
+        })
+}
+
 fn bin_key(point: [f64; 3], width: f64) -> (i64, i64, i64) {
     (
         (point[0] / width).floor() as i64,
@@ -353,7 +362,7 @@ fn prepare_gaussian3d_input_with_r(
         config.rho_max,
         config.seed,
     );
-    let cache_key = format!(
+    let cache_identity = format!(
         "{CACHE_SCHEMA}-rev{TENSOR4ALL_REV}-n{}-r{r}-padding{:016x}-sigma{:016x}-rho{:016x}-spacing{:016x}-tci{:016x}-local{:016x}-piv{}-cap{}-seed{}",
         config.n,
         GAUSSIAN_PADDING_FACTOR.to_bits(),
@@ -365,6 +374,11 @@ fn prepare_gaussian3d_input_with_r(
         config.tci_pivot_components,
         config.tci_max_bond_dim,
         config.seed,
+    );
+    let cache_key = format!(
+        "{CACHE_SCHEMA}-n{}-r{r}-{:016x}",
+        config.n,
+        stable_key_hash(&cache_identity)
     );
     std::fs::create_dir_all(&config.cache_dir)?;
     let path = config.cache_dir.join(format!("{cache_key}.h5"));

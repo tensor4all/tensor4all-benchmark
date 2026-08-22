@@ -19,7 +19,9 @@ use t4a_bench::harness::time_median;
 use t4a_bench::integrated_gaussian::{
     count_integrated_components, prepare_integrated_reference, OUTPUT_REFERENCE_ABS_TOLERANCE,
 };
-use t4a_bench::mpo_contract::{center_errors_vs_integrated_gaussians, mpo_n_params};
+use t4a_bench::mpo_contract::{
+    center_errors_vs_integrated_gaussians, direct_product_mpo, mpo_n_params,
+};
 use t4a_bench::patched_mpo::{
     local_sweep_rtol, partitioned_treetn_n_params, tensortrain_n_params, MpoPatchLayout,
     PatchedMpoPair,
@@ -141,9 +143,16 @@ fn main() -> anyhow::Result<()> {
     let warmups = env_or("BENCH_WARMUPS", 0usize);
     let seed = env_or("BENCH_SEED", 0u64);
     let gaussian3d_input_only = env_or("BENCH_3D_INPUT_ONLY", 0usize) != 0;
+    let direct_product_input_only = env_or("BENCH_DIRECT_PRODUCT_INPUT_ONLY", 0usize) != 0;
+    anyhow::ensure!(
+        !(gaussian3d_input_only && direct_product_input_only),
+        "choose only one input-only mode"
+    );
     for n in ns {
         if gaussian3d_input_only {
             run_gaussian3d_input_rank_point(n, seed, &cache_dir, refresh, &out_dir)?;
+        } else if direct_product_input_only {
+            run_direct_product_input_rank_point(n, seed, &cache_dir, refresh, &out_dir)?;
         } else {
             run_point(n, seed, runs, warmups, &cache_dir, refresh, &out_dir)?;
         }
@@ -252,6 +261,117 @@ fn run_gaussian3d_input_rank_point(
             output_max_bond_dim: mpo_chi,
             output_bond_dims: input.batch_diagonal_mpo.link_dims(),
             n_params: Some(diagonal_mpo_params),
+            n_patches: None,
+            max_patch_bond: None,
+            rtol: Some(input_l2_rtol),
+            input_build_secs: Some(input.build.as_secs_f64()),
+        },
+    )
+}
+
+fn run_direct_product_input_rank_point(
+    n: usize,
+    seed: u64,
+    cache_dir: &Path,
+    refresh: bool,
+    out_dir: &Path,
+) -> anyhow::Result<()> {
+    let input_l2_rtol = env_or("BENCH_INPUT_L2_RTOL", INPUT_L2_RTOL);
+    let max_bytes = env_or("BENCH_DIRECT_PRODUCT_MAX_BYTES", 2usize << 30);
+    let config = GaussianInputConfig {
+        n,
+        sigma_minor: 0.05,
+        rho_max: 8.0,
+        spacing: 3.0,
+        tci_tolerance: INPUT_TCI_TOLERANCE,
+        tci_max_bond_dim: INPUT_TCI_MAX_BOND,
+        localized_absolute_tolerance: INPUT_LOCAL_ABS_TOLERANCE,
+        tci_pivot_components: INPUT_TCI_PIVOT_COMPONENTS,
+        seed,
+        cache_dir: cache_dir.to_path_buf(),
+        refresh,
+    };
+    let input = prepare_gaussian_pair_with_l2_rtol(&config, input_l2_rtol)?;
+    let sampled_error = sampled_input_relative_l2(&input, ERROR_SAMPLES, seed.wrapping_add(41))?;
+    let principal_error = principal_axis_input_relative_l2(&input, INPUT_TCI_PIVOT_COMPONENTS)?;
+    anyhow::ensure!(
+        sampled_error.0.max(sampled_error.1) <= ERROR_SANITY
+            && principal_error.0.max(principal_error.1) <= ERROR_SANITY,
+        "direct-product factor input error exceeds sanity gate"
+    );
+    let left_factor = fused_qtt_to_mpo(&input.left)?;
+    let right_factor = fused_qtt_to_mpo(&input.right)?;
+    let build_start = Instant::now();
+    let left_product = direct_product_mpo(&left_factor, &left_factor, max_bytes / 2)?;
+    let right_product = direct_product_mpo(&right_factor, &right_factor, max_bytes / 2)?;
+    let product_build_secs = build_start.elapsed().as_secs_f64();
+    let left_factor_chi = left_factor.rank();
+    let right_factor_chi = right_factor.rank();
+    let left_product_chi = left_product.rank();
+    let right_product_chi = right_product.rank();
+    anyhow::ensure!(
+        left_product_chi == left_factor_chi * left_factor_chi
+            && right_product_chi == right_factor_chi * right_factor_chi,
+        "exact direct product did not square the factor bond dimension"
+    );
+    let left_product_params = mpo_n_params(&left_product);
+    let right_product_params = mpo_n_params(&right_product);
+    let params = serde_json::json!({
+        "mode": "doubled_space_direct_product_input_only",
+        "contraction_performed": false,
+        "patching_performed": false,
+        "definition": "F(x,x_prime;y,y_prime)=f(x,y) tensor_product f(x_prime,y_prime)",
+        "n_gauss": n,
+        "r": input.r,
+        "factor_input_l2_rtol": input_l2_rtol,
+        "left_factor_chi": left_factor_chi,
+        "right_factor_chi": right_factor_chi,
+        "left_direct_product_chi": left_product_chi,
+        "right_direct_product_chi": right_product_chi,
+        "left_factor_bond_dims": left_factor.link_dims(),
+        "right_factor_bond_dims": right_factor.link_dims(),
+        "left_direct_product_bond_dims": left_product.link_dims(),
+        "right_direct_product_bond_dims": right_product.link_dims(),
+        "left_factor_params": mpo_n_params(&left_factor),
+        "right_factor_params": mpo_n_params(&right_factor),
+        "left_direct_product_params": left_product_params,
+        "right_direct_product_params": right_product_params,
+        "direct_product_bytes": (left_product_params + right_product_params) * std::mem::size_of::<f64>(),
+        "direct_product_max_bytes": max_bytes,
+        "direct_product_build_secs": product_build_secs,
+        "left_factor_sampled_relative_l2": sampled_error.0,
+        "right_factor_sampled_relative_l2": sampled_error.1,
+        "left_factor_principal_axis_relative_l2": principal_error.0,
+        "right_factor_principal_axis_relative_l2": principal_error.1,
+        "cache_key": input.cache_key,
+        "cache_hit": input.cache_hit,
+        "cache_load_secs": input.cache_load.as_secs_f64(),
+        "input_build_secs": input.build.as_secs_f64(),
+        "input_compression_secs": input.compression.as_secs_f64(),
+        "weights": "positive_uniform_[0.5,1.5)",
+        "physical_output_dimension_per_site": 4,
+        "physical_input_dimension_per_site": 4
+    });
+    write_record(
+        out_dir,
+        &format!(
+            "{CASE}-direct_product_input-n{n}-chi{}",
+            left_product_chi.max(right_product_chi)
+        ),
+        &RunRecord {
+            schema_version: SCHEMA_VERSION,
+            case: CASE.into(),
+            algorithm: "doubled_space_direct_product_input".into(),
+            params,
+            seed,
+            tolerance: input_l2_rtol,
+            wall_time_median_secs: 0.0,
+            wall_times_secs: Vec::new(),
+            max_error: sampled_error.0.max(sampled_error.1),
+            input_max_bond_dim: left_factor_chi.max(right_factor_chi),
+            output_max_bond_dim: left_product_chi.max(right_product_chi),
+            output_bond_dims: left_product.link_dims(),
+            n_params: Some(left_product_params + right_product_params),
             n_patches: None,
             max_patch_bond: None,
             rtol: Some(input_l2_rtol),

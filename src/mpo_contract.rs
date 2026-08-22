@@ -21,6 +21,92 @@ pub fn mpo_n_params(mpo: &MPO<f64>) -> usize {
         .sum()
 }
 
+/// Form the exact sitewise direct product of two equally long MPOs.
+pub fn direct_product_mpo(
+    first: &MPO<f64>,
+    second: &MPO<f64>,
+    max_bytes: usize,
+) -> anyhow::Result<MPO<f64>> {
+    anyhow::ensure!(
+        first.len() == second.len(),
+        "direct-product MPO lengths differ"
+    );
+    let mut total_entries = 0usize;
+    for site in 0..first.len() {
+        let a = first.site_tensor(site);
+        let b = second.site_tensor(site);
+        let entries = [
+            a.left_dim(),
+            b.left_dim(),
+            a.site_dim_1(),
+            b.site_dim_1(),
+            a.site_dim_2(),
+            b.site_dim_2(),
+            a.right_dim(),
+            b.right_dim(),
+        ]
+        .into_iter()
+        .try_fold(1usize, |product, factor| product.checked_mul(factor))
+        .ok_or_else(|| anyhow::anyhow!("direct-product parameter count overflow"))?;
+        total_entries = total_entries
+            .checked_add(entries)
+            .ok_or_else(|| anyhow::anyhow!("direct-product parameter count overflow"))?;
+    }
+    let bytes = total_entries
+        .checked_mul(std::mem::size_of::<f64>())
+        .ok_or_else(|| anyhow::anyhow!("direct-product byte count overflow"))?;
+    anyhow::ensure!(
+        bytes <= max_bytes,
+        "direct-product MPO requires {bytes} bytes, exceeding limit {max_bytes}"
+    );
+
+    let tensors = (0..first.len())
+        .map(|site| {
+            let a = first.site_tensor(site);
+            let b = second.site_tensor(site);
+            let mut data = Vec::with_capacity(
+                a.left_dim()
+                    * b.left_dim()
+                    * a.site_dim_1()
+                    * b.site_dim_1()
+                    * a.site_dim_2()
+                    * b.site_dim_2()
+                    * a.right_dim()
+                    * b.right_dim(),
+            );
+            for b_right in 0..b.right_dim() {
+                for a_right in 0..a.right_dim() {
+                    for b_input in 0..b.site_dim_2() {
+                        for a_input in 0..a.site_dim_2() {
+                            for b_output in 0..b.site_dim_1() {
+                                for a_output in 0..a.site_dim_1() {
+                                    for b_left in 0..b.left_dim() {
+                                        for a_left in 0..a.left_dim() {
+                                            data.push(
+                                                *a.get4(a_left, a_output, a_input, a_right)
+                                                    * *b.get4(b_left, b_output, b_input, b_right),
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            tensor4_from_data(
+                data,
+                a.left_dim() * b.left_dim(),
+                a.site_dim_1() * b.site_dim_1(),
+                a.site_dim_2() * b.site_dim_2(),
+                a.right_dim() * b.right_dim(),
+            )
+            .map_err(anyhow::Error::from)
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?;
+    MPO::new(tensors).map_err(anyhow::Error::from)
+}
+
 /// Contract `f(x,y)` and `g(y,z)` using the TreeTN variational fit engine.
 pub fn fit_mpo_contract(
     left: &MPO<f64>,
@@ -278,6 +364,13 @@ mod tests {
                 .unwrap(),
         )
         .unwrap();
+        assert!(direct_product_mpo(&left, &left, 0).is_err());
+        let direct = direct_product_mpo(&left, &left, usize::MAX).unwrap();
+        assert_eq!(direct.rank(), left.rank() * left.rank());
+        let zero = vec![0; 2 * r];
+        assert!(
+            (direct.evaluate(&zero).unwrap() - left.evaluate(&zero).unwrap().powi(2)).abs() < 1e-12
+        );
         let output = fit_mpo_contract(&left, &right, 1e-8, 128).unwrap();
         let error = sampled_relative_l2_vs_aniso_grid(
             &output,

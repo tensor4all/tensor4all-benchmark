@@ -12,7 +12,7 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. Gaussian inputs use fixed `R = 16`, meaning 65,536 grid points per physical axis. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
-The pre-tolerance-correction factor-4 padded patch-scaling and profiled small-N MPO results are archived in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The current contraction-free balanced versus shared-y-only N/χ study is in [`result/linux-epyc-7713p-patch-layout-scaling-r16/report.md`](result/linux-epyc-7713p-patch-layout-scaling-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
+The pre-tolerance-correction factor-4 padded patch-scaling and profiled small-N MPO results are archived in [`result/linux-epyc-7713p-padded-r16/report.md`](result/linux-epyc-7713p-padded-r16/report.md). The current contraction-free balanced versus shared-y-only N/χ study is in [`result/linux-epyc-7713p-patch-layout-scaling-r16/report.md`](result/linux-epyc-7713p-patch-layout-scaling-r16/report.md). The input-only fully correlated 3D Gaussian rank sweep is in [`result/linux-epyc-7713p-gaussian3d-rank-r16/report.md`](result/linux-epyc-7713p-gaussian3d-rank-r16/report.md). The earlier unpadded profile through compressed χ418 remains archived in [`result/linux-epyc-7713p-global-tci-r16/report.md`](result/linux-epyc-7713p-global-tci-r16/report.md) and is not presented as the current padded result.
 
 ## Gaussian input
 
@@ -84,7 +84,14 @@ MKL_NUM_THREADS=1 BLIS_NUM_THREADS=1 BENCH_INPUT_ONLY=1 BENCH_NS=512 \
 cargo run --release --locked --bin elementwise_gauss2d_patched
 ```
 
-The batch-diagonal 3D rank probe runs through the existing Case 3 binary:
+The bounded batch-diagonal 3D rank sweep is reproduced with:
+
+```bash
+BENCH_CPU_CORE=0 scripts/run_gaussian3d_rank_scaling.sh \
+  linux-epyc-7713p-gaussian3d-rank-r16
+```
+
+A single probe runs through the existing Case 3 binary:
 
 ```bash
 BENCH_3D_INPUT_ONLY=1 BENCH_NS=8 BENCH_INPUT_CACHE_DIR=.cache/inputs \

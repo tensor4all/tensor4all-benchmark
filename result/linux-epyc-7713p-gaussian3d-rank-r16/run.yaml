@@ -1,6 +1,6 @@
 profile: linux-epyc-7713p-gaussian3d-rank-r16
 date: 2026-08-22
-repository_revision: bd2f174781cd9454427237d7ca32b2de47f9a780
+repository_revision: 81b3c57f26562aae475e6c0b53c7206970b3965a
 tensor4all_rs_revision: 1b3ebb74ea40d5aa0c44f39d7bcfba34710e038b
 input_cache_compatibility_revision: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
 cpu: AMD EPYC 7713P 64-Core Processor
@@ -12,6 +12,8 @@ dimensions: [batch, x, y]
 batch_diagonal_embedding: "A(b,x;b_prime,y)=delta(b,b_prime)A(b,x,y)"
 padding_factor: 4
 input_l2_rtol: 1e-6
+local_compression_rtol: 2.581988897471611e-7
+compression_bond_budget_count: 15
 n_points: [1, 2, 4, 8, 16, 32, 64]
 measurement_command_timeout_seconds: 570
 patching_performed: false
@@ -19,4 +21,5 @@ contraction_performed: false
 notes:
   - Raw Global TCI inputs are cached; final relative-L2 compression and diagonal embedding are repeated outside any timed operation.
   - The diagonal embedding is site-local and preserves QTT bond dimensions exactly.
+  - The requested squared compression budget is distributed across 15 QTT bonds; off-pivot principal-axis validation remains authoritative.
   - N64 timed out during input construction and produced no rank record.

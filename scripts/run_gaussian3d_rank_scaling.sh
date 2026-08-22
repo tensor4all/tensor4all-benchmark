@@ -18,6 +18,11 @@ if [[ -z $tensor4all_rev && -d $local_tensor4all/.git ]]; then
   tensor4all_rev=$(git -C "$local_tensor4all" rev-parse HEAD)
 fi
 tensor4all_rev=${tensor4all_rev:-9e9aedaebe0d3918b34dd399ff0981e337f3835b}
+local_compression_rtol=$(python3 - <<'PY'
+import math
+print(repr(1e-6 / math.sqrt(15)))
+PY
+)
 cat >"$out/run.yaml" <<EOF
 profile: $profile
 date: $(date -I)
@@ -33,10 +38,14 @@ dimensions: [batch, x, y]
 batch_diagonal_embedding: "A(b,x;b_prime,y)=delta(b,b_prime)A(b,x,y)"
 padding_factor: 4
 input_l2_rtol: 1e-6
+local_compression_rtol: $local_compression_rtol
+compression_bond_budget_count: 15
 n_points: [1, 2, 4, 8, 16, 32, 64]
 measurement_command_timeout_seconds: 570
 patching_performed: false
 contraction_performed: false
+notes:
+  - The requested squared compression budget is distributed across 15 QTT bonds; off-pivot principal-axis validation remains authoritative.
 EOF
 
 export RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1

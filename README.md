@@ -8,7 +8,7 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 | --- | --- | --- | --- |
 | `elementwise_fourier` | Elementwise product of two random one-dimensional Fourier QTTs | naive, zip-up, fit, ACI | measured input χ |
 | `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, patched fit, global ACI, patched ACI | compressed input χ |
-| `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit, patched fit | compressed input χ |
+| `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit, global zip-up, global SRC fixed, global SRC adaptive, patched fit | compressed input χ |
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
@@ -31,9 +31,12 @@ Case 2 compares:
 - global ACI with scale-relative residual
 - patched ACI with patch-local absolute residual followed by global L2 budgeting
 
-Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Its reference is the finite left-endpoint quantics grid contraction, evaluated analytically with endpoint corrections.
+Case 3 compares global TreeTN fit, global TreeTN zip-up, fixed and adaptive global TreeTN SRC, and patched chain-TreeTN fit. Its reference is the finite left-endpoint quantics grid contraction, evaluated analytically with endpoint corrections.
 
 Input construction, cache I/O, global input compression, format conversion, patch preparation, output conversion, and accuracy evaluation are outside timed regions.
+
+The input cache key and run metadata include the pinned tensor4all-rs commit, so
+records cannot be mixed across implementation revisions.
 
 ## Running
 

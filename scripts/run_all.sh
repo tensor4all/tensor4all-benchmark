@@ -44,7 +44,7 @@ os: $(uname -s)
 chip: ${chip:-unknown}
 memory_gb: ${memory_gb:-unknown}
 repo_rev: $repo_rev
-tensor4all_rs_rev: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
+tensor4all_rs_rev: cd3724b045f13a780de5642123b97d8491ce2083
 threads: 1
 cpu_affinity: $core
 EOF

@@ -1,4 +1,4 @@
-//! Case 3: global and patched fit contraction of interpolative Gaussian MPOs.
+//! Case 3: global fit, global zip-up, SRC, and patched fit contraction of interpolative Gaussian MPOs.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -146,6 +146,145 @@ fn run_point(
             output_max_bond_dim: global_chi,
             output_bond_dims: global.bond_dims(),
             n_params: Some(global_params),
+            n_patches: None,
+            max_patch_bond: None,
+            rtol: Some(INPUT_L2_RTOL),
+            input_build_secs: Some(input.build.as_secs_f64()),
+        },
+    )?;
+
+    let (zipup_result, zipup_timing) = time_median(warmups, runs, || {
+        prepared.contract_zipup_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)
+    });
+    let zipup: TensorTrain = zipup_result?;
+    let zipup_params = tensortrain_n_params(&zipup);
+    let zipup_chi = zipup.max_bond_dim();
+    let zipup_mpo = prepared.finish_global_output(&zipup)?;
+    let zipup_error = sampled_relative_l2_vs_aniso_grid(
+        &zipup_mpo,
+        grid_step,
+        &input.left_mixture,
+        &input.right_mixture,
+        input.r,
+        input.box_l,
+        ERROR_SAMPLES,
+        seed.wrapping_add(99),
+    )?;
+    anyhow::ensure!(
+        zipup_error <= ERROR_SANITY,
+        "global zip-up contraction error {zipup_error:.3e}"
+    );
+    write_record(
+        out_dir,
+        &format!("{CASE}-global_zipup-chi{input_chi}"),
+        &RunRecord {
+            schema_version: SCHEMA_VERSION,
+            case: CASE.into(),
+            algorithm: "global_zipup".into(),
+            params: common.clone(),
+            seed,
+            tolerance: INPUT_L2_RTOL,
+            wall_time_median_secs: zipup_timing.median_secs,
+            wall_times_secs: zipup_timing.runs_secs.clone(),
+            max_error: zipup_error,
+            input_max_bond_dim: input_chi,
+            output_max_bond_dim: zipup_chi,
+            output_bond_dims: zipup.bond_dims(),
+            n_params: Some(zipup_params),
+            n_patches: None,
+            max_patch_bond: None,
+            rtol: Some(INPUT_L2_RTOL),
+            input_build_secs: Some(input.build.as_secs_f64()),
+        },
+    )?;
+
+    let (src_fixed_result, src_fixed_timing) = time_median(warmups, runs, || {
+        prepared.contract_src_fixed_global(GLOBAL_MAX_BOND, seed.wrapping_add(101))
+    });
+    let src_fixed: TensorTrain = src_fixed_result?;
+    let src_fixed_params = tensortrain_n_params(&src_fixed);
+    let src_fixed_chi = src_fixed.max_bond_dim();
+    let src_fixed_mpo = prepared.finish_global_output(&src_fixed)?;
+    let src_fixed_error = sampled_relative_l2_vs_aniso_grid(
+        &src_fixed_mpo,
+        grid_step,
+        &input.left_mixture,
+        &input.right_mixture,
+        input.r,
+        input.box_l,
+        ERROR_SAMPLES,
+        seed.wrapping_add(99),
+    )?;
+    anyhow::ensure!(
+        src_fixed_error <= ERROR_SANITY,
+        "global fixed SRC contraction error {src_fixed_error:.3e}"
+    );
+    write_record(
+        out_dir,
+        &format!("{CASE}-global_src_fixed-chi{input_chi}"),
+        &RunRecord {
+            schema_version: SCHEMA_VERSION,
+            case: CASE.into(),
+            algorithm: "global_src_fixed".into(),
+            params: common.clone(),
+            seed,
+            tolerance: INPUT_L2_RTOL,
+            wall_time_median_secs: src_fixed_timing.median_secs,
+            wall_times_secs: src_fixed_timing.runs_secs.clone(),
+            max_error: src_fixed_error,
+            input_max_bond_dim: input_chi,
+            output_max_bond_dim: src_fixed_chi,
+            output_bond_dims: src_fixed.bond_dims(),
+            n_params: Some(src_fixed_params),
+            n_patches: None,
+            max_patch_bond: None,
+            rtol: None,
+            input_build_secs: Some(input.build.as_secs_f64()),
+        },
+    )?;
+
+    let (src_adaptive_result, src_adaptive_timing) = time_median(warmups, runs, || {
+        prepared.contract_src_adaptive_global(
+            INPUT_L2_RTOL,
+            GLOBAL_MAX_BOND,
+            seed.wrapping_add(202),
+        )
+    });
+    let src_adaptive: TensorTrain = src_adaptive_result?;
+    let src_adaptive_params = tensortrain_n_params(&src_adaptive);
+    let src_adaptive_chi = src_adaptive.max_bond_dim();
+    let src_adaptive_mpo = prepared.finish_global_output(&src_adaptive)?;
+    let src_adaptive_error = sampled_relative_l2_vs_aniso_grid(
+        &src_adaptive_mpo,
+        grid_step,
+        &input.left_mixture,
+        &input.right_mixture,
+        input.r,
+        input.box_l,
+        ERROR_SAMPLES,
+        seed.wrapping_add(99),
+    )?;
+    anyhow::ensure!(
+        src_adaptive_error <= ERROR_SANITY,
+        "global adaptive SRC contraction error {src_adaptive_error:.3e}"
+    );
+    write_record(
+        out_dir,
+        &format!("{CASE}-global_src_adaptive-chi{input_chi}"),
+        &RunRecord {
+            schema_version: SCHEMA_VERSION,
+            case: CASE.into(),
+            algorithm: "global_src_adaptive".into(),
+            params: common.clone(),
+            seed,
+            tolerance: INPUT_L2_RTOL,
+            wall_time_median_secs: src_adaptive_timing.median_secs,
+            wall_times_secs: src_adaptive_timing.runs_secs,
+            max_error: src_adaptive_error,
+            input_max_bond_dim: input_chi,
+            output_max_bond_dim: src_adaptive_chi,
+            output_bond_dims: src_adaptive.bond_dims(),
+            n_params: Some(src_adaptive_params),
             n_patches: None,
             max_patch_bond: None,
             rtol: Some(INPUT_L2_RTOL),

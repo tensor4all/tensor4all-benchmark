@@ -1,7 +1,7 @@
 //! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
 
 use tensor4all_core::{DynIndex, SvdTruncationPolicy};
-use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
+use tensor4all_itensorlike::{ContractOptions, SrcOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
 use tensor4all_partitionedtt as tt;
 use tensor4all_simplett::mpo::MPO;
@@ -217,7 +217,7 @@ impl PatchedMpoPair {
         let global_left = left_train.clone();
         let global_right = right_train.clone();
         let tree_input_options = tree::PatchingOptions {
-            rtol: input_rtol,
+            cutoff: input_rtol * input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -233,7 +233,7 @@ impl PatchedMpoPair {
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
         let tree_options = tree::PatchingOptions {
-            rtol: contract_rtol,
+            cutoff: contract_rtol * contract_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -333,6 +333,49 @@ impl PatchedMpoPair {
             .map_err(Into::into)
     }
 
+    /// Run one global zip-up contraction on the prepared unpatched inputs.
+    pub fn contract_zipup_global(
+        &self,
+        rtol: f64,
+        output_max_bond: usize,
+    ) -> anyhow::Result<TensorTrain> {
+        let options = ContractOptions::zipup()
+            .with_max_bond_dim(output_max_bond)
+            .with_svd_policy(itensor_cutoff_policy(rtol));
+        self.global_left
+            .contract(&self.global_right, &options)
+            .map_err(Into::into)
+    }
+
+    /// Run fixed-rank SRC on the prepared global chain inputs.
+    pub fn contract_src_fixed_global(
+        &self,
+        output_max_bond: usize,
+        seed: u64,
+    ) -> anyhow::Result<TensorTrain> {
+        let options = ContractOptions::src()
+            .with_max_bond_dim(output_max_bond)
+            .with_src_options(SrcOptions::fixed().with_seed(seed));
+        self.global_left
+            .contract(&self.global_right, &options)
+            .map_err(Into::into)
+    }
+
+    /// Run tolerance-driven adaptive SRC on the prepared global chain inputs.
+    pub fn contract_src_adaptive_global(
+        &self,
+        rtol: f64,
+        max_rank: usize,
+        seed: u64,
+    ) -> anyhow::Result<TensorTrain> {
+        let options = ContractOptions::src()
+            .with_max_bond_dim(max_rank)
+            .with_src_options(SrcOptions::adaptive(rtol, max_rank).with_seed(seed));
+        self.global_left
+            .contract(&self.global_right, &options)
+            .map_err(Into::into)
+    }
+
     /// Convert a prepared global result to an MPO outside the timed region.
     pub fn finish_global_output(&self, output: &TensorTrain) -> anyhow::Result<MPO<f64>> {
         tensortrain_to_mpo(output, &self.x, &self.z)
@@ -389,7 +432,7 @@ impl PatchedMpoPair {
         output_max_bond: usize,
     ) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
         let output_options = tree::PatchingOptions {
-            rtol,
+            cutoff: rtol * rtol,
             max_bond_dim: Some(output_max_bond),
             ..self.tree_options.clone()
         };

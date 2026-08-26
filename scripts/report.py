@@ -9,7 +9,13 @@ from pathlib import Path
 EXPECTED = {
     "elementwise_fourier": {"naive", "zipup", "fit", "aci"},
     "gaussian_elementwise": {"global_fit", "patched_fit", "global_aci", "patched_aci"},
-    "gaussian_mpo_contraction": {"global_fit", "patched_fit"},
+    "gaussian_mpo_contraction": {
+        "global_fit",
+        "global_zipup",
+        "global_src_fixed",
+        "global_src_adaptive",
+        "patched_fit",
+    },
 }
 
 
@@ -67,7 +73,7 @@ def main(profile: Path) -> None:
         )
     for case, title in [
         ("gaussian_elementwise", "Case 2: Gaussian elementwise, global versus patched"),
-        ("gaussian_mpo_contraction", "Case 3: Gaussian MPO-MPO contraction, global versus patched"),
+        ("gaussian_mpo_contraction", "Case 3: Gaussian MPO-MPO contraction, global methods versus patched"),
     ]:
         lines += [
             "",
@@ -76,12 +82,19 @@ def main(profile: Path) -> None:
             "| input χ | raw χ | N | R | arm | time (s) | sampled relative L2 | input patches | input max patch χ | output patches | parameters | speedup |",
             "|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
-        for record in sorted(grouped[case], key=lambda item: (item["input_max_bond_dim"], item["algorithm"])):
+        records = sorted(grouped[case], key=lambda item: (item["input_max_bond_dim"], item["algorithm"]))
+        global_fit_times = {
+            record["params"]["n_gauss"]: record["wall_time_median_secs"]
+            for record in records
+            if record["algorithm"] == "global_fit"
+        }
+        for record in records:
             params = record["params"]
             raw_chi = max(params["raw_left_chi"], params["raw_right_chi"])
             input_patches = params.get("input_patch_count", params.get("left_input_patch_count", 0) + params.get("right_input_patch_count", 0))
             input_patch_chi = params.get("input_max_patch_chi", max(params.get("left_input_max_patch_chi", 0), params.get("right_input_max_patch_chi", 0)))
-            speedup = params.get("speedup_vs_global", 1.0)
+            baseline_time = global_fit_times[params["n_gauss"]]
+            speedup = baseline_time / record["wall_time_median_secs"]
             lines.append(
                 f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {speedup:.3f} |"
             )

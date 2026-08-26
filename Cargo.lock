@@ -514,6 +514,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
+name = "hataori"
+version = "0.1.0"
+source = "git+https://github.com/shinaoka/hataori-rs.git?rev=59d0ccd6b403e285b7e716a8ae6d12d851da13b1#59d0ccd6b403e285b7e716a8ae6d12d851da13b1"
+dependencies = [
+ "libc",
+ "rayon",
+]
+
+[[package]]
 name = "hdf5-metno"
 version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1372,7 +1381,7 @@ dependencies = [
 [[package]]
 name = "tenferro-ad"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "computegraph",
  "lru",
@@ -1388,12 +1397,12 @@ dependencies = [
 [[package]]
 name = "tenferro-core-ops"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 
 [[package]]
 name = "tenferro-cpu"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "faer",
  "lru",
@@ -1412,7 +1421,7 @@ dependencies = [
 [[package]]
 name = "tenferro-einsum"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "computegraph",
  "lru",
@@ -1430,7 +1439,7 @@ dependencies = [
 [[package]]
 name = "tenferro-internal-cpu-kernels"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "num-complex",
  "num-traits",
@@ -1442,7 +1451,7 @@ dependencies = [
 [[package]]
 name = "tenferro-internal-extension-macros"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1452,7 +1461,7 @@ dependencies = [
 [[package]]
 name = "tenferro-internal-ops"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "computegraph",
  "num-complex",
@@ -1465,7 +1474,7 @@ dependencies = [
 [[package]]
 name = "tenferro-linalg"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "computegraph",
  "faer",
@@ -1483,7 +1492,7 @@ dependencies = [
 [[package]]
 name = "tenferro-runtime"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "computegraph",
  "lru",
@@ -1491,6 +1500,7 @@ dependencies = [
  "num-traits",
  "smallvec",
  "tenferro-core-ops",
+ "tenferro-internal-extension-macros",
  "tenferro-internal-ops",
  "tenferro-tensor",
  "thiserror 2.0.20",
@@ -1499,7 +1509,7 @@ dependencies = [
 [[package]]
 name = "tenferro-tensor"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "num-complex",
  "num-traits",
@@ -1513,7 +1523,7 @@ dependencies = [
 [[package]]
 name = "tenferro-tensor-core"
 version = "0.3.0"
-source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=b5a106be3133979d78832a0ca3f4d6b57613b3d7#b5a106be3133979d78832a0ca3f4d6b57613b3d7"
+source = "git+https://github.com/tensor4all/tenferro-rs.git?rev=a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45#a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45"
 dependencies = [
  "num-complex",
  "smallvec",
@@ -1523,7 +1533,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-aci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "num-complex",
  "rand",
@@ -1538,7 +1548,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-core"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1563,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-hdf5"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "hdf5-metno",
@@ -1579,7 +1589,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-interpolativeqtt"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "tensor4all-simplett",
  "tensor4all-tensorbackend",
@@ -1589,7 +1599,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-itensorlike"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1603,11 +1613,10 @@ dependencies = [
 [[package]]
 name = "tensor4all-partitionedtreetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "tensor4all-core",
- "tensor4all-tensorbackend",
  "tensor4all-treetn",
  "thiserror 2.0.20",
 ]
@@ -1615,9 +1624,10 @@ dependencies = [
 [[package]]
 name = "tensor4all-partitionedtt"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
+ "hataori",
  "num-complex",
  "num-traits",
  "rand",
@@ -1633,7 +1643,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-simplett"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1650,7 +1660,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorbackend"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1670,7 +1680,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1685,7 +1695,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-treetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=9e9aedaebe0d3918b34dd399ff0981e337f3835b#9e9aedaebe0d3918b34dd399ff0981e337f3835b"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=cd3724b045f13a780de5642123b97d8491ce2083#cd3724b045f13a780de5642123b97d8491ce2083"
 dependencies = [
  "anyhow",
  "dyn-clone",

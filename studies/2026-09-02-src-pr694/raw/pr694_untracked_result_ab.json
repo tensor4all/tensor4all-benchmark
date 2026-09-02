@@ -1,0 +1,272 @@
+[
+  {
+    "bond": 32,
+    "pair": 1,
+    "untracked_ms": 29.645,
+    "untracked_error": 5.359e-26,
+    "leaf_ms": 28.374,
+    "leaf_error": 5.344e-26,
+    "change_pct": 4.4794530203707605
+  },
+  {
+    "bond": 32,
+    "pair": 2,
+    "leaf_ms": 30.412000000000003,
+    "leaf_error": 5.447e-26,
+    "untracked_ms": 28.367,
+    "untracked_error": 5.359e-26,
+    "change_pct": -6.72431934762594
+  },
+  {
+    "bond": 32,
+    "pair": 3,
+    "untracked_ms": 28.415,
+    "untracked_error": 5.202e-26,
+    "leaf_ms": 29.356,
+    "leaf_error": 5.375e-26,
+    "change_pct": -3.2054775855021256
+  },
+  {
+    "bond": 32,
+    "pair": 4,
+    "leaf_ms": 30.058999999999997,
+    "leaf_error": 5.078e-26,
+    "untracked_ms": 27.151,
+    "untracked_error": 4.638e-26,
+    "change_pct": -9.674307195848153
+  },
+  {
+    "bond": 32,
+    "pair": 5,
+    "untracked_ms": 30.816,
+    "untracked_error": 5.821e-26,
+    "leaf_ms": 28.916,
+    "leaf_error": 5.447e-26,
+    "change_pct": 6.570756674505462
+  },
+  {
+    "bond": 32,
+    "pair": 6,
+    "leaf_ms": 30.236,
+    "leaf_error": 5.578e-26,
+    "untracked_ms": 29.381999999999998,
+    "untracked_error": 4.638e-26,
+    "change_pct": -2.82444767826433
+  },
+  {
+    "bond": 32,
+    "pair": 7,
+    "untracked_ms": 28.599,
+    "untracked_error": 4.78e-26,
+    "leaf_ms": 33.592,
+    "leaf_error": 4.987e-26,
+    "change_pct": -14.863658013812808
+  },
+  {
+    "bond": 32,
+    "pair": 8,
+    "leaf_ms": 30.658,
+    "leaf_error": 5.375e-26,
+    "untracked_ms": 27.488,
+    "untracked_error": 5.431e-26,
+    "change_pct": -10.339878661360824
+  },
+  {
+    "bond": 32,
+    "pair": 9,
+    "untracked_ms": 26.551000000000002,
+    "untracked_error": 5.202e-26,
+    "leaf_ms": 29.391000000000002,
+    "leaf_error": 5.359e-26,
+    "change_pct": -9.662821952298318
+  },
+  {
+    "bond": 32,
+    "pair": 10,
+    "leaf_ms": 31.491,
+    "leaf_error": 4.638e-26,
+    "untracked_ms": 27.447,
+    "untracked_error": 5.447e-26,
+    "change_pct": -12.841764313613414
+  },
+  {
+    "bond": 64,
+    "pair": 1,
+    "untracked_ms": 61.824,
+    "untracked_error": 9.67e-29,
+    "leaf_ms": 64.594,
+    "leaf_error": 8.703e-29,
+    "change_pct": -4.288323992940512
+  },
+  {
+    "bond": 64,
+    "pair": 2,
+    "leaf_ms": 66.34700000000001,
+    "leaf_error": 9.212e-29,
+    "untracked_ms": 61.032999999999994,
+    "untracked_error": 1.176e-28,
+    "change_pct": -8.009405097442258
+  },
+  {
+    "bond": 64,
+    "pair": 3,
+    "untracked_ms": 66.447,
+    "untracked_error": 1.176e-28,
+    "leaf_ms": 61.477999999999994,
+    "leaf_error": 8.088e-29,
+    "change_pct": 8.082566121214096
+  },
+  {
+    "bond": 64,
+    "pair": 4,
+    "leaf_ms": 68.23400000000001,
+    "leaf_error": 1.176e-28,
+    "untracked_ms": 61.729,
+    "untracked_error": 1.176e-28,
+    "change_pct": -9.533370460474266
+  },
+  {
+    "bond": 64,
+    "pair": 5,
+    "untracked_ms": 63.702999999999996,
+    "untracked_error": 9.824e-29,
+    "leaf_ms": 80.916,
+    "leaf_error": 1.029e-28,
+    "change_pct": -21.272677838746358
+  },
+  {
+    "bond": 64,
+    "pair": 6,
+    "leaf_ms": 64.014,
+    "leaf_error": 9.67e-29,
+    "untracked_ms": 62.449,
+    "untracked_error": 1.052e-28,
+    "change_pct": -2.4447777048770547
+  },
+  {
+    "bond": 64,
+    "pair": 7,
+    "untracked_ms": 60.052,
+    "untracked_error": 1.12e-28,
+    "leaf_ms": 68.385,
+    "leaf_error": 1.095e-28,
+    "change_pct": -12.185420779410695
+  },
+  {
+    "bond": 64,
+    "pair": 8,
+    "leaf_ms": 63.928,
+    "leaf_error": 9.33e-29,
+    "untracked_ms": 60.602999999999994,
+    "untracked_error": 9.026e-29,
+    "change_pct": -5.201163809285447
+  },
+  {
+    "bond": 64,
+    "pair": 9,
+    "untracked_ms": 58.424,
+    "untracked_error": 1.095e-28,
+    "leaf_ms": 64.584,
+    "leaf_error": 9.67e-29,
+    "change_pct": -9.537966059705195
+  },
+  {
+    "bond": 64,
+    "pair": 10,
+    "leaf_ms": 68.047,
+    "leaf_error": 1.095e-28,
+    "untracked_ms": 58.271,
+    "untracked_error": 8.088e-29,
+    "change_pct": -14.36654077328905
+  },
+  {
+    "bond": 128,
+    "pair": 1,
+    "untracked_ms": 277.7,
+    "untracked_error": 2.068e-31,
+    "leaf_ms": 292.961,
+    "leaf_error": 2.091e-31,
+    "change_pct": -5.209225801386541
+  },
+  {
+    "bond": 128,
+    "pair": 2,
+    "leaf_ms": 286.17900000000003,
+    "leaf_error": 2.113e-31,
+    "untracked_ms": 261.799,
+    "untracked_error": 2.143e-31,
+    "change_pct": -8.519143612913616
+  },
+  {
+    "bond": 128,
+    "pair": 3,
+    "untracked_ms": 284.738,
+    "untracked_error": 1.959e-31,
+    "leaf_ms": 311.534,
+    "leaf_error": 2.24e-31,
+    "change_pct": -8.601308364416083
+  },
+  {
+    "bond": 128,
+    "pair": 4,
+    "leaf_ms": 320.069,
+    "leaf_error": 2.24e-31,
+    "untracked_ms": 281.494,
+    "untracked_error": 2.113e-31,
+    "change_pct": -12.052088768359315
+  },
+  {
+    "bond": 128,
+    "pair": 5,
+    "untracked_ms": 280.36899999999997,
+    "untracked_error": 1.959e-31,
+    "leaf_ms": 293.594,
+    "leaf_error": 1.868e-31,
+    "change_pct": -4.504519847135846
+  },
+  {
+    "bond": 128,
+    "pair": 6,
+    "leaf_ms": 294.12100000000004,
+    "leaf_error": 2.099e-31,
+    "untracked_ms": 273.254,
+    "untracked_error": 1.868e-31,
+    "change_pct": -7.094699120430037
+  },
+  {
+    "bond": 128,
+    "pair": 7,
+    "untracked_ms": 297.107,
+    "untracked_error": 1.871e-31,
+    "leaf_ms": 292.279,
+    "leaf_error": 1.948e-31,
+    "change_pct": 1.651846352286701
+  },
+  {
+    "bond": 128,
+    "pair": 8,
+    "leaf_ms": 289.993,
+    "leaf_error": 1.868e-31,
+    "untracked_ms": 273.812,
+    "untracked_error": 2.091e-31,
+    "change_pct": -5.579789856996542
+  },
+  {
+    "bond": 128,
+    "pair": 9,
+    "untracked_ms": 268.5,
+    "untracked_error": 1.868e-31,
+    "leaf_ms": 293.311,
+    "leaf_error": 2.091e-31,
+    "change_pct": -8.458939487438244
+  },
+  {
+    "bond": 128,
+    "pair": 10,
+    "leaf_ms": 296.29100000000005,
+    "leaf_error": 2.099e-31,
+    "untracked_ms": 281.136,
+    "untracked_error": 1.959e-31,
+    "change_pct": -5.114903928907744
+  }
+]

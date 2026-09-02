@@ -1,0 +1,272 @@
+[
+  {
+    "bond": 32,
+    "pair": 1,
+    "candidate_ms": 34.272999999999996,
+    "candidate_error": 5.202e-26,
+    "baseline_ms": 32.929,
+    "baseline_error": 5.078e-26,
+    "change_pct": 4.081508700537495
+  },
+  {
+    "bond": 32,
+    "pair": 2,
+    "baseline_ms": 34.047000000000004,
+    "baseline_error": 6.021e-26,
+    "candidate_ms": 32.995999999999995,
+    "candidate_error": 5.359e-26,
+    "change_pct": -3.0869092724763125
+  },
+  {
+    "bond": 32,
+    "pair": 3,
+    "candidate_ms": 31.621000000000002,
+    "candidate_error": 5.202e-26,
+    "baseline_ms": 34.439,
+    "baseline_error": 5.078e-26,
+    "change_pct": -8.182583698713664
+  },
+  {
+    "bond": 32,
+    "pair": 4,
+    "baseline_ms": 33.242,
+    "baseline_error": 5.578e-26,
+    "candidate_ms": 31.948999999999998,
+    "candidate_error": 4.638e-26,
+    "change_pct": -3.8896576619938616
+  },
+  {
+    "bond": 32,
+    "pair": 5,
+    "candidate_ms": 33.581,
+    "candidate_error": 4.78e-26,
+    "baseline_ms": 35.244,
+    "baseline_error": 5.359e-26,
+    "change_pct": -4.718533651117907
+  },
+  {
+    "bond": 32,
+    "pair": 6,
+    "baseline_ms": 34.501999999999995,
+    "baseline_error": 5.344e-26,
+    "candidate_ms": 33.02,
+    "candidate_error": 5.578e-26,
+    "change_pct": -4.295403165033884
+  },
+  {
+    "bond": 32,
+    "pair": 7,
+    "candidate_ms": 30.965,
+    "candidate_error": 5.447e-26,
+    "baseline_ms": 36.23500000000001,
+    "baseline_error": 6.171e-26,
+    "change_pct": -14.54394922036707
+  },
+  {
+    "bond": 32,
+    "pair": 8,
+    "baseline_ms": 34.83,
+    "baseline_error": 5.359e-26,
+    "candidate_ms": 32.348,
+    "candidate_error": 5.375e-26,
+    "change_pct": -7.126040769451625
+  },
+  {
+    "bond": 32,
+    "pair": 9,
+    "candidate_ms": 32.394,
+    "candidate_error": 5.202e-26,
+    "baseline_ms": 35.594,
+    "baseline_error": 4.78e-26,
+    "change_pct": -8.990279260549539
+  },
+  {
+    "bond": 32,
+    "pair": 10,
+    "baseline_ms": 33.373,
+    "baseline_error": 5.078e-26,
+    "candidate_ms": 31.983999999999998,
+    "candidate_error": 5.202e-26,
+    "change_pct": -4.162047163874982
+  },
+  {
+    "bond": 64,
+    "pair": 1,
+    "candidate_ms": 69.911,
+    "candidate_error": 9.026e-29,
+    "baseline_ms": 71.488,
+    "baseline_error": 1.155e-28,
+    "change_pct": -2.2059646374216646
+  },
+  {
+    "bond": 64,
+    "pair": 2,
+    "baseline_ms": 71.58399999999999,
+    "baseline_error": 9.67e-29,
+    "candidate_ms": 70.381,
+    "candidate_error": 1.12e-28,
+    "change_pct": -1.6805431381314073
+  },
+  {
+    "bond": 64,
+    "pair": 3,
+    "candidate_ms": 72.782,
+    "candidate_error": 1.052e-28,
+    "baseline_ms": 67.929,
+    "baseline_error": 7.536e-29,
+    "change_pct": 7.144224116356779
+  },
+  {
+    "bond": 64,
+    "pair": 4,
+    "baseline_ms": 70.195,
+    "baseline_error": 8.088e-29,
+    "candidate_ms": 68.28399999999999,
+    "candidate_error": 9.026e-29,
+    "change_pct": -2.722416126504734
+  },
+  {
+    "bond": 64,
+    "pair": 5,
+    "candidate_ms": 69.188,
+    "candidate_error": 8.703e-29,
+    "baseline_ms": 69.926,
+    "baseline_error": 1.036e-28,
+    "change_pct": -1.0554014243629006
+  },
+  {
+    "bond": 64,
+    "pair": 6,
+    "baseline_ms": 66.068,
+    "baseline_error": 1.176e-28,
+    "candidate_ms": 62.096,
+    "candidate_error": 1.029e-28,
+    "change_pct": -6.011987649088823
+  },
+  {
+    "bond": 64,
+    "pair": 7,
+    "candidate_ms": 67.52900000000001,
+    "candidate_error": 1.095e-28,
+    "baseline_ms": 67.94600000000001,
+    "baseline_error": 9.026e-29,
+    "change_pct": -0.6137226621140357
+  },
+  {
+    "bond": 64,
+    "pair": 8,
+    "baseline_ms": 66.71000000000001,
+    "baseline_error": 8.088e-29,
+    "candidate_ms": 67.673,
+    "candidate_error": 1.095e-28,
+    "change_pct": 1.4435616849048039
+  },
+  {
+    "bond": 64,
+    "pair": 9,
+    "candidate_ms": 71.73,
+    "candidate_error": 1.12e-28,
+    "baseline_ms": 67.98400000000001,
+    "baseline_error": 1.036e-28,
+    "change_pct": 5.510120028241938
+  },
+  {
+    "bond": 64,
+    "pair": 10,
+    "baseline_ms": 75.042,
+    "baseline_error": 9.824e-29,
+    "candidate_ms": 72.80799999999999,
+    "candidate_error": 9.824e-29,
+    "change_pct": -2.9769995469204003
+  },
+  {
+    "bond": 128,
+    "pair": 1,
+    "candidate_ms": 324.041,
+    "candidate_error": 2.24e-31,
+    "baseline_ms": 308.52000000000004,
+    "baseline_error": 2.143e-31,
+    "change_pct": 5.03079216906519
+  },
+  {
+    "bond": 128,
+    "pair": 2,
+    "baseline_ms": 302.431,
+    "baseline_error": 2e-31,
+    "candidate_ms": 296.544,
+    "candidate_error": 2.113e-31,
+    "change_pct": -1.9465597111407273
+  },
+  {
+    "bond": 128,
+    "pair": 3,
+    "candidate_ms": 322.043,
+    "candidate_error": 2.215e-31,
+    "baseline_ms": 303.662,
+    "baseline_error": 2.091e-31,
+    "change_pct": 6.053111683384826
+  },
+  {
+    "bond": 128,
+    "pair": 4,
+    "baseline_ms": 305.14000000000004,
+    "baseline_error": 2.068e-31,
+    "candidate_ms": 319.457,
+    "candidate_error": 2.095e-31,
+    "change_pct": 4.691944681129967
+  },
+  {
+    "bond": 128,
+    "pair": 5,
+    "candidate_ms": 315.421,
+    "candidate_error": 1.871e-31,
+    "baseline_ms": 304.089,
+    "baseline_error": 2.099e-31,
+    "change_pct": 3.7265405851576228
+  },
+  {
+    "bond": 128,
+    "pair": 6,
+    "baseline_ms": 328.829,
+    "baseline_error": 1.816e-31,
+    "candidate_ms": 315.99399999999997,
+    "candidate_error": 1.816e-31,
+    "change_pct": -3.9032445435165486
+  },
+  {
+    "bond": 128,
+    "pair": 7,
+    "candidate_ms": 321.901,
+    "candidate_error": 2.215e-31,
+    "baseline_ms": 333.731,
+    "baseline_error": 2.215e-31,
+    "change_pct": -3.5447710880919026
+  },
+  {
+    "bond": 128,
+    "pair": 8,
+    "baseline_ms": 310.507,
+    "baseline_error": 2.113e-31,
+    "candidate_ms": 288.837,
+    "candidate_error": 2.143e-31,
+    "change_pct": -6.978908688048902
+  },
+  {
+    "bond": 128,
+    "pair": 9,
+    "candidate_ms": 310.212,
+    "candidate_error": 2e-31,
+    "baseline_ms": 337.351,
+    "baseline_error": 2.095e-31,
+    "change_pct": -8.044736787500263
+  },
+  {
+    "bond": 128,
+    "pair": 10,
+    "baseline_ms": 325.798,
+    "baseline_error": 2.215e-31,
+    "candidate_ms": 297.808,
+    "candidate_error": 1.948e-31,
+    "change_pct": -8.591212960177785
+  }
+]

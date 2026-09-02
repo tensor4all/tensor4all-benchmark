@@ -1,0 +1,63 @@
+{
+  "medians_ms": {
+    "baseline": 36.4625,
+    "candidate": 33.5815,
+    "python": 20.021752826869488
+  },
+  "candidate_vs_baseline_paired_median_pct": -7.224899766775467,
+  "candidate_ratio_python": 1.6772507527379485,
+  "candidate_gap_python_ms": 13.55974717313051,
+  "baseline_ratio_python": 1.8211442482232019,
+  "rows": [
+    {
+      "python": 20.281941629946232,
+      "baseline": 36.208,
+      "candidate": 33.777
+    },
+    {
+      "candidate": 33.494,
+      "python": 20.50791857764125,
+      "baseline": 37.416
+    },
+    {
+      "python": 19.82068670913577,
+      "candidate": 34.497,
+      "baseline": 37.026
+    },
+    {
+      "python": 19.688605330884457,
+      "candidate": 33.669,
+      "baseline": 36.717
+    },
+    {
+      "candidate": 34.217999999999996,
+      "python": 20.467915292829275,
+      "baseline": 36.818999999999996
+    },
+    {
+      "python": 19.655843637883663,
+      "baseline": 36.03,
+      "candidate": 33.369
+    },
+    {
+      "baseline": 36.017,
+      "python": 22.05714676529169,
+      "candidate": 43.157000000000004
+    },
+    {
+      "baseline": 46.485,
+      "python": 20.022814255207777,
+      "candidate": 33.028
+    },
+    {
+      "candidate": 33.446999999999996,
+      "python": 20.0206913985312,
+      "baseline": 36.12
+    },
+    {
+      "python": 19.9134336784482,
+      "baseline": 34.696999999999996,
+      "candidate": 33.171
+    }
+  ]
+}

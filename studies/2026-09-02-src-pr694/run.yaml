@@ -1,0 +1,50 @@
+study: tensor4all-rs-pr694-src-performance
+recorded_utc: 2026-09-02T05:58:06Z
+machine: linux-epyc-7713p
+os: Linux 6.8.0-101-generic x86_64
+chip: AMD EPYC 7713P 64-Core Processor
+physical_cores: 64
+memory_gb: 995.5
+cpu_affinity:
+  - 0
+  - 63
+threads:
+  rayon: 1
+  openblas: 1
+  omp: 1
+  mkl: 1
+rust:
+  rustc: 1.97.1 (8bab26f4f 2026-07-14)
+  cargo: 1.97.1 (c980f4866 2026-06-30)
+  release_codegen_units: 256
+tensor4all_rs:
+  branch: feature/treetn-src
+  patch_base_rev: 48ad4021d02a98a52dcffffb226ca48fbb6e2748
+  candidate_patch: tensor4all-rs-candidate.patch.gz
+  candidate_rev: 481005fbe13240f0734c9e804eb0dd960d62059e
+  pre_typed_probe_binary_sha256: dc1581df9c832a1bfc3aa28c2da6dea94420a504a5c1ad3c9eb4aaf2d82cce81
+  final_candidate_binary_sha256: dc03209646373fe804bb691f939392596e57083d6fe1f8b390850fc2c96e8574
+tenferro_rs_rev: a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45
+python_reference:
+  repository: chriscamano/RandomMPOMPS
+  rev: fe6ad494fc6f3605fc3963360f626d83f47bc2ce
+  python: 3.12.11
+  numpy: 2.0.0
+  scipy: 1.14.0
+  blas: scipy-openblas 0.3.27
+  incremental_qr: SciPy LAPACK fallback
+benchmark:
+  sites: 10
+  physical_dim: 2
+  mode: mpo-mps
+  adaptive_max_rank: 32
+  rank_increment: 3
+  final_svd: false
+  warmup: true
+  exact_reference: dense Rust oracle where recorded
+limitations:
+  - The Rust and Python arms use matched settings and shapes, but independently generated tensor values.
+  - CPU affinity changed from core 0 in early runs to core 63 in later runs. Each archived script records its core.
+  - Absolute wall time varied with shared-host load. Alternating paired Rust comparisons are primary.
+  - The deep fixed-cost profile includes profiling overhead and is diagnostic, not a wall-time result.
+  - The Python repository had no detected license, so no implementation was copied.

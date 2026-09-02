@@ -1,0 +1,103 @@
+{
+  "rows": [
+    {
+      "pair": 1,
+      "candidate_ms": 27.988,
+      "candidate_error": 5.447e-26,
+      "baseline_ms": 28.986,
+      "baseline_error": 5.578e-26,
+      "change_pct": -3.4430414682950383
+    },
+    {
+      "pair": 2,
+      "baseline_ms": 27.677,
+      "baseline_error": 5.202e-26,
+      "candidate_ms": 27.886999999999997,
+      "candidate_error": 5.431e-26,
+      "change_pct": 0.7587527549951067
+    },
+    {
+      "pair": 3,
+      "candidate_ms": 28.43,
+      "candidate_error": 5.359e-26,
+      "baseline_ms": 29.087,
+      "baseline_error": 6.021e-26,
+      "change_pct": -2.2587410183243395
+    },
+    {
+      "pair": 4,
+      "baseline_ms": 28.875,
+      "baseline_error": 5.078e-26,
+      "candidate_ms": 30.393,
+      "candidate_error": 5.578e-26,
+      "change_pct": 5.257142857142849
+    },
+    {
+      "pair": 5,
+      "candidate_ms": 31.295,
+      "candidate_error": 5.078e-26,
+      "baseline_ms": 31.965,
+      "baseline_error": 6.021e-26,
+      "change_pct": -2.0960425465352706
+    },
+    {
+      "pair": 6,
+      "baseline_ms": 31.644,
+      "baseline_error": 6.021e-26,
+      "candidate_ms": 30.630000000000003,
+      "candidate_error": 5.344e-26,
+      "change_pct": -3.204398938187325
+    },
+    {
+      "pair": 7,
+      "candidate_ms": 31.304,
+      "candidate_error": 4.78e-26,
+      "baseline_ms": 31.089,
+      "baseline_error": 5.202e-26,
+      "change_pct": 0.6915629322268302
+    },
+    {
+      "pair": 8,
+      "baseline_ms": 30.453,
+      "baseline_error": 5.344e-26,
+      "candidate_ms": 30.294,
+      "candidate_error": 6.021e-26,
+      "change_pct": -0.5221160476800324
+    },
+    {
+      "pair": 9,
+      "candidate_ms": 29.936,
+      "candidate_error": 5.447e-26,
+      "baseline_ms": 30.909,
+      "baseline_error": 4.638e-26,
+      "change_pct": -3.147950435148339
+    },
+    {
+      "pair": 10,
+      "baseline_ms": 31.578000000000003,
+      "baseline_error": 4.987e-26,
+      "candidate_ms": 30.607,
+      "candidate_error": 4.638e-26,
+      "change_pct": -3.0749255811007736
+    }
+  ],
+  "summary": {
+    "baseline_ms": 30.680999999999997,
+    "candidate_ms": 30.3435,
+    "paired_median_pct": -2.177391782429805,
+    "paired_mean_pct": -1.1039757490906332,
+    "pair_values": [
+      -3.4430414682950383,
+      0.7587527549951067,
+      -2.2587410183243395,
+      5.257142857142849,
+      -2.0960425465352706,
+      -3.204398938187325,
+      0.6915629322268302,
+      -0.5221160476800324,
+      -3.147950435148339,
+      -3.0749255811007736
+    ],
+    "max_error": 6.021e-26
+  }
+}

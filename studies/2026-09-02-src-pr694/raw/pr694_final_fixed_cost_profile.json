@@ -1,0 +1,100 @@
+{
+  "medians": {
+    "backend_einsum": 57.937965,
+    "build_plan": 1.6372,
+    "execute_plan_total": 60.332198,
+    "from_inner_expected_dims": 0.029893,
+    "from_inner_validate_indices": 0.257877,
+    "inspect_grad": 0.027221,
+    "prepare_native_operands": 0.771308,
+    "run_ms": 74.178,
+    "validate_sizes": 0.134427,
+    "wrap_result": 1.211315
+  },
+  "runs": [
+    {
+      "run_ms": 98.576,
+      "execute_plan_total": 74.633562,
+      "backend_einsum": 72.158284,
+      "build_plan": 1.613633,
+      "wrap_result": 1.266275,
+      "prepare_native_operands": 0.785783,
+      "validate_sizes": 0.137939,
+      "inspect_grad": 0.02739,
+      "from_inner_validate_indices": 0.257877,
+      "from_inner_expected_dims": 0.028181
+    },
+    {
+      "run_ms": 74.726,
+      "execute_plan_total": 61.108248,
+      "backend_einsum": 58.587996,
+      "build_plan": 1.666659,
+      "wrap_result": 1.278214,
+      "prepare_native_operands": 0.786634,
+      "validate_sizes": 0.129746,
+      "inspect_grad": 0.029892,
+      "from_inner_validate_indices": 0.246199,
+      "from_inner_expected_dims": 0.030211
+    },
+    {
+      "run_ms": 74.68900000000001,
+      "execute_plan_total": 60.748181,
+      "backend_einsum": 58.352797,
+      "build_plan": 1.6372,
+      "wrap_result": 1.196583,
+      "prepare_native_operands": 0.771308,
+      "validate_sizes": 0.134427,
+      "inspect_grad": 0.027222,
+      "from_inner_validate_indices": 0.264367,
+      "from_inner_expected_dims": 0.028081
+    },
+    {
+      "run_ms": 74.178,
+      "execute_plan_total": 60.268994,
+      "backend_einsum": 57.845655,
+      "build_plan": 1.608999,
+      "wrap_result": 1.21717,
+      "prepare_native_operands": 0.775539,
+      "validate_sizes": 0.134542,
+      "inspect_grad": 0.027212,
+      "from_inner_validate_indices": 0.259755,
+      "from_inner_expected_dims": 0.029893
+    },
+    {
+      "run_ms": 73.922,
+      "execute_plan_total": 60.161983,
+      "backend_einsum": 57.76767,
+      "build_plan": 1.642609,
+      "wrap_result": 1.17027,
+      "prepare_native_operands": 0.771024,
+      "validate_sizes": 0.134143,
+      "inspect_grad": 0.027221,
+      "from_inner_validate_indices": 0.239302,
+      "from_inner_expected_dims": 0.030444
+    },
+    {
+      "run_ms": 73.878,
+      "execute_plan_total": 60.332198,
+      "backend_einsum": 57.937965,
+      "build_plan": 1.654179,
+      "wrap_result": 1.199159,
+      "prepare_native_operands": 0.767774,
+      "validate_sizes": 0.135105,
+      "inspect_grad": 0.021561,
+      "from_inner_validate_indices": 0.261151,
+      "from_inner_expected_dims": 0.032142
+    },
+    {
+      "run_ms": 73.738,
+      "execute_plan_total": 60.200785,
+      "backend_einsum": 57.806498,
+      "build_plan": 1.624338,
+      "wrap_result": 1.211315,
+      "prepare_native_operands": 0.753572,
+      "validate_sizes": 0.133804,
+      "inspect_grad": 0.02506,
+      "from_inner_validate_indices": 0.250471,
+      "from_inner_expected_dims": 0.029522
+    }
+  ]
+}

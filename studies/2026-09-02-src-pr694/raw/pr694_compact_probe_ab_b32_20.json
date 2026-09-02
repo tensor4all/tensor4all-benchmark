@@ -1,0 +1,182 @@
+[
+  {
+    "bond": 32,
+    "pair": 1,
+    "compact_ms": 35.278,
+    "compact_error": 5.431e-26,
+    "baseline_ms": 32.601,
+    "baseline_error": 5.202e-26,
+    "change_pct": 8.211404558142377
+  },
+  {
+    "bond": 32,
+    "pair": 2,
+    "baseline_ms": 32.362,
+    "baseline_error": 5.202e-26,
+    "compact_ms": 34.103,
+    "compact_error": 6.255e-26,
+    "change_pct": 5.379766392682783
+  },
+  {
+    "bond": 32,
+    "pair": 3,
+    "compact_ms": 33.833,
+    "compact_error": 5.202e-26,
+    "baseline_ms": 33.751000000000005,
+    "baseline_error": 5.202e-26,
+    "change_pct": 0.24295576427362242
+  },
+  {
+    "bond": 32,
+    "pair": 4,
+    "baseline_ms": 33.867000000000004,
+    "baseline_error": 4.987e-26,
+    "compact_ms": 34.838,
+    "compact_error": 5.431e-26,
+    "change_pct": 2.8670977647857754
+  },
+  {
+    "bond": 32,
+    "pair": 5,
+    "compact_ms": 33.617000000000004,
+    "compact_error": 6.021e-26,
+    "baseline_ms": 35.458999999999996,
+    "baseline_error": 5.431e-26,
+    "change_pct": -5.194731943935227
+  },
+  {
+    "bond": 32,
+    "pair": 6,
+    "baseline_ms": 34.03,
+    "baseline_error": 6.255e-26,
+    "compact_ms": 35.174,
+    "compact_error": 5.447e-26,
+    "change_pct": 3.3617396414928002
+  },
+  {
+    "bond": 32,
+    "pair": 7,
+    "compact_ms": 34.611999999999995,
+    "compact_error": 4.896e-26,
+    "baseline_ms": 33.02,
+    "baseline_error": 5.202e-26,
+    "change_pct": 4.821320411871577
+  },
+  {
+    "bond": 32,
+    "pair": 8,
+    "baseline_ms": 34.035000000000004,
+    "baseline_error": 5.375e-26,
+    "compact_ms": 35.509,
+    "compact_error": 5.447e-26,
+    "change_pct": 4.330835904216235
+  },
+  {
+    "bond": 32,
+    "pair": 9,
+    "compact_ms": 35.044,
+    "compact_error": 4.638e-26,
+    "baseline_ms": 33.836,
+    "baseline_error": 5.447e-26,
+    "change_pct": 3.5701619576782084
+  },
+  {
+    "bond": 32,
+    "pair": 10,
+    "baseline_ms": 32.487,
+    "baseline_error": 5.078e-26,
+    "compact_ms": 34.23,
+    "compact_error": 5.578e-26,
+    "change_pct": 5.365223012281817
+  },
+  {
+    "bond": 32,
+    "pair": 11,
+    "compact_ms": 34.798,
+    "compact_error": 5.821e-26,
+    "baseline_ms": 33.625,
+    "baseline_error": 5.344e-26,
+    "change_pct": 3.4884758364312374
+  },
+  {
+    "bond": 32,
+    "pair": 12,
+    "baseline_ms": 35.25,
+    "baseline_error": 5.078e-26,
+    "compact_ms": 35.549,
+    "compact_error": 5.078e-26,
+    "change_pct": 0.8482269503546025
+  },
+  {
+    "bond": 32,
+    "pair": 13,
+    "compact_ms": 37.092,
+    "compact_error": 4.78e-26,
+    "baseline_ms": 33.87,
+    "baseline_error": 5.447e-26,
+    "change_pct": 9.512843224092116
+  },
+  {
+    "bond": 32,
+    "pair": 14,
+    "baseline_ms": 34.885,
+    "baseline_error": 5.078e-26,
+    "compact_ms": 33.385999999999996,
+    "compact_error": 5.344e-26,
+    "change_pct": -4.2969757775548345
+  },
+  {
+    "bond": 32,
+    "pair": 15,
+    "compact_ms": 36.824999999999996,
+    "compact_error": 5.375e-26,
+    "baseline_ms": 34.410999999999994,
+    "baseline_error": 5.202e-26,
+    "change_pct": 7.015198628345587
+  },
+  {
+    "bond": 32,
+    "pair": 16,
+    "baseline_ms": 35.844,
+    "baseline_error": 4.896e-26,
+    "compact_ms": 32.991,
+    "compact_error": 5.202e-26,
+    "change_pct": -7.959491128222296
+  },
+  {
+    "bond": 32,
+    "pair": 17,
+    "compact_ms": 35.558,
+    "compact_error": 4.78e-26,
+    "baseline_ms": 32.204,
+    "baseline_error": 5.202e-26,
+    "change_pct": 10.414855297478564
+  },
+  {
+    "bond": 32,
+    "pair": 18,
+    "baseline_ms": 32.766000000000005,
+    "baseline_error": 5.447e-26,
+    "compact_ms": 33.577999999999996,
+    "compact_error": 5.202e-26,
+    "change_pct": 2.4781785997680217
+  },
+  {
+    "bond": 32,
+    "pair": 19,
+    "compact_ms": 36.381,
+    "compact_error": 5.431e-26,
+    "baseline_ms": 34.13,
+    "baseline_error": 5.578e-26,
+    "change_pct": 6.595370641664222
+  },
+  {
+    "bond": 32,
+    "pair": 20,
+    "baseline_ms": 33.695,
+    "baseline_error": 6.255e-26,
+    "compact_ms": 33.85,
+    "compact_error": 5.578e-26,
+    "change_pct": 0.4600089033981236
+  }
+]

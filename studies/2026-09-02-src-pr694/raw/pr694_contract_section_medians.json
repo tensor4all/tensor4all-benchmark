@@ -1,0 +1,64 @@
+{
+  "medians": {
+    "execute_plan_total": 21.460755,
+    "backend_einsum": 19.338538,
+    "build_plan": 1.650833,
+    "wrap_result": 0.838398,
+    "prepare_native_operands": 0.729892,
+    "inspect_inputs": 0.161754,
+    "validate_sizes": 0.131024,
+    "total": 32.201
+  },
+  "runs": [
+    {
+      "execute_plan_total": 21.460755,
+      "backend_einsum": 19.338538,
+      "build_plan": 1.650833,
+      "wrap_result": 0.830276,
+      "prepare_native_operands": 0.74903,
+      "inspect_inputs": 0.157828,
+      "validate_sizes": 0.127864,
+      "total": 32.201
+    },
+    {
+      "execute_plan_total": 21.980112,
+      "backend_einsum": 19.819752,
+      "build_plan": 1.690482,
+      "wrap_result": 0.8777,
+      "prepare_native_operands": 0.731913,
+      "inspect_inputs": 0.162727,
+      "validate_sizes": 0.133355,
+      "total": 32.826
+    },
+    {
+      "execute_plan_total": 21.243488,
+      "backend_einsum": 19.172594,
+      "build_plan": 1.613617,
+      "wrap_result": 0.819973,
+      "prepare_native_operands": 0.729892,
+      "inspect_inputs": 0.144568,
+      "validate_sizes": 0.131024,
+      "total": 31.682000000000002
+    },
+    {
+      "execute_plan_total": 22.054235,
+      "backend_einsum": 19.900188,
+      "build_plan": 1.653458,
+      "wrap_result": 0.901395,
+      "prepare_native_operands": 0.728005,
+      "inspect_inputs": 0.161754,
+      "validate_sizes": 0.130985,
+      "total": 32.757
+    },
+    {
+      "execute_plan_total": 21.100662,
+      "backend_einsum": 18.997886,
+      "build_plan": 1.643864,
+      "wrap_result": 0.838398,
+      "prepare_native_operands": 0.728977,
+      "inspect_inputs": 0.168828,
+      "validate_sizes": 0.13323,
+      "total": 31.669999999999998
+    }
+  ]
+}

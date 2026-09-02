@@ -1,0 +1,272 @@
+[
+  {
+    "bond": 32,
+    "pair": 1,
+    "direct_ms": 33.363,
+    "direct_error": 4.78e-26,
+    "baseline_ms": 35.424,
+    "baseline_error": 5.578e-26,
+    "change_pct": -5.818089430894313
+  },
+  {
+    "bond": 32,
+    "pair": 2,
+    "baseline_ms": 33.631,
+    "baseline_error": 4.987e-26,
+    "direct_ms": 32.553,
+    "direct_error": 5.202e-26,
+    "change_pct": -3.205375992387982
+  },
+  {
+    "bond": 32,
+    "pair": 3,
+    "direct_ms": 32.108,
+    "direct_error": 6.255e-26,
+    "baseline_ms": 34.689,
+    "baseline_error": 6.255e-26,
+    "change_pct": -7.440398973738082
+  },
+  {
+    "bond": 32,
+    "pair": 4,
+    "baseline_ms": 35.511,
+    "baseline_error": 5.447e-26,
+    "direct_ms": 32.361000000000004,
+    "direct_error": 6.255e-26,
+    "change_pct": -8.870490833826139
+  },
+  {
+    "bond": 32,
+    "pair": 5,
+    "direct_ms": 33.565,
+    "direct_error": 4.78e-26,
+    "baseline_ms": 34.875,
+    "baseline_error": 5.578e-26,
+    "change_pct": -3.7562724014337023
+  },
+  {
+    "bond": 32,
+    "pair": 6,
+    "baseline_ms": 36.305,
+    "baseline_error": 4.987e-26,
+    "direct_ms": 32.104,
+    "direct_error": 5.202e-26,
+    "change_pct": -11.571408896846169
+  },
+  {
+    "bond": 32,
+    "pair": 7,
+    "direct_ms": 31.517999999999997,
+    "direct_error": 5.359e-26,
+    "baseline_ms": 33.419,
+    "baseline_error": 5.202e-26,
+    "change_pct": -5.688380861186748
+  },
+  {
+    "bond": 32,
+    "pair": 8,
+    "baseline_ms": 35.244,
+    "baseline_error": 5.078e-26,
+    "direct_ms": 32.580999999999996,
+    "direct_error": 6.021e-26,
+    "change_pct": -7.55589603904212
+  },
+  {
+    "bond": 32,
+    "pair": 9,
+    "direct_ms": 32.994,
+    "direct_error": 4.896e-26,
+    "baseline_ms": 35.178000000000004,
+    "baseline_error": 5.202e-26,
+    "change_pct": -6.208425720620858
+  },
+  {
+    "bond": 32,
+    "pair": 10,
+    "baseline_ms": 36.596,
+    "baseline_error": 5.375e-26,
+    "direct_ms": 33.946,
+    "direct_error": 5.821e-26,
+    "change_pct": -7.241228549568257
+  },
+  {
+    "bond": 64,
+    "pair": 1,
+    "direct_ms": 72.881,
+    "direct_error": 1.155e-28,
+    "baseline_ms": 73.181,
+    "baseline_error": 9.33e-29,
+    "change_pct": -0.4099424714065103
+  },
+  {
+    "bond": 64,
+    "pair": 2,
+    "baseline_ms": 70.821,
+    "baseline_error": 7.536e-29,
+    "direct_ms": 72.34599999999999,
+    "direct_error": 9.67e-29,
+    "change_pct": 2.1533161068044704
+  },
+  {
+    "bond": 64,
+    "pair": 3,
+    "direct_ms": 68.048,
+    "direct_error": 7.536e-29,
+    "baseline_ms": 74.378,
+    "baseline_error": 9.212e-29,
+    "change_pct": -8.510581085804937
+  },
+  {
+    "bond": 64,
+    "pair": 4,
+    "baseline_ms": 83.23400000000001,
+    "baseline_error": 8.703e-29,
+    "direct_ms": 70.02,
+    "direct_error": 8.088e-29,
+    "change_pct": -15.875723862844527
+  },
+  {
+    "bond": 64,
+    "pair": 5,
+    "direct_ms": 69.30799999999999,
+    "direct_error": 7.536e-29,
+    "baseline_ms": 72.228,
+    "baseline_error": 1.095e-28,
+    "change_pct": -4.042753502796703
+  },
+  {
+    "bond": 64,
+    "pair": 6,
+    "baseline_ms": 76.23,
+    "baseline_error": 1.12e-28,
+    "direct_ms": 72.905,
+    "direct_error": 9.33e-29,
+    "change_pct": -4.36179981634528
+  },
+  {
+    "bond": 64,
+    "pair": 7,
+    "direct_ms": 73.77,
+    "direct_error": 1.155e-28,
+    "baseline_ms": 74.771,
+    "baseline_error": 1.176e-28,
+    "change_pct": -1.3387543298872595
+  },
+  {
+    "bond": 64,
+    "pair": 8,
+    "baseline_ms": 77.428,
+    "baseline_error": 9.824e-29,
+    "direct_ms": 75.037,
+    "direct_error": 9.33e-29,
+    "change_pct": -3.0880301699643398
+  },
+  {
+    "bond": 64,
+    "pair": 9,
+    "direct_ms": 71.99,
+    "direct_error": 1.036e-28,
+    "baseline_ms": 75.874,
+    "baseline_error": 9.824e-29,
+    "change_pct": -5.1190131006668915
+  },
+  {
+    "bond": 64,
+    "pair": 10,
+    "baseline_ms": 69.491,
+    "baseline_error": 8.088e-29,
+    "direct_ms": 69.60900000000001,
+    "direct_error": 8.088e-29,
+    "change_pct": 0.16980616194903764
+  },
+  {
+    "bond": 128,
+    "pair": 1,
+    "direct_ms": 334.944,
+    "direct_error": 2.236e-31,
+    "baseline_ms": 313.505,
+    "baseline_error": 2e-31,
+    "change_pct": 6.838487424442996
+  },
+  {
+    "bond": 128,
+    "pair": 2,
+    "baseline_ms": 315.609,
+    "baseline_error": 2.143e-31,
+    "direct_ms": 324.609,
+    "direct_error": 2.099e-31,
+    "change_pct": 2.851629706377201
+  },
+  {
+    "bond": 128,
+    "pair": 3,
+    "direct_ms": 349.44599999999997,
+    "direct_error": 2.095e-31,
+    "baseline_ms": 359.44599999999997,
+    "baseline_error": 2.236e-31,
+    "change_pct": -2.7820590575496684
+  },
+  {
+    "bond": 128,
+    "pair": 4,
+    "baseline_ms": 333.75300000000004,
+    "baseline_error": 2.068e-31,
+    "direct_ms": 319.403,
+    "direct_error": 2.091e-31,
+    "change_pct": -4.29958682019338
+  },
+  {
+    "bond": 128,
+    "pair": 5,
+    "direct_ms": 345.855,
+    "direct_error": 1.959e-31,
+    "baseline_ms": 309.612,
+    "baseline_error": 2.068e-31,
+    "change_pct": 11.70594163016938
+  },
+  {
+    "bond": 128,
+    "pair": 6,
+    "baseline_ms": 304.289,
+    "baseline_error": 2e-31,
+    "direct_ms": 282.825,
+    "direct_error": 2e-31,
+    "change_pct": -7.053820545599743
+  },
+  {
+    "bond": 128,
+    "pair": 7,
+    "direct_ms": 337.647,
+    "direct_error": 2.095e-31,
+    "baseline_ms": 337.165,
+    "baseline_error": 2.095e-31,
+    "change_pct": 0.14295671258879317
+  },
+  {
+    "bond": 128,
+    "pair": 8,
+    "baseline_ms": 310.165,
+    "baseline_error": 2.068e-31,
+    "direct_ms": 337.171,
+    "direct_error": 1.816e-31,
+    "change_pct": 8.706978543678346
+  },
+  {
+    "bond": 128,
+    "pair": 9,
+    "direct_ms": 303.101,
+    "direct_error": 2.143e-31,
+    "baseline_ms": 340.551,
+    "baseline_error": 1.816e-31,
+    "change_pct": -10.996884460770929
+  },
+  {
+    "bond": 128,
+    "pair": 10,
+    "baseline_ms": 335.91900000000004,
+    "baseline_error": 1.816e-31,
+    "direct_ms": 335.159,
+    "direct_error": 1.871e-31,
+    "change_pct": -0.22624501740003966
+  }
+]

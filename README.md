@@ -12,6 +12,8 @@ Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https:/
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
+Historical optimization investigations live under `studies/` and do not add maintained cases. The [tensor4all-rs PR 694 SRC performance study](studies/2026-09-02-src-pr694/README.md) records the matched Python/Rust measurements, retained and rejected experiments, exact candidate patches, and remaining fixed-cost profile that led to the maintained SRC arms.
+
 ## Gaussian input
 
 Every Gaussian has an independent positive weight, center, log-uniform aspect ratio, and orientation uniform in `[0, pi)`. Each term is independently constructed by two-dimensional `interpolate_multi_scale_nd`. Principal-axis unsafe points spaced by half the minor-axis standard deviation keep the narrow ridge refined.

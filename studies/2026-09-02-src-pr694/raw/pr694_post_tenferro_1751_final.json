@@ -1,0 +1,1244 @@
+{
+  "recorded_utc": "2026-09-02T11:40:58.352260+00:00",
+  "comparison": {
+    "tensor4all_revision": "481005fbe13240f0734c9e804eb0dd960d62059e",
+    "original_tenferro_revision": "a21a4c602fc6700b9bc0c3f1b14ebd19b9d7ec45",
+    "merged_tenferro_revision": "0190e43b1a331670c7d4eeb2d1d138c811ed9eae",
+    "tenferro_pr": "https://github.com/tensor4all/tenferro-rs/pull/1751",
+    "tenferro_merged_at": "2026-09-02T11:14:49Z",
+    "python_revision": "fe6ad494fc6f3605fc3963360f626d83f47bc2ce"
+  },
+  "protocol": {
+    "cpu": 63,
+    "threads": {
+      "rayon": 1,
+      "openblas": 1,
+      "omp": 1,
+      "mkl": 1
+    },
+    "accepted_pairs_by_bond": {
+      "32": 11,
+      "64": 7,
+      "128": 7
+    },
+    "repetitions_per_process": 10,
+    "warmup_per_process": 1,
+    "sites": 10,
+    "physical_dim": 2,
+    "input_bonds": [
+      32,
+      64,
+      128
+    ],
+    "adaptive_max_rank": 32,
+    "rank_increment": 3,
+    "final_svd": false,
+    "acceptance_gate": {
+      "rust_cpu_time_over_wall_time_min": 0.95,
+      "python_cpu_time_over_wall_time_min": 0.75
+    },
+    "selection_note": "Bond 32 uses an 11-pair clean-window rerun. Bonds 64 and 128 use the preceding contiguous 7-pair clean-window run. A later mixed-regime bond-64 run was rejected because all lanes slowed together under shared-host memory/frequency contention."
+  },
+  "binaries": {
+    "current": {
+      "path": "/tmp/benchmark_src.pr694-validated-derived-wrap-final",
+      "sha256": "dc03209646373fe804bb691f939392596e57083d6fe1f8b390850fc2c96e8574"
+    },
+    "merged_bcgs2": {
+      "path": "/tmp/benchmark_src.pr694-post1751-merge-bcgs2",
+      "sha256": "5cb6aad54253eea573adbffbb439aee2449d87757e17ae369fff2247be4ccc30"
+    },
+    "merged_householder": {
+      "path": "/tmp/benchmark_src.pr694-post1751-merge-householder",
+      "sha256": "e6149e62d5a30a1e2fc7d232ab958e48cbda5c58d5282056fd974f49e9f3a379"
+    }
+  },
+  "correctness": {
+    "merged_bcgs2": {
+      "binary": "/tmp/benchmark_src.pr694-post1751-merge-bcgs2",
+      "sha256": "5cb6aad54253eea573adbffbb439aee2449d87757e17ae369fff2247be4ccc30",
+      "relative_errors": {
+        "32": 6.021e-26,
+        "64": 1.095e-28,
+        "128": 2.143e-31
+      }
+    },
+    "merged_householder": {
+      "binary": "/tmp/benchmark_src.pr694-post1751-merge-householder",
+      "sha256": "e6149e62d5a30a1e2fc7d232ab958e48cbda5c58d5282056fd974f49e9f3a379",
+      "relative_errors": {
+        "32": 4.703e-26,
+        "64": 1.211e-28,
+        "128": 2.131e-31
+      }
+    }
+  },
+  "rows": [
+    {
+      "bond": 32,
+      "attempt": 1,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.035652,
+        "relative_error": null,
+        "cpu_utilization": 0.9912244775557202
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035017,
+        "relative_error": null,
+        "cpu_utilization": 0.9981551154518273
+      },
+      "merged_householder": {
+        "seconds": 0.0342,
+        "relative_error": null,
+        "cpu_utilization": 0.9983261716375099
+      },
+      "python": {
+        "seconds": 0.020195860788226126,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9369325627844103
+      },
+      "accepted": true,
+      "pair": 1
+    },
+    {
+      "bond": 32,
+      "attempt": 2,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.036265,
+        "relative_error": null,
+        "cpu_utilization": 0.9930737038840828
+      },
+      "merged_householder": {
+        "seconds": 0.035113,
+        "relative_error": null,
+        "cpu_utilization": 0.9983441157910409
+      },
+      "python": {
+        "seconds": 0.020445891842246055,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9805915892574844
+      },
+      "current": {
+        "seconds": 0.03596,
+        "relative_error": null,
+        "cpu_utilization": 0.991940161740929
+      },
+      "accepted": true,
+      "pair": 2
+    },
+    {
+      "bond": 32,
+      "attempt": 3,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.03551,
+        "relative_error": null,
+        "cpu_utilization": 0.9984331236887677
+      },
+      "python": {
+        "seconds": 0.02031717337667942,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9771304978530988
+      },
+      "current": {
+        "seconds": 0.036444,
+        "relative_error": null,
+        "cpu_utilization": 0.9984508611043896
+      },
+      "merged_bcgs2": {
+        "seconds": 0.034134,
+        "relative_error": null,
+        "cpu_utilization": 0.9959922343035873
+      },
+      "accepted": true,
+      "pair": 3
+    },
+    {
+      "bond": 32,
+      "attempt": 4,
+      "order": [
+        "python",
+        "current",
+        "merged_bcgs2",
+        "merged_householder"
+      ],
+      "python": {
+        "seconds": 0.020217350870370864,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.972587886538631
+      },
+      "current": {
+        "seconds": 0.036487,
+        "relative_error": null,
+        "cpu_utilization": 0.9979789638960742
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035272,
+        "relative_error": null,
+        "cpu_utilization": 0.9919855676142203
+      },
+      "merged_householder": {
+        "seconds": 0.034516,
+        "relative_error": null,
+        "cpu_utilization": 0.992922595106478
+      },
+      "accepted": true,
+      "pair": 4
+    },
+    {
+      "bond": 32,
+      "attempt": 5,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.036784,
+        "relative_error": null,
+        "cpu_utilization": 0.99772338136261
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035358,
+        "relative_error": null,
+        "cpu_utilization": 0.9983480202907014
+      },
+      "merged_householder": {
+        "seconds": 0.035464,
+        "relative_error": null,
+        "cpu_utilization": 0.9982423996868272
+      },
+      "python": {
+        "seconds": 0.020152691379189493,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9712451594330349
+      },
+      "accepted": true,
+      "pair": 5
+    },
+    {
+      "bond": 32,
+      "attempt": 6,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.036068,
+        "relative_error": null,
+        "cpu_utilization": 0.997950451701424
+      },
+      "merged_householder": {
+        "seconds": 0.034796,
+        "relative_error": null,
+        "cpu_utilization": 0.9978985500529797
+      },
+      "python": {
+        "seconds": 0.01997760571539402,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9657108217599804
+      },
+      "current": {
+        "seconds": 0.035884,
+        "relative_error": null,
+        "cpu_utilization": 0.9979776627158317
+      },
+      "accepted": true,
+      "pair": 6
+    },
+    {
+      "bond": 32,
+      "attempt": 7,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.03559,
+        "relative_error": null,
+        "cpu_utilization": 0.9942256667035255
+      },
+      "python": {
+        "seconds": 0.02030411045998335,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9696959663732813
+      },
+      "current": {
+        "seconds": 0.035972,
+        "relative_error": null,
+        "cpu_utilization": 0.9967265916666996
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035893,
+        "relative_error": null,
+        "cpu_utilization": 0.9981498145125414
+      },
+      "accepted": true,
+      "pair": 7
+    },
+    {
+      "bond": 32,
+      "attempt": 8,
+      "order": [
+        "python",
+        "current",
+        "merged_bcgs2",
+        "merged_householder"
+      ],
+      "python": {
+        "seconds": 0.020251045748591424,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.967895633682332
+      },
+      "current": {
+        "seconds": 0.036435,
+        "relative_error": null,
+        "cpu_utilization": 0.9979393518918858
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035611,
+        "relative_error": null,
+        "cpu_utilization": 0.9981971112914826
+      },
+      "merged_householder": {
+        "seconds": 0.034554,
+        "relative_error": null,
+        "cpu_utilization": 0.9984282899399118
+      },
+      "accepted": true,
+      "pair": 8
+    },
+    {
+      "bond": 32,
+      "attempt": 9,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.036679,
+        "relative_error": null,
+        "cpu_utilization": 0.9980444013530508
+      },
+      "merged_bcgs2": {
+        "seconds": 0.036118,
+        "relative_error": null,
+        "cpu_utilization": 0.998407417841698
+      },
+      "merged_householder": {
+        "seconds": 0.035136,
+        "relative_error": null,
+        "cpu_utilization": 0.9982770269401199
+      },
+      "python": {
+        "seconds": 0.02016408517956734,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.963567784702964
+      },
+      "accepted": true,
+      "pair": 9
+    },
+    {
+      "bond": 32,
+      "attempt": 10,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.035358,
+        "relative_error": null,
+        "cpu_utilization": 0.9981903323212599
+      },
+      "merged_householder": {
+        "seconds": 0.03451,
+        "relative_error": null,
+        "cpu_utilization": 0.9982562035554805
+      },
+      "python": {
+        "seconds": 0.020289139077067374,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9693481488334651
+      },
+      "current": {
+        "seconds": 0.035836,
+        "relative_error": null,
+        "cpu_utilization": 0.9982958737284668
+      },
+      "accepted": true,
+      "pair": 10
+    },
+    {
+      "bond": 32,
+      "attempt": 11,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.03496,
+        "relative_error": null,
+        "cpu_utilization": 0.9985843355047613
+      },
+      "python": {
+        "seconds": 0.020369271747767925,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9739302191972594
+      },
+      "current": {
+        "seconds": 0.036678,
+        "relative_error": null,
+        "cpu_utilization": 0.9985299757050798
+      },
+      "merged_bcgs2": {
+        "seconds": 0.035899,
+        "relative_error": null,
+        "cpu_utilization": 0.9980949063692772
+      },
+      "accepted": true,
+      "pair": 11
+    },
+    {
+      "bond": 64,
+      "attempt": 1,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.076696,
+        "relative_error": null,
+        "cpu_utilization": 0.9984261261938167
+      },
+      "merged_bcgs2": {
+        "seconds": 0.07611,
+        "relative_error": null,
+        "cpu_utilization": 0.9970295730676052
+      },
+      "merged_householder": {
+        "seconds": 0.076023,
+        "relative_error": null,
+        "cpu_utilization": 0.9963986841397554
+      },
+      "python": {
+        "seconds": 0.07715140804648399,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9900990497701292
+      },
+      "accepted": true,
+      "pair": 1
+    },
+    {
+      "bond": 64,
+      "attempt": 2,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.075557,
+        "relative_error": null,
+        "cpu_utilization": 0.9956757014930837
+      },
+      "merged_householder": {
+        "seconds": 0.079486,
+        "relative_error": null,
+        "cpu_utilization": 0.9991404137975295
+      },
+      "python": {
+        "seconds": 0.07959985546767712,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.985010201472032
+      },
+      "current": {
+        "seconds": 0.076547,
+        "relative_error": null,
+        "cpu_utilization": 0.9963791938597267
+      },
+      "accepted": true,
+      "pair": 2
+    },
+    {
+      "bond": 64,
+      "attempt": 3,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.076031,
+        "relative_error": null,
+        "cpu_utilization": 0.9990421664044912
+      },
+      "python": {
+        "seconds": 0.07914389558136463,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9848245685262732
+      },
+      "current": {
+        "seconds": 0.077829,
+        "relative_error": null,
+        "cpu_utilization": 0.9876719554654696
+      },
+      "merged_bcgs2": {
+        "seconds": 0.076685,
+        "relative_error": null,
+        "cpu_utilization": 0.9987073681819896
+      },
+      "accepted": true,
+      "pair": 3
+    },
+    {
+      "bond": 64,
+      "attempt": 4,
+      "order": [
+        "python",
+        "current",
+        "merged_bcgs2",
+        "merged_householder"
+      ],
+      "python": {
+        "seconds": 0.07981113381683827,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9899332847732745
+      },
+      "current": {
+        "seconds": 0.080984,
+        "relative_error": null,
+        "cpu_utilization": 0.994229830515108
+      },
+      "merged_bcgs2": {
+        "seconds": 0.079694,
+        "relative_error": null,
+        "cpu_utilization": 0.9985306288741688
+      },
+      "merged_householder": {
+        "seconds": 0.076383,
+        "relative_error": null,
+        "cpu_utilization": 0.9986547250051291
+      },
+      "accepted": true,
+      "pair": 4
+    },
+    {
+      "bond": 64,
+      "attempt": 5,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.075972,
+        "relative_error": null,
+        "cpu_utilization": 0.9986154100032382
+      },
+      "merged_bcgs2": {
+        "seconds": 0.075871,
+        "relative_error": null,
+        "cpu_utilization": 0.9966028696732457
+      },
+      "merged_householder": {
+        "seconds": 0.075361,
+        "relative_error": null,
+        "cpu_utilization": 0.999050730761814
+      },
+      "python": {
+        "seconds": 0.07926984876394272,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9831011256171422
+      },
+      "accepted": true,
+      "pair": 5
+    },
+    {
+      "bond": 64,
+      "attempt": 6,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.078357,
+        "relative_error": null,
+        "cpu_utilization": 0.9990032818240467
+      },
+      "merged_householder": {
+        "seconds": 0.086666,
+        "relative_error": null,
+        "cpu_utilization": 0.9990561601656279
+      },
+      "python": {
+        "seconds": 0.07862884122878314,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9892433757861384
+      },
+      "current": {
+        "seconds": 0.080755,
+        "relative_error": null,
+        "cpu_utilization": 0.9990717112994246
+      },
+      "accepted": true,
+      "pair": 6
+    },
+    {
+      "bond": 64,
+      "attempt": 7,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.078646,
+        "relative_error": null,
+        "cpu_utilization": 0.9990762056078559
+      },
+      "python": {
+        "seconds": 0.08024834543466568,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9896187647598871
+      },
+      "current": {
+        "seconds": 0.078499,
+        "relative_error": null,
+        "cpu_utilization": 0.9991491766270578
+      },
+      "merged_bcgs2": {
+        "seconds": 0.07714,
+        "relative_error": null,
+        "cpu_utilization": 0.9982764086665714
+      },
+      "accepted": true,
+      "pair": 7
+    },
+    {
+      "bond": 128,
+      "attempt": 1,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.345496,
+        "relative_error": null,
+        "cpu_utilization": 0.9990204590530257
+      },
+      "merged_bcgs2": {
+        "seconds": 0.328219,
+        "relative_error": null,
+        "cpu_utilization": 0.9996641244174301
+      },
+      "merged_householder": {
+        "seconds": 0.327046,
+        "relative_error": null,
+        "cpu_utilization": 0.9997233547374637
+      },
+      "python": {
+        "seconds": 0.4629262717440724,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9976845984074783
+      },
+      "accepted": true,
+      "pair": 1
+    },
+    {
+      "bond": 128,
+      "attempt": 2,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.325798,
+        "relative_error": null,
+        "cpu_utilization": 0.9996407741232237
+      },
+      "merged_householder": {
+        "seconds": 0.326859,
+        "relative_error": null,
+        "cpu_utilization": 0.9996295553265696
+      },
+      "python": {
+        "seconds": 0.474786358140409,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9968897846038166
+      },
+      "current": {
+        "seconds": 0.338207,
+        "relative_error": null,
+        "cpu_utilization": 0.9997453568974258
+      },
+      "accepted": true,
+      "pair": 2
+    },
+    {
+      "bond": 128,
+      "attempt": 3,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.311178,
+        "relative_error": null,
+        "cpu_utilization": 0.9996901165550117
+      },
+      "python": {
+        "seconds": 0.4520740592852235,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9945154219496642
+      },
+      "current": {
+        "seconds": 0.339667,
+        "relative_error": null,
+        "cpu_utilization": 0.9997469645619473
+      },
+      "merged_bcgs2": {
+        "seconds": 0.313778,
+        "relative_error": null,
+        "cpu_utilization": 0.9997366045010113
+      },
+      "accepted": true,
+      "pair": 3
+    },
+    {
+      "bond": 128,
+      "attempt": 4,
+      "order": [
+        "python",
+        "current",
+        "merged_bcgs2",
+        "merged_householder"
+      ],
+      "python": {
+        "seconds": 0.46910920143127444,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9979491444844869
+      },
+      "current": {
+        "seconds": 0.347617,
+        "relative_error": null,
+        "cpu_utilization": 0.9991199279297913
+      },
+      "merged_bcgs2": {
+        "seconds": 0.338834,
+        "relative_error": null,
+        "cpu_utilization": 0.9997106213333669
+      },
+      "merged_householder": {
+        "seconds": 0.319158,
+        "relative_error": null,
+        "cpu_utilization": 0.9997551390069283
+      },
+      "accepted": true,
+      "pair": 4
+    },
+    {
+      "bond": 128,
+      "attempt": 5,
+      "order": [
+        "current",
+        "merged_bcgs2",
+        "merged_householder",
+        "python"
+      ],
+      "current": {
+        "seconds": 0.32462,
+        "relative_error": null,
+        "cpu_utilization": 0.9997118170829786
+      },
+      "merged_bcgs2": {
+        "seconds": 0.322606,
+        "relative_error": null,
+        "cpu_utilization": 0.9997146695051199
+      },
+      "merged_householder": {
+        "seconds": 0.352086,
+        "relative_error": null,
+        "cpu_utilization": 0.9997647661118009
+      },
+      "python": {
+        "seconds": 0.46830187551677227,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9961187696331744
+      },
+      "accepted": true,
+      "pair": 5
+    },
+    {
+      "bond": 128,
+      "attempt": 6,
+      "order": [
+        "merged_bcgs2",
+        "merged_householder",
+        "python",
+        "current"
+      ],
+      "merged_bcgs2": {
+        "seconds": 0.311651,
+        "relative_error": null,
+        "cpu_utilization": 0.9997208863357988
+      },
+      "merged_householder": {
+        "seconds": 0.324806,
+        "relative_error": null,
+        "cpu_utilization": 0.9997045718050472
+      },
+      "python": {
+        "seconds": 0.4584161715582013,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9963121362699979
+      },
+      "current": {
+        "seconds": 0.319554,
+        "relative_error": null,
+        "cpu_utilization": 0.999708063232024
+      },
+      "accepted": true,
+      "pair": 6
+    },
+    {
+      "bond": 128,
+      "attempt": 7,
+      "order": [
+        "merged_householder",
+        "python",
+        "current",
+        "merged_bcgs2"
+      ],
+      "merged_householder": {
+        "seconds": 0.341094,
+        "relative_error": null,
+        "cpu_utilization": 0.9997383878104982
+      },
+      "python": {
+        "seconds": 0.4685057593509555,
+        "output_bonds": [
+          5,
+          5,
+          11,
+          17,
+          32,
+          16,
+          8,
+          4,
+          2
+        ],
+        "cpu_utilization": 0.9960347059221127
+      },
+      "current": {
+        "seconds": 0.343771,
+        "relative_error": null,
+        "cpu_utilization": 0.9997492789014033
+      },
+      "merged_bcgs2": {
+        "seconds": 0.342415,
+        "relative_error": null,
+        "cpu_utilization": 0.9997180615207454
+      },
+      "accepted": true,
+      "pair": 7
+    }
+  ],
+  "summary": [
+    {
+      "bond": 32,
+      "accepted_pairs": 11,
+      "attempts": 11,
+      "median_ms": {
+        "current": 36.435,
+        "merged_bcgs2": 35.611,
+        "merged_householder": 34.96,
+        "python": 20.251045748591423
+      },
+      "cov_percent": {
+        "current": 1.104799848120209,
+        "merged_bcgs2": 1.7308859073800236,
+        "merged_householder": 1.3340403765171933,
+        "python": 0.6174173295588173
+      },
+      "merged_bcgs2_vs_current": 0.9773843831480717,
+      "merged_householder_vs_current": 0.9595169479895704,
+      "merged_householder_vs_merged_bcgs2": 0.9817191317289603,
+      "merged_bcgs2_vs_python": 1.758477090126417,
+      "merged_bcgs2_gap_python_ms": 15.359954251408574,
+      "merged_householder_vs_python": 1.7263306020841749,
+      "merged_householder_gap_python_ms": 14.708954251408578,
+      "paired_median_ratios": {
+        "merged_bcgs2_over_current": 0.9821889375070121,
+        "merged_householder_over_merged_bcgs2": 0.9760167430284518,
+        "merged_bcgs2_over_python": 1.758477090126417,
+        "merged_householder_over_python": 1.7173621121993918
+      },
+      "min_cpu_utilization": {
+        "current": 0.9912244775557202,
+        "merged_bcgs2": 0.9919855676142203,
+        "merged_householder": 0.992922595106478,
+        "python": 0.9369325627844103
+      }
+    },
+    {
+      "bond": 64,
+      "accepted_pairs": 7,
+      "attempts": 7,
+      "median_ms": {
+        "current": 77.829,
+        "merged_bcgs2": 76.685,
+        "merged_householder": 76.38300000000001,
+        "python": 79.26984876394272
+      },
+      "cov_percent": {
+        "current": 2.582608043833537,
+        "merged_bcgs2": 1.9351624166939834,
+        "merged_householder": 5.05389806392877,
+        "python": 1.276519806776622
+      },
+      "merged_bcgs2_vs_current": 0.9853011088411776,
+      "merged_householder_vs_current": 0.9814208071541458,
+      "merged_householder_vs_merged_bcgs2": 0.9960618113059921,
+      "merged_bcgs2_vs_python": 0.9673917787879207,
+      "merged_bcgs2_gap_python_ms": -2.5848487639427162,
+      "merged_householder_vs_python": 0.9635820074220219,
+      "merged_householder_gap_python_ms": -2.8868487639427087,
+      "paired_median_ratios": {
+        "merged_bcgs2_over_current": 0.9853011088411775,
+        "merged_householder_over_merged_bcgs2": 0.9988569176192352,
+        "merged_bcgs2_over_python": 0.9689313299111397,
+        "merged_householder_over_python": 0.9800326670165401
+      },
+      "min_cpu_utilization": {
+        "current": 0.9876719554654696,
+        "merged_bcgs2": 0.9956757014930837,
+        "merged_householder": 0.9963986841397554,
+        "python": 0.9831011256171422
+      }
+    },
+    {
+      "bond": 128,
+      "accepted_pairs": 7,
+      "attempts": 7,
+      "median_ms": {
+        "current": 339.667,
+        "merged_bcgs2": 325.798,
+        "merged_householder": 326.85900000000004,
+        "python": 468.30187551677227
+      },
+      "cov_percent": {
+        "current": 3.1982058580834334,
+        "merged_bcgs2": 3.5525463174868346,
+        "merged_householder": 4.153461670851689,
+        "python": 1.6440413628588073
+      },
+      "merged_bcgs2_vs_current": 0.9591688330040894,
+      "merged_householder_vs_current": 0.9622924805765649,
+      "merged_householder_vs_merged_bcgs2": 1.0032566191321004,
+      "merged_bcgs2_vs_python": 0.6957008225527201,
+      "merged_bcgs2_gap_python_ms": -142.50387551677227,
+      "merged_householder_vs_python": 0.6979664551616632,
+      "merged_householder_gap_python_ms": -141.44287551677223,
+      "paired_median_ratios": {
+        "merged_bcgs2_over_current": 0.9747336867874702,
+        "merged_householder_over_merged_bcgs2": 0.9964261666752992,
+        "merged_bcgs2_over_python": 0.694085390557724,
+        "merged_householder_over_python": 0.7064753503141133
+      },
+      "min_cpu_utilization": {
+        "current": 0.9990204590530257,
+        "merged_bcgs2": 0.9996407741232237,
+        "merged_householder": 0.9996295553265696,
+        "python": 0.9945154219496642
+      }
+    }
+  ],
+  "limitations": [
+    "Rust and Python use matched settings and shapes but independently generated values.",
+    "Current versus merged BCGS2 isolates the tenferro revision; merged Householder additionally changes the tensor4all QR adapter.",
+    "CPU-utilization gating rejects externally preempted processes but does not remove intrinsic input-to-input variation.",
+    "The shared host entered distinct fast and slow memory/frequency regimes despite full per-process CPU utilization; only contiguous clean-window runs are reported, and the rejected mixed-regime run is archived separately."
+  ]
+}

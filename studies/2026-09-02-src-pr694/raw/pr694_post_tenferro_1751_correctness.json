@@ -1,0 +1,44 @@
+{
+  "tenferro_pr": "https://github.com/tensor4all/tenferro-rs/pull/1751",
+  "tenferro_merge_revision": "0190e43b1a331670c7d4eeb2d1d138c811ed9eae",
+  "merged_at": "2026-09-02T11:14:49Z",
+  "protocol": {
+    "cpu": 63,
+    "threads": 1,
+    "sites": 10,
+    "physical_dim": 2,
+    "rank_increment": 3,
+    "final_svd": false,
+    "input_bonds": [32, 64, 128],
+    "max_rank": 32,
+    "warmup": 1,
+    "timed_repetitions": 1,
+    "environment": {
+      "RAYON_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1"
+    }
+  },
+  "variants": {
+    "merged_bcgs2": {
+      "binary": "/tmp/benchmark_src.pr694-post1751-merge-bcgs2",
+      "sha256": "5cb6aad54253eea573adbffbb439aee2449d87757e17ae369fff2247be4ccc30",
+      "relative_errors": {
+        "32": 6.021e-26,
+        "64": 1.095e-28,
+        "128": 2.143e-31
+      }
+    },
+    "merged_householder": {
+      "binary": "/tmp/benchmark_src.pr694-post1751-merge-householder",
+      "sha256": "e6149e62d5a30a1e2fc7d232ab958e48cbda5c58d5282056fd974f49e9f3a379",
+      "relative_errors": {
+        "32": 4.703e-26,
+        "64": 1.211e-28,
+        "128": 2.131e-31
+      }
+    }
+  },
+  "performance_note": "Correctness runs are not performance evidence. CPU 63 was busy during this phase; controlled timing was deferred."
+}

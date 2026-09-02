@@ -56,6 +56,20 @@ After the derived-result validation optimization, a fresh same-period five-pair 
 
 See `raw/pr694_final_matched_python.json`. Absolute bond-32 time was higher than in the preceding triplet because of shared-host load; the alternating Rust-only A/B result remains the evidence for the optimization itself.
 
+## Post-merge tenferro-rs PR 1751 follow-up
+
+After [tenferro-rs PR 1751](https://github.com/tensor4all/tenferro-rs/pull/1751) merged as `0190e43b1a331670c7d4eeb2d1d138c811ed9eae`, the final tensor4all-rs candidate was rebuilt and compared in four alternating lanes: the original tenferro revision with BCGS2, the merged revision with BCGS2, the merged revision with the compact Householder adapter, and Python. Processes used CPU 63 and one Rayon/BLAS thread. Each accepted process had at least 95% CPU-time/wall-time utilization for Rust and 75% for Python. Bond 32 uses 11 accepted pairs; bonds 64 and 128 use seven.
+
+| Input bond | Original BCGS2 | Merged BCGS2 | Merged Householder | Python | Merged BCGS2 / Python | Householder / Python |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 32 | 36.435 ms | 35.611 ms | 34.960 ms | 20.251 ms | 1.758 | 1.726 |
+| 64 | 77.829 ms | 76.685 ms | 76.383 ms | 79.270 ms | 0.967 | 0.964 |
+| 128 | 339.667 ms | 325.798 ms | 326.859 ms | 468.302 ms | 0.696 | 0.698 |
+
+The merged tenferro revision improved the BCGS2 median by 2.26%, 1.47%, and 4.08% at input bonds 32, 64, and 128. The compact Householder adapter changed the corresponding merged-revision BCGS2 medians by -1.83%, -0.39%, and +0.33%; it is therefore effectively neutral for this SRC workload rather than a broadly established replacement. Rust remains 75.8% slower than Python at bond 32, while it is 3.3% and 30.4% faster at bonds 64 and 128. The dense-oracle relative error was at most `6.021e-26` for merged BCGS2 and `4.703e-26` for merged Householder.
+
+The accepted rows and paired statistics are in `raw/pr694_post_tenferro_1751_final.json`; independent dense-oracle runs are in `raw/pr694_post_tenferro_1751_correctness.json`. A later bond-64 run crossed into a shared-host memory/frequency-contention regime even though per-process CPU utilization remained high. It was excluded and retained transparently as `raw/pr694_post_tenferro_1751_rejected_b64_mixed_regime.json`.
+
 ## Remaining tensor4all-owned fixed costs
 
 Temporary section instrumentation was applied to the final candidate and removed after measurement. One bond-32 run contained 254 N-ary contractions and 545 result/index validations. The median section totals below are nested. They are not additive.

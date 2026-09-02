@@ -42,6 +42,27 @@ benchmark:
   final_svd: false
   warmup: true
   exact_reference: dense Rust oracle where recorded
+post_tenferro_1751:
+  merged_rev: 0190e43b1a331670c7d4eeb2d1d138c811ed9eae
+  merged_at_utc: 2026-09-02T11:14:49Z
+  cpu_affinity: 63
+  repetitions_per_process: 10
+  accepted_pairs:
+    bond_32: 11
+    bond_64: 7
+    bond_128: 7
+  contention_gate:
+    rust_cpu_time_over_wall_time_min: 0.95
+    python_cpu_time_over_wall_time_min: 0.75
+  binaries:
+    original_bcgs2_sha256: dc03209646373fe804bb691f939392596e57083d6fe1f8b390850fc2c96e8574
+    merged_bcgs2_sha256: 5cb6aad54253eea573adbffbb439aee2449d87757e17ae369fff2247be4ccc30
+    merged_householder_sha256: e6149e62d5a30a1e2fc7d232ab958e48cbda5c58d5282056fd974f49e9f3a379
+  records:
+    timing: raw/pr694_post_tenferro_1751_final.json
+    correctness: raw/pr694_post_tenferro_1751_correctness.json
+    rejected_mixed_regime: raw/pr694_post_tenferro_1751_rejected_b64_mixed_regime.json
+    runner: scripts/run_pr694_post_tenferro_1751.py
 limitations:
   - The Rust and Python arms use matched settings and shapes, but independently generated tensor values.
   - CPU affinity changed from core 0 in early runs to core 63 in later runs. Each archived script records its core.

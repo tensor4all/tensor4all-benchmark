@@ -1,0 +1,9 @@
+profile: linux-ryzen-ai-9-hx-470
+date_utc: 2026-10-10T22:45:59Z
+os: Linux
+chip: AMD Ryzen AI 9 HX 470 w/ Radeon 890M
+memory_gb: 58.5
+repo_rev: 05ebd78bdc40e09f1534a4bab2ac72131ce271d3
+tensor4all_rs_rev: a5157385f58048355a28a6a003d4cb63d3b1349b
+threads: 1
+cpu_affinity: 0

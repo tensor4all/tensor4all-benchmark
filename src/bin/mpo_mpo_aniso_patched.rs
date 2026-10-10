@@ -150,6 +150,8 @@ fn run_point(
             max_patch_bond: None,
             rtol: Some(INPUT_L2_RTOL),
             input_build_secs: Some(input.build.as_secs_f64()),
+            n_allocations: Some(global_timing.alloc_calls_median),
+            allocated_bytes: Some(global_timing.alloc_bytes_median),
         },
     )?;
 
@@ -191,6 +193,8 @@ fn run_point(
             seed,
             tolerance: INPUT_L2_RTOL,
             wall_time_median_secs: patched_timing.median_secs,
+            n_allocations: Some(patched_timing.alloc_calls_median),
+            allocated_bytes: Some(patched_timing.alloc_bytes_median),
             wall_times_secs: patched_timing.runs_secs,
             max_error: patched_error,
             input_max_bond_dim: input_chi,

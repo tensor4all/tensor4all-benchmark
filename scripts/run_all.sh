@@ -10,19 +10,32 @@ profile=$1
 out="result/$profile"
 raw="$out/raw"
 core=${BENCH_CPU_CORE:-0}
+threads=${BENCH_THREADS:-1}
+if ((threads < 1)); then
+  echo "BENCH_THREADS must be at least 1, got $threads" >&2
+  exit 2
+fi
+# One pinned core for the source-of-truth sweep, a contiguous range for the
+# optional `<machine>-<n>t` scaling profile.
+if ((threads == 1)); then
+  affinity="$core"
+else
+  affinity="$core-$((core + threads - 1))"
+fi
 mkdir -p "$raw"
 rm -f "$raw"/*.json
 
-export RAYON_NUM_THREADS=1
-export OMP_NUM_THREADS=1
-export OPENBLAS_NUM_THREADS=1
-export MKL_NUM_THREADS=1
-export VECLIB_MAXIMUM_THREADS=1
+export RAYON_NUM_THREADS="$threads"
+export OMP_NUM_THREADS="$threads"
+export OPENBLAS_NUM_THREADS="$threads"
+export MKL_NUM_THREADS="$threads"
+export VECLIB_MAXIMUM_THREADS="$threads"
+export TENFERRO_NUM_THREADS="$threads"
 export OUT_DIR="$raw"
 
 run() {
   if command -v taskset >/dev/null 2>&1; then
-    taskset -c "$core" "$@"
+    taskset -c "$affinity" "$@"
   else
     "$@"
   fi
@@ -44,9 +57,9 @@ os: $(uname -s)
 chip: ${chip:-unknown}
 memory_gb: ${memory_gb:-unknown}
 repo_rev: $repo_rev
-tensor4all_rs_rev: 9e9aedaebe0d3918b34dd399ff0981e337f3835b
-threads: 1
-cpu_affinity: $core
+tensor4all_rs_rev: a5157385f58048355a28a6a003d4cb63d3b1349b
+threads: $threads
+cpu_affinity: $affinity
 EOF
 
 run cargo run --release --locked --bin elementwise_fourier

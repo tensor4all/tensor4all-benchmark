@@ -14,7 +14,13 @@ ACI residual tolerance is not an L2 tolerance. Keep its internal metric explicit
 
 Time only the benchmarked elementwise or contraction operation. Input construction, cache I/O, compression, conversion, patch preparation, output conversion, and accuracy evaluation stay outside timed regions.
 
-Run release builds with one pinned CPU core and single-threaded Rayon and BLAS. Warm up any JIT-compiled external implementation before timing it.
+Run release builds with one pinned CPU core and single-threaded Rayon and BLAS. That single-core sweep is the source of truth, and its profile name is the machine alone. Warm up any JIT-compiled external implementation before timing it.
+
+A machine may carry one additional scaling profile named `<machine>-<n>t`,
+produced with `BENCH_THREADS=n`, which pins a contiguous core range and lets the
+same three cases run on `n` Rayon and BLAS threads. Its `run.yaml` records the
+thread count and the core range. Treat it as scaling evidence only: the
+single-core profile stays the reference, and the two profiles are never merged.
 
 ## Results
 

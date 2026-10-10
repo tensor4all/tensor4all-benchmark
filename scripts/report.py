@@ -13,6 +13,17 @@ EXPECTED = {
 }
 
 
+def alloc_calls(record: dict) -> str:
+    """Allocation count, blank on records written before the counters existed."""
+    value = record.get("n_allocations")
+    return "" if value is None else str(value)
+
+
+def alloc_mib(record: dict) -> str:
+    value = record.get("allocated_bytes")
+    return "" if value is None else f"{value / 2**20:.2f}"
+
+
 def metadata(path: Path) -> dict[str, str]:
     result = {}
     for line in path.read_text().splitlines():
@@ -58,12 +69,12 @@ def main(profile: Path) -> None:
         "",
         "## Case 1: Fourier elementwise",
         "",
-        "| input χ | K | arm | time (s) | sampled relative L2 | output χ | parameters |",
-        "|---:|---:|---|---:|---:|---:|---:|",
+        "| input χ | K | arm | time (s) | sampled relative L2 | output χ | parameters | allocations | allocated (MiB) |",
+        "|---:|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
     for record in sorted(grouped["elementwise_fourier"], key=lambda item: (item["input_max_bond_dim"], item["params"]["k_max"], item["algorithm"])):
         lines.append(
-            f"| {record['input_max_bond_dim']} | {record['params']['k_max']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} |"
+            f"| {record['input_max_bond_dim']} | {record['params']['k_max']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} |"
         )
     for case, title in [
         ("gaussian_elementwise", "Case 2: Gaussian elementwise, global versus patched"),
@@ -73,8 +84,8 @@ def main(profile: Path) -> None:
             "",
             f"## {title}",
             "",
-            "| input χ | raw χ | N | R | arm | time (s) | sampled relative L2 | input patches | input max patch χ | output patches | parameters | speedup |",
-            "|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|",
+            "| input χ | raw χ | N | R | arm | time (s) | sampled relative L2 | input patches | input max patch χ | output patches | parameters | allocations | allocated (MiB) | speedup |",
+            "|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for record in sorted(grouped[case], key=lambda item: (item["input_max_bond_dim"], item["algorithm"])):
             params = record["params"]
@@ -83,7 +94,7 @@ def main(profile: Path) -> None:
             input_patch_chi = params.get("input_max_patch_chi", max(params.get("left_input_max_patch_chi", 0), params.get("right_input_max_patch_chi", 0)))
             speedup = params.get("speedup_vs_global", 1.0)
             lines.append(
-                f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {speedup:.3f} |"
+                f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} | {speedup:.3f} |"
             )
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 

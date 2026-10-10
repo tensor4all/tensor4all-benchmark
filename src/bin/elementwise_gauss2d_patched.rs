@@ -395,6 +395,8 @@ fn write_global_record(
             max_patch_bond: None,
             rtol: (tolerance_metric == "relative_l2_svd").then_some(INPUT_L2_RTOL),
             input_build_secs: Some(input.build.as_secs_f64()),
+            n_allocations: Some(timing.alloc_calls_median),
+            allocated_bytes: Some(timing.alloc_bytes_median),
         },
     )
 }
@@ -456,6 +458,8 @@ fn write_patched_record(
             max_patch_bond: Some(max_patch_bond(output)),
             rtol: Some(INPUT_L2_RTOL),
             input_build_secs: Some(input.build.as_secs_f64()),
+            n_allocations: Some(timing.alloc_calls_median),
+            allocated_bytes: Some(timing.alloc_bytes_median),
         },
     )
 }

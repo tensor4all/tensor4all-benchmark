@@ -1,3 +1,4 @@
+pub mod alloc;
 pub mod elementwise;
 pub mod fourier;
 pub mod gaussian;

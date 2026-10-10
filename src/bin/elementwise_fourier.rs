@@ -138,6 +138,8 @@ fn main() -> anyhow::Result<()> {
                 max_patch_bond: None,
                 rtol: None,
                 input_build_secs: None,
+                n_allocations: Some(timing.alloc_calls_median),
+                allocated_bytes: Some(timing.alloc_bytes_median),
             };
             write_record(
                 &out_dir,

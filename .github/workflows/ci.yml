@@ -14,6 +14,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
+      - name: Check the generated result index
+        run: python3 scripts/gen_index.py --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --release --locked
       - name: smoke Fourier elementwise
@@ -30,4 +32,14 @@ jobs:
         run: >
           BENCH_NS=2 BENCH_RUNS=1 BENCH_WARMUPS=0
           BENCH_INPUT_CACHE_DIR=/tmp/smoke-cache OUT_DIR=/tmp/smoke/raw
+          EXPORT_HDF5=/tmp/smoke-export
           cargo run --release --locked --bin mpo_mpo_aniso_patched
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+      - name: Julia cross-check of the MPO contraction inputs
+        # Reads the HDF5 the smoke step exported and evaluates it in ITensors.jl
+        # against the closed form the instance approximates.
+        run: |
+          julia --project=julia -e 'using Pkg; Pkg.instantiate()'
+          julia --project=julia julia/check_mpo_mpo.jl /tmp/smoke-export 2

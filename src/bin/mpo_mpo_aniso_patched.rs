@@ -6,10 +6,10 @@ use std::time::Instant;
 use tensor4all_itensorlike::TensorTrain;
 use tensor4all_simplett::AbstractTensorTrain;
 
-use t4a_bench::gaussian::fused_qtt_to_mpo;
+use t4a_bench::gaussian::{fused_qtt_to_mpo, AnisoMixture2D};
 use t4a_bench::gaussian_input::{
     prepare_gaussian_pair, sampled_input_relative_l2, tensortrain_n_params as simple_n_params,
-    GaussianInputConfig, INPUT_L2_RTOL, PATCH_CAP,
+    GaussianInputConfig, GaussianInputPair, INPUT_L2_RTOL, PATCH_CAP,
 };
 use t4a_bench::harness::time_median;
 use t4a_bench::mpo_contract::sampled_relative_l2_vs_aniso_grid;
@@ -26,6 +26,45 @@ fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
         .ok()
         .and_then(|value| value.parse().ok())
         .unwrap_or(default)
+}
+
+/// One term of the closed form the interpolative input approximates.
+fn mixture_json(mixture: &AnisoMixture2D) -> serde_json::Value {
+    serde_json::json!({
+        "weights": mixture.weights,
+        "quad": mixture.quad.iter().map(|&q| [q.0, q.1, q.2]).collect::<Vec<_>>(),
+        "centers": mixture.centers.iter().map(|&c| [c.0, c.1]).collect::<Vec<_>>(),
+    })
+}
+
+/// Write the ITensors-compatible instance dump for the Julia cross-check.
+///
+/// The two groups `f` and `g` are the fused site-dimension-4 QTTs, one MPS site
+/// per quantics bit pair, and the JSON carries the mixtures they approximate.
+/// The case name is asserted on the Julia side, because cases 2 and 3 once
+/// shared these file names.
+fn export_instance(dir: &str, n: usize, input: &GaussianInputPair) -> anyhow::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let h5 = format!("{dir}/instance-n{n}.h5");
+    t4a_bench::hdf5_export::save_tt_as_mps(&h5, "f", &input.left, false)?;
+    t4a_bench::hdf5_export::save_tt_as_mps(&h5, "g", &input.right, true)?;
+    let meta = serde_json::json!({
+        "schema_version": 1,
+        "case": CASE,
+        "n_gauss": n,
+        "r": input.r,
+        "box_l": input.box_l,
+        "interpolation_tolerance": 1e-10,
+        "input_l2_rtol": INPUT_L2_RTOL,
+        "left": mixture_json(&input.left_mixture),
+        "right": mixture_json(&input.right_mixture),
+    });
+    std::fs::write(
+        format!("{dir}/instance-n{n}.json"),
+        serde_json::to_string_pretty(&meta)?,
+    )?;
+    eprintln!("exported instance-n{n} to {dir}");
+    Ok(())
 }
 
 fn main() -> anyhow::Result<()> {
@@ -92,6 +131,13 @@ fn run_point(
     );
     let input_chi = input.left.rank().max(input.right.rank());
     let input_params = simple_n_params(&input.left) + simple_n_params(&input.right);
+
+    // Independent ITensors.jl cross-check export: the two input QTTs and the
+    // analytic mixtures they approximate. `julia/check_mpo_mpo.jl` reads both and
+    // evaluates the tensors at sampled grid points against the closed form.
+    if let Some(dir) = std::env::var("EXPORT_HDF5").ok().filter(|d| !d.is_empty()) {
+        export_instance(&dir, n, &input)?;
+    }
 
     let (global_result, global_timing) = time_median(warmups, runs, || {
         prepared.contract_fit_global(INPUT_L2_RTOL, GLOBAL_MAX_BOND)

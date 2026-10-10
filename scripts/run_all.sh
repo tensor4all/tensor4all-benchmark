@@ -7,7 +7,14 @@ if [[ $# -ne 1 ]]; then
 fi
 
 profile=$1
-out="result/$profile"
+# The measured revision comes from the pin, so the recorded revision and the
+# directory the sweep lands in cannot disagree with the code that was built.
+rev=$(grep -m1 'tensor4all-itensorlike = ' Cargo.toml | sed -n 's/.*rev = "\([0-9a-f]*\)".*/\1/p')
+if [[ -z $rev ]]; then
+  echo "cannot read the tensor4all-rs pin from Cargo.toml" >&2
+  exit 2
+fi
+out="result/$profile/${rev:0:12}"
 raw="$out/raw"
 core=${BENCH_CPU_CORE:-0}
 threads=${BENCH_THREADS:-1}
@@ -23,6 +30,8 @@ else
   affinity="$core-$((core + threads - 1))"
 fi
 mkdir -p "$raw"
+# Re-measuring a (profile, revision) replaces that sweep; other revisions of the
+# same profile stay, and result/INDEX.md links them all.
 rm -f "$raw"/*.json
 
 export RAYON_NUM_THREADS="$threads"
@@ -57,7 +66,7 @@ os: $(uname -s)
 chip: ${chip:-unknown}
 memory_gb: ${memory_gb:-unknown}
 repo_rev: $repo_rev
-tensor4all_rs_rev: a5157385f58048355a28a6a003d4cb63d3b1349b
+tensor4all_rs_rev: $rev
 threads: $threads
 cpu_affinity: $affinity
 EOF
@@ -66,3 +75,4 @@ run cargo run --release --locked --bin elementwise_fourier
 run cargo run --release --locked --bin elementwise_gauss2d_patched
 run cargo run --release --locked --bin mpo_mpo_aniso_patched
 python3 scripts/report.py "$out"
+python3 scripts/gen_index.py

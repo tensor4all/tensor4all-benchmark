@@ -55,7 +55,13 @@ Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. A complete single
 BENCH_CPU_CORE=0 scripts/run_all.sh linux-epyc-7713p
 ```
 
-The script pins Rayon and common BLAS implementations to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`.
+The script pins Rayon and common BLAS implementations and the tenferro thread count to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`.
+
+Set `BENCH_THREADS=n` for the optional scaling sweep. It uses `n` threads on the contiguous core range starting at `BENCH_CPU_CORE`, and belongs in its own profile named `<machine>-<n>t`. The single-core profile stays the source of truth.
+
+```bash
+BENCH_CPU_CORE=0 BENCH_THREADS=4 scripts/run_all.sh linux-epyc-7713p-4t
+```
 
 For a probe run:
 

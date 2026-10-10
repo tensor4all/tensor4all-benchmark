@@ -45,6 +45,14 @@ pub struct RunRecord {
     /// inputs are shared by every arm of the instance.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_build_secs: Option<f64>,
+    /// Heap allocation calls made by the timed operation, median over the timed
+    /// runs. Present on every arm measured by the current harness; absent from
+    /// records written before the counters existed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub n_allocations: Option<u64>,
+    /// Bytes requested by those allocation calls, median over the timed runs.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allocated_bytes: Option<u64>,
 }
 
 pub fn write_record(dir: &Path, name: &str, record: &RunRecord) -> anyhow::Result<()> {
@@ -78,12 +86,16 @@ mod tests {
             max_patch_bond: None,
             rtol: None,
             input_build_secs: None,
+            n_allocations: Some(1234),
+            allocated_bytes: Some(5678),
         };
         let s = serde_json::to_string(&rec).unwrap();
         let v: serde_json::Value = serde_json::from_str(&s).unwrap();
         assert_eq!(v["schema_version"], 1);
         assert_eq!(v["params"]["k_max"], 8);
         assert_eq!(v["n_params"], 120);
+        assert_eq!(v["n_allocations"], 1234);
+        assert_eq!(v["allocated_bytes"], 5678);
         // The unset optional fields are omitted rather than written as null, so
         // a record only ever carries the fields its case actually measured.
         assert!(

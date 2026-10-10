@@ -20,6 +20,18 @@ The terms are combined by deterministic balanced pairwise reduction. Every pair 
 
 The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache key includes the schema version, pinned tensor4all-rs revision, `N`, `R`, width, aspect range, spacing, polynomial degree, interpolation tolerance, addition tolerance, and seed. Cases 2 and 3 share the same cache entry. Set `BENCH_INPUT_CACHE_REFRESH=1` to rebuild it or `BENCH_INPUT_CACHE_DIR` to move the cache.
 
+## Allocation counters
+
+Every record carries the allocation calls and the requested bytes of the timed
+operation, median over the timed runs. The counters come from a process-wide
+`GlobalAlloc` wrapper in `src/alloc.rs`; the benchmark binaries are single
+threaded and pinned to one CPU core, so the counts are attributable to the timed
+arm. They expose the per-call overhead of the contraction engine, which the wall
+time alone hides: at small bond dimensions an arm can allocate two orders of
+magnitude more than its tensors hold, and that cost tracks the number of local
+updates rather than the tensor size. Records written before the counters existed
+omit both fields, and the report generator leaves their columns blank.
+
 ## Patching and accuracy
 
 The patch cap is fixed at 128 and has no runtime setting. Gaussian fit arms use relative-L2/SVD truncation. ACI uses its own interpolation residual, which is not identified with an L2 tolerance. Records therefore carry both the internal tolerance metric and a common deterministic holdout sampled relative-L2 error.

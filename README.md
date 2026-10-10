@@ -2,6 +2,25 @@
 
 Reproducible benchmarks for tensor network algorithms in [tensor4all-rs](https://github.com/tensor4all/tensor4all-rs). Inputs use fixed seeds, timed regions exclude preparation, every arm writes JSON, and reports are generated from those records.
 
+## Results
+
+Every committed sweep is a directory under [`result/`](result/), one per hardware
+profile. Each holds `run.yaml` (machine, revisions, thread count and CPU set),
+`raw/` (one JSON record per case, arm and instance) and the generated
+`report.md`. Read the reports:
+
+| Profile | Machine | Threads | tensor4all-rs | Report |
+| --- | --- | ---: | --- | --- |
+| `linux-ryzen-ai-9-hx-470` | AMD Ryzen AI 9 HX 470, 12 physical cores | 1 | `a515738` | [report.md](result/linux-ryzen-ai-9-hx-470/report.md) |
+| `linux-ryzen-ai-9-hx-470-4t` | the same machine, CPUs 0-3 | 4 | `a515738` | [report.md](result/linux-ryzen-ai-9-hx-470-4t/report.md) |
+| `linux-epyc-7713p` | AMD EPYC 7713P | 1 | `9e9aeda` | [report.md](result/linux-epyc-7713p/report.md) |
+
+The one-thread profile is the reference configuration, and each report repeats
+the machine, revisions, thread count and CPU set in its header. The `-4t`
+profile is scaling evidence only: read it against the one-thread profile of the
+same machine, never instead of it. [`result/README.md`](result/README.md)
+describes the layout.
+
 ## Maintained cases
 
 | Case | Input and operation | Arms | Scaling axis |

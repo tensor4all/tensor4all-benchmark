@@ -217,7 +217,9 @@ impl PatchedMpoPair {
         let global_left = left_train.clone();
         let global_right = right_train.clone();
         let tree_input_options = tree::PatchingOptions {
-            rtol: input_rtol,
+            // `tree::PatchingOptions` takes a discarded-weight cutoff; `rtol`
+            // was the same budget as `rtol^2`.
+            cutoff: input_rtol * input_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -233,7 +235,7 @@ impl PatchedMpoPair {
             split_strategy: tt::PatchSplitStrategy::Sequential,
         };
         let tree_options = tree::PatchingOptions {
-            rtol: contract_rtol,
+            cutoff: contract_rtol * contract_rtol,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -389,7 +391,7 @@ impl PatchedMpoPair {
         output_max_bond: usize,
     ) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
         let output_options = tree::PatchingOptions {
-            rtol,
+            cutoff: rtol * rtol,
             max_bond_dim: Some(output_max_bond),
             ..self.tree_options.clone()
         };

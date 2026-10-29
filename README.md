@@ -23,6 +23,7 @@ has the layout.
 | `elementwise_fourier` | Elementwise product of two random one-dimensional Fourier QTTs | naive, zip-up, fit, ACI | measured input χ |
 | `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, patched fit, global ACI, patched ACI | compressed input χ |
 | `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit, patched fit | compressed input χ |
+| `vertex_bse_contraction` | Bethe-Salpeter contraction of impurity-model vertices (fixed inputs, downloaded) | zip-up, fit | input tolerance |
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
@@ -33,6 +34,19 @@ Every Gaussian has an independent positive weight, center, log-uniform aspect ra
 The terms are combined by deterministic balanced pairwise reduction. Every pair is added and immediately compressed with the recorded intermediate relative-L2/SVD tolerance. This gives logarithmic reduction depth and avoids an exact intermediate sum whose bond dimension grows with the number of terms. A final global relative-L2/SVD truncation uses `1e-6`.
 
 The expensive raw input pair is cached atomically in `.cache/inputs/`. The cache key includes the schema version, pinned tensor4all-rs revision, `N`, `R`, width, aspect range, spacing, polynomial degree, interpolation tolerance, addition tolerance, and seed. Cases 2 and 3 share the same cache entry. Set `BENCH_INPUT_CACHE_REFRESH=1` to rebuild it or `BENCH_INPUT_CACHE_DIR` to move the cache.
+
+## Vertex input
+
+Case 4 contracts two-particle vertices of the single-impurity Anderson model (parquet approximation, magnetic channel,
+β = 1000, 1024 Matsubara frequencies per axis) as a Bethe-Salpeter equation does,
+Φ(ν, ν', ω) = Σ_ν₁ Γ(ν, ν₁, ω) χ0(ν₁, ω) F(ν₁, ν', ω): `hadamard` weights Γ by the bubble χ0, and `partial_contract`
+joins the result with F, timed together and truncating at τ/10 per bond. The inputs are fixed files, one per input
+tolerance τ (`1e-4`, `1e-6`, `1e-8`), from the
+[`vertex-bse-inputs-v1`](https://github.com/tensor4all/tensor4all-benchmark/releases/tag/vertex-bse-inputs-v1)
+release, whose notes describe them; they are downloaded once into `.cache/inputs/vertex_bse/`. The error is the
+relative L2 error against the exact Φ at 4096 points, and a run fails above 10 τ. On one thread τ = `1e-4` takes
+17 s (zip-up) and 33 s (fit) with a 1.5 GB peak, and τ = `1e-6` 9 and 14 minutes with an 18 GB peak; the default
+sweep runs these two, `1e-8` is opt-in.
 
 ## Allocation counters
 
@@ -95,7 +109,7 @@ Requirements are Rust, HDF5, and a BLAS/LAPACK implementation. A complete single
 BENCH_CPU_CORE=0 scripts/run_all.sh linux-epyc-7713p
 ```
 
-The script pins Rayon and common BLAS implementations and the tenferro thread count to one thread, runs the three maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`.
+The script pins Rayon and common BLAS implementations and the tenferro thread count to one thread, runs the four maintained binaries in release mode, writes raw records under `result/<profile>/raw/`, records machine metadata in `run.yaml`, and generates `report.md`.
 
 Set `BENCH_THREADS=n` for the optional scaling sweep. It uses `n` threads on the contiguous core range starting at `BENCH_CPU_CORE`, and belongs in its own profile named `<machine>-<n>t`. The single-core profile stays the source of truth.
 
@@ -127,6 +141,8 @@ Gaussian knobs shared by Cases 2 and 3:
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.
 
 Case 1 accepts `BENCH_KS`, `BENCH_R`, `BENCH_TOL`, `BENCH_MAX_BOND`, `BENCH_RUNS`, `BENCH_WARMUPS`, `BENCH_SEED`, and `BENCH_ALGOS`. Its report is sorted by measured input χ even though mode count generates the instances.
+
+Case 4 accepts `BENCH_VERTEX_TAUS` (default `1e-4,1e-6`; available `1e-4`, `1e-6`, `1e-8`), `BENCH_ALGOS` (default `zipup,fit`), `BENCH_RUNS`, `BENCH_WARMUPS`, `BENCH_INPUT_CACHE_DIR`, and `OUT_DIR`.
 
 ## Validation
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render and validate the three maintained benchmark cases."""
+"""Render and validate the four maintained benchmark cases."""
 
 import json
 import sys
@@ -10,6 +10,7 @@ EXPECTED = {
     "elementwise_fourier": {"naive", "zipup", "fit", "aci"},
     "gaussian_elementwise": {"global_fit", "patched_fit", "global_aci", "patched_aci"},
     "gaussian_mpo_contraction": {"global_fit", "patched_fit"},
+    "vertex_bse_contraction": {"zipup", "fit"},
 }
 
 
@@ -47,7 +48,8 @@ def main(profile: Path) -> None:
         assert {record["algorithm"] for record in grouped[case]} == arms
         by_instance = defaultdict(list)
         for record in grouped[case]:
-            key = record["params"].get("k_max", record["params"].get("n_gauss"))
+            params = record["params"]
+            key = params.get("k_max", params.get("n_gauss", params.get("input_tolerance")))
             by_instance[key].append(record["algorithm"])
         for key, actual in by_instance.items():
             assert Counter(actual) == Counter(arms), (case, key, actual)
@@ -57,6 +59,10 @@ def main(profile: Path) -> None:
         assert params["input_l2_rtol"] == 1e-6
         assert params["external_error_metric"] == "sampled_relative_l2"
         assert record["max_error"] <= 1e-4
+    for record in grouped["vertex_bse_contraction"]:
+        params = record["params"]
+        assert params["external_error_metric"] == "reference_relative_l2"
+        assert record["max_error"] <= 10 * params["input_tolerance"]
     run = metadata(profile / "run.yaml")
     lines = [
         "# Tensor4all benchmark results",
@@ -96,6 +102,18 @@ def main(profile: Path) -> None:
             lines.append(
                 f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} | {speedup:.3f} |"
             )
+    lines += [
+        "",
+        "## Case 4: vertex Bethe-Salpeter contraction",
+        "",
+        "| input tolerance | input χ (Γ / F) | arm | time (s) | relative L2 vs reference | best attainable | output χ | parameters | allocations | allocated (MiB) |",
+        "|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for record in sorted(grouped["vertex_bse_contraction"], key=lambda item: (-item["params"]["input_tolerance"], item["algorithm"])):
+        params = record["params"]
+        lines.append(
+            f"| {params['input_tolerance']:.0e} | {params['gamma_chi']} / {params['f_chi']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {params['best_attainable_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} |"
+        )
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 
 

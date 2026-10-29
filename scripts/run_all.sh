@@ -74,5 +74,6 @@ EOF
 run cargo run --release --locked --bin elementwise_fourier
 run cargo run --release --locked --bin elementwise_gauss2d_patched
 run cargo run --release --locked --bin mpo_mpo_aniso_patched
+run cargo run --release --locked --bin vertex_bse
 python3 scripts/report.py "$out"
 python3 scripts/gen_index.py

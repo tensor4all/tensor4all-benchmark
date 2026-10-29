@@ -1445,6 +1445,7 @@ name = "t4a-bench"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "hdf5-metno",
  "libm",
  "num-complex",
  "rand",

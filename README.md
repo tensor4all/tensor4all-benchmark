@@ -23,6 +23,7 @@ has the layout.
 | `elementwise_fourier` | Elementwise product of two random one-dimensional Fourier QTTs | naive, zip-up, fit, ACI | measured input χ |
 | `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, global ACI (patched fit and patched ACI paused) | compressed input χ |
 | `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit (patched fit paused) | compressed input χ |
+| `vertex_bse_contraction` | Bethe-Salpeter contraction of impurity-model vertices (fixed inputs, downloaded) | zip-up, fit | input tolerance |
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 

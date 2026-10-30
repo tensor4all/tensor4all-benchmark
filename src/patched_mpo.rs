@@ -1,8 +1,16 @@
 //! Patched MPO-MPO contraction on the legacy TT and chain TreeTN wrappers.
+//!
+//! The legacy `tensor4all-partitionedtt` halves are paused together with the
+//! rest of the patched arms: tensor4all-rs#1005 removed that crate. They stay
+//! behind the `patched-partitionedtt` feature (not buildable at the pinned
+//! revision) and the port is tracked in
+//! https://github.com/tensor4all/tensor4all-benchmark/issues/11. The chain
+//! TreeTN and global halves build at the pin.
 
 use tensor4all_core::{DynIndex, SvdTruncationPolicy};
 use tensor4all_itensorlike::{ContractOptions, TensorTrain, TruncateOptions};
 use tensor4all_partitionedtreetn as tree;
+#[cfg(feature = "patched-partitionedtt")]
 use tensor4all_partitionedtt as tt;
 use tensor4all_simplett::mpo::MPO;
 use tensor4all_treetn::contraction::ContractionOptions as TreeContractOptions;
@@ -22,10 +30,16 @@ pub struct PatchedMpoPair {
     z: Vec<DynIndex>,
     global_left: TensorTrain,
     global_right: TensorTrain,
+    /// Legacy `partitionedtt` input patches, paused at this pin.
+    #[cfg(feature = "patched-partitionedtt")]
     tt_left: tt::PartitionedTT,
+    /// Legacy `partitionedtt` input patches, paused at this pin.
+    #[cfg(feature = "patched-partitionedtt")]
     tt_right: tt::PartitionedTT,
     tree_left: tree::PartitionedTreeTN<usize>,
     tree_right: tree::PartitionedTreeTN<usize>,
+    /// Legacy `partitionedtt` output options, paused at this pin.
+    #[cfg(feature = "patched-partitionedtt")]
     tt_options: tt::PatchingOptions,
     tree_options: tree::PatchingOptions,
     center: usize,
@@ -196,30 +210,44 @@ impl PatchedMpoPair {
         let input_max_bond = left_train.max_bond_dim().max(right_train.max_bond_dim());
         let left_order = y.iter().chain(&x).cloned().collect::<Vec<_>>();
         let right_order = y.iter().chain(&z).cloned().collect::<Vec<_>>();
-        let tt_input_options = tt::PatchingOptions {
-            rtol: input_rtol,
-            max_bond_dim: Some(patch_max_bond),
-            patch_order: left_order.clone(),
-            split_strategy: tt::PatchSplitStrategy::Sequential,
-        };
-        let tt_right_input_options = tt::PatchingOptions {
-            patch_order: right_order.clone(),
-            ..tt_input_options.clone()
-        };
-        let tt_left = tt::add_with_patching(
-            vec![tt::SubDomainTT::from_tt(left_train.clone())],
-            &tt_input_options,
-        )?;
-        let tt_right = tt::add_with_patching(
-            vec![tt::SubDomainTT::from_tt(right_train.clone())],
-            &tt_right_input_options,
-        )?;
         let global_left = left_train.clone();
         let global_right = right_train.clone();
+        // Legacy `partitionedtt` input patches, paused at this pin.
+        #[cfg(feature = "patched-partitionedtt")]
+        let (tt_left, tt_right, tt_options) = {
+            let tt_input_options = tt::PatchingOptions {
+                rtol: input_rtol,
+                max_bond_dim: Some(patch_max_bond),
+                patch_order: left_order.clone(),
+                split_strategy: tt::PatchSplitStrategy::Sequential,
+            };
+            let tt_right_input_options = tt::PatchingOptions {
+                patch_order: right_order.clone(),
+                ..tt_input_options.clone()
+            };
+            let tt_left = tt::add_with_patching(
+                vec![tt::SubDomainTT::from_tt(left_train.clone())],
+                &tt_input_options,
+            )?;
+            let tt_right = tt::add_with_patching(
+                vec![tt::SubDomainTT::from_tt(right_train.clone())],
+                &tt_right_input_options,
+            )?;
+            let tt_options = tt::PatchingOptions {
+                rtol: contract_rtol,
+                max_bond_dim: Some(patch_max_bond),
+                patch_order: left_order.clone(),
+                split_strategy: tt::PatchSplitStrategy::Sequential,
+            };
+            (tt_left, tt_right, tt_options)
+        };
         let tree_input_options = tree::PatchingOptions {
             // `tree::PatchingOptions` takes a discarded-weight cutoff; `rtol`
             // was the same budget as `rtol^2`.
             cutoff: input_rtol * input_rtol,
+            // The volume-proportional budget is what the recorded chain TreeTN
+            // arm used before `BudgetAllocation` became a field.
+            allocation: tree::BudgetAllocation::Volume,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order.clone(),
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -228,14 +256,9 @@ impl PatchedMpoPair {
             patch_order: right_order.clone(),
             ..tree_input_options.clone()
         };
-        let tt_options = tt::PatchingOptions {
-            rtol: contract_rtol,
-            max_bond_dim: Some(patch_max_bond),
-            patch_order: left_order.clone(),
-            split_strategy: tt::PatchSplitStrategy::Sequential,
-        };
         let tree_options = tree::PatchingOptions {
             cutoff: contract_rtol * contract_rtol,
+            allocation: tree::BudgetAllocation::Volume,
             max_bond_dim: Some(patch_max_bond),
             patch_order: left_order,
             split_strategy: tree::PatchSplitStrategy::Sequential,
@@ -255,6 +278,7 @@ impl PatchedMpoPair {
             &center,
             &tree_right_input_options,
         )?;
+        #[cfg(feature = "patched-partitionedtt")]
         anyhow::ensure!(
             (tree_left.len(), tree_right.len()) == (tt_left.len(), tt_right.len()),
             "TT and TreeTN patch counts differ"
@@ -264,10 +288,13 @@ impl PatchedMpoPair {
             z,
             global_left,
             global_right,
+            #[cfg(feature = "patched-partitionedtt")]
             tt_left,
+            #[cfg(feature = "patched-partitionedtt")]
             tt_right,
             tree_left,
             tree_right,
+            #[cfg(feature = "patched-partitionedtt")]
             tt_options,
             tree_options,
             center,
@@ -286,19 +313,23 @@ impl PatchedMpoPair {
     }
 
     /// Left and right input patch counts.
+    ///
+    /// Counted on the chain TreeTN patches, which the constructor asserts equal the
+    /// paused `partitionedtt` patches, so the numbers do not depend on which of the two
+    /// representations is built.
     pub fn input_patch_counts(&self) -> (usize, usize) {
-        (self.tt_left.len(), self.tt_right.len())
+        (self.tree_left.len(), self.tree_right.len())
     }
 
     /// Largest left and right input patch bond dimensions.
     pub fn input_patch_max_bonds(&self) -> (usize, usize) {
         (
-            self.tt_left
+            self.tree_left
                 .values()
                 .map(|patch| patch.max_bond_dim())
                 .max()
                 .unwrap_or(0),
-            self.tt_right
+            self.tree_right
                 .values()
                 .map(|patch| patch.max_bond_dim())
                 .max()
@@ -309,14 +340,8 @@ impl PatchedMpoPair {
     /// Total stored parameters in the left and right patched inputs.
     pub fn input_patch_n_params(&self) -> (usize, usize) {
         (
-            self.tt_left
-                .values()
-                .map(|subdomain| tensortrain_n_params(subdomain.data()))
-                .sum(),
-            self.tt_right
-                .values()
-                .map(|subdomain| tensortrain_n_params(subdomain.data()))
-                .sum(),
+            partitioned_treetn_n_params(&self.tree_left),
+            partitioned_treetn_n_params(&self.tree_right),
         )
     }
 
@@ -341,6 +366,10 @@ impl PatchedMpoPair {
     }
 
     /// Run one full-sweep fit through `tensor4all-partitionedtt`.
+    ///
+    /// Paused at this pin: tensor4all-rs#1005 removed that crate. See
+    /// <https://github.com/tensor4all/tensor4all-benchmark/issues/11>.
+    #[cfg(feature = "patched-partitionedtt")]
     pub fn contract_fit_tt_partitioned(
         &self,
         rtol: f64,
@@ -360,6 +389,10 @@ impl PatchedMpoPair {
     }
 
     /// Sum and convert a legacy partitioned result outside the timed region.
+    ///
+    /// Paused at this pin: tensor4all-rs#1005 removed that crate. See
+    /// <https://github.com/tensor4all/tensor4all-benchmark/issues/11>.
+    #[cfg(feature = "patched-partitionedtt")]
     pub fn finish_tt_output(&self, output: tt::PartitionedTT) -> anyhow::Result<PatchedMpoOutput> {
         let max_patch_bond = output
             .values()
@@ -375,6 +408,10 @@ impl PatchedMpoPair {
     }
 
     /// Run and convert one legacy partitioned fit contraction.
+    ///
+    /// Paused at this pin: tensor4all-rs#1005 removed that crate. See
+    /// <https://github.com/tensor4all/tensor4all-benchmark/issues/11>.
+    #[cfg(feature = "patched-partitionedtt")]
     pub fn contract_fit_tt(
         &self,
         rtol: f64,
@@ -392,6 +429,7 @@ impl PatchedMpoPair {
     ) -> anyhow::Result<tree::PartitionedTreeTN<usize>> {
         let output_options = tree::PatchingOptions {
             cutoff: rtol * rtol,
+            allocation: tree::BudgetAllocation::Volume,
             max_bond_dim: Some(output_max_bond),
             ..self.tree_options.clone()
         };

@@ -21,10 +21,25 @@ has the layout.
 | Case | Input and operation | Arms | Scaling axis |
 | --- | --- | --- | --- |
 | `elementwise_fourier` | Elementwise product of two random one-dimensional Fourier QTTs | naive, zip-up, fit, ACI | measured input χ |
-| `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, patched fit, global ACI, patched ACI | compressed input χ |
-| `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit, patched fit | compressed input χ |
+| `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, global ACI (patched fit and patched ACI paused) | compressed input χ |
+| `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit (patched fit paused) | compressed input χ |
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
+
+## Paused patched arms
+
+The patched arms of cases 2 and 3 are paused. `tensor4all-rs#1005` removed
+`tensor4all-partitionedtt`, which they are built on, so at the pinned revision
+they are excluded from the build and from measurement. The code stays in the
+tree behind the `patched-partitionedtt` Cargo feature, which does not build at
+this pin. Porting the arms to `tensor4all-partitionedtreetn` is tracked as
+tensor4all-benchmark#11.
+
+`BENCH_ARMS` selects the arms of a Gaussian runner, and asking for a paused arm
+fails with a message pointing at that issue. Records written since the pause
+carry no patched rows, and `scripts/report.py` leaves the columns that only a
+patched row fills blank. Sweeps recorded before the pause keep their patched
+rows.
 
 ## Gaussian input
 
@@ -53,11 +68,11 @@ The patch cap is fixed at 128 and has no runtime setting. Gaussian fit arms use 
 Case 2 compares:
 
 - global fit
-- patched fit
+- patched fit (paused)
 - global ACI with scale-relative residual
-- patched ACI with patch-local absolute residual followed by global L2 budgeting
+- patched ACI with patch-local absolute residual followed by global L2 budgeting (paused)
 
-Case 3 compares global TreeTN fit with patched chain-TreeTN fit. Its reference is the finite left-endpoint quantics grid contraction, evaluated analytically with endpoint corrections.
+Case 3 compares global TreeTN fit with patched chain-TreeTN fit (paused). Its reference is the finite left-endpoint quantics grid contraction, evaluated analytically with endpoint corrections.
 
 Input construction, cache I/O, global input compression, format conversion, patch preparation, output conversion, and accuracy evaluation are outside timed regions.
 
@@ -117,6 +132,7 @@ Gaussian knobs shared by Cases 2 and 3:
 | Variable | Default | Meaning |
 | --- | ---: | --- |
 | `BENCH_NS` | `2,8,32,128` | Gaussian counts used to produce measured χ points |
+| `BENCH_ARMS` | `global_fit,global_aci` (case 2), `global_fit` (case 3) | arms to run; a paused arm fails with the pointer to tensor4all-benchmark#11 |
 | `BENCH_SEED` | `0` | deterministic instance seed |
 | `BENCH_RUNS` | `1` | timed repetitions |
 | `BENCH_WARMUPS` | `0` | untimed repetitions |

@@ -71,6 +71,9 @@ threads: $threads
 cpu_affinity: $affinity
 EOF
 
+# The two Gaussian runners default to the arms this pin can build. The patched
+# arms are paused because tensor4all-rs#1005 removed tensor4all-partitionedtt;
+# the port is tracked as tensor4all-benchmark#11.
 run cargo run --release --locked --bin elementwise_fourier
 run cargo run --release --locked --bin elementwise_gauss2d_patched
 run cargo run --release --locked --bin mpo_mpo_aniso_patched

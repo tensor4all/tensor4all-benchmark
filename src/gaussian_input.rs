@@ -16,7 +16,7 @@ pub const PATCH_CAP: usize = 128;
 /// Final global relative-L2 input tolerance.
 pub const INPUT_L2_RTOL: f64 = 1e-6;
 const CACHE_SCHEMA: &str = "interpolative-gaussian-pair-v2";
-const TENSOR4ALL_REV: &str = "a5157385f58048355a28a6a003d4cb63d3b1349b";
+const TENSOR4ALL_REV: &str = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec";
 
 /// Parameters that uniquely define one cached input pair.
 #[derive(Clone, Debug)]

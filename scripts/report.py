@@ -3,13 +3,24 @@
 
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
-EXPECTED = {
+# Arms each case measures at the pinned tensor4all-rs revision. The patched arms
+# are paused: tensor4all-rs#1005 removed tensor4all-partitionedtt, which they are
+# built on, and the port is tracked in
+# https://github.com/tensor4all/tensor4all-benchmark/issues/11. A sweep recorded
+# before the pause still carries them, so PAUSED arms are accepted but not
+# required.
+MEASURED = {
     "elementwise_fourier": {"naive", "zipup", "fit", "aci"},
-    "gaussian_elementwise": {"global_fit", "patched_fit", "global_aci", "patched_aci"},
-    "gaussian_mpo_contraction": {"global_fit", "patched_fit"},
+    "gaussian_elementwise": {"global_fit", "global_aci"},
+    "gaussian_mpo_contraction": {"global_fit"},
+}
+PAUSED = {
+    "elementwise_fourier": set(),
+    "gaussian_elementwise": {"patched_fit", "patched_aci"},
+    "gaussian_mpo_contraction": {"patched_fit"},
 }
 
 
@@ -33,24 +44,49 @@ def metadata(path: Path) -> dict[str, str]:
     return result
 
 
+def input_patch_count(params: dict) -> object:
+    """Input patch count, blank on records written while the patched arms are paused."""
+    if "input_patch_count" in params:
+        return params["input_patch_count"]
+    if "left_input_patch_count" in params:
+        return params.get("left_input_patch_count", 0) + params.get(
+            "right_input_patch_count", 0
+        )
+    return ""
+
+
+def input_patch_chi(params: dict) -> object:
+    """Largest input patch bond dimension, blank while the patched arms are paused."""
+    if "input_max_patch_chi" in params:
+        return params["input_max_patch_chi"]
+    if "left_input_max_patch_chi" in params:
+        return max(
+            params.get("left_input_max_patch_chi", 0),
+            params.get("right_input_max_patch_chi", 0),
+        )
+    return ""
+
+
 def main(profile: Path) -> None:
     records = [json.loads(path.read_text()) for path in sorted((profile / "raw").glob("*.json"))]
     assert records, f"no JSON records in {profile / 'raw'}"
     grouped = defaultdict(list)
     for record in records:
         assert record["schema_version"] == 1
-        assert record["case"] in EXPECTED, record["case"]
-        assert record["algorithm"] in EXPECTED[record["case"]], record["algorithm"]
-        grouped[record["case"]].append(record)
-    assert set(grouped) == set(EXPECTED), set(grouped)
-    for case, arms in EXPECTED.items():
-        assert {record["algorithm"] for record in grouped[case]} == arms
+        assert record["case"] in MEASURED, record["case"]
+        case = record["case"]
+        assert record["algorithm"] in MEASURED[case] | PAUSED[case], record["algorithm"]
+        grouped[case].append(record)
+    assert set(grouped) == set(MEASURED), set(grouped)
+    for case, arms in MEASURED.items():
+        assert arms <= {record["algorithm"] for record in grouped[case]}, set(grouped[case])
         by_instance = defaultdict(list)
         for record in grouped[case]:
             key = record["params"].get("k_max", record["params"].get("n_gauss"))
             by_instance[key].append(record["algorithm"])
         for key, actual in by_instance.items():
-            assert Counter(actual) == Counter(arms), (case, key, actual)
+            assert arms <= set(actual), (case, key, actual)
+            assert len(actual) == len(set(actual)), (case, key, actual)
     for record in grouped["gaussian_elementwise"] + grouped["gaussian_mpo_contraction"]:
         params = record["params"]
         assert params["patch_cap"] == 128
@@ -90,11 +126,9 @@ def main(profile: Path) -> None:
         for record in sorted(grouped[case], key=lambda item: (item["input_max_bond_dim"], item["algorithm"])):
             params = record["params"]
             raw_chi = max(params["raw_left_chi"], params["raw_right_chi"])
-            input_patches = params.get("input_patch_count", params.get("left_input_patch_count", 0) + params.get("right_input_patch_count", 0))
-            input_patch_chi = params.get("input_max_patch_chi", max(params.get("left_input_max_patch_chi", 0), params.get("right_input_max_patch_chi", 0)))
             speedup = params.get("speedup_vs_global", 1.0)
             lines.append(
-                f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patches} | {input_patch_chi} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} | {speedup:.3f} |"
+                f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patch_count(params)} | {input_patch_chi(params)} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} | {speedup:.3f} |"
             )
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 

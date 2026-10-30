@@ -5,16 +5,24 @@ edition = "2021"
 license = "MIT"
 publish = false
 
+[features]
+default = []
+# The patched arms (src/patched.rs, the partitionedtt parts of src/patched_mpo.rs and the
+# patched arms of the two Gaussian runners) are paused: tensor4all-rs#1005 removed
+# tensor4all-partitionedtt, which they are built on. The feature is a marker that keeps
+# that code in the tree; nothing is measured behind it and it does not build at this pin.
+# The port is tracked in https://github.com/tensor4all/tensor4all-benchmark/issues/11.
+patched-partitionedtt = []
+
 [dependencies]
-tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-simplett" }
-tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-aci" }
-tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-treetn" }
-tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-itensorlike" }
-tensor4all-partitionedtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-partitionedtt" }
-tensor4all-partitionedtreetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-partitionedtreetn" }
-tensor4all-interpolativeqtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-interpolativeqtt" }
-tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-hdf5" }
-tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "a5157385f58048355a28a6a003d4cb63d3b1349b", package = "tensor4all-core" }
+tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-simplett" }
+tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-aci" }
+tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-treetn" }
+tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-itensorlike" }
+tensor4all-partitionedtreetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-partitionedtreetn" }
+tensor4all-interpolativeqtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-interpolativeqtt" }
+tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-hdf5" }
+tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-core" }
 num-complex = "0.4"
 rand = "0.9"
 rand_chacha = "0.9"

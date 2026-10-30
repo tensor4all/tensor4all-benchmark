@@ -6,6 +6,7 @@ pub mod gaussian_input;
 pub mod harness;
 pub mod hdf5_export;
 pub mod mpo_contract;
+#[cfg(feature = "patched-partitionedtt")]
 pub mod patched;
 pub mod patched_mpo;
 pub mod record;

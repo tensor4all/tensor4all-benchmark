@@ -34,6 +34,11 @@ jobs:
           BENCH_INPUT_CACHE_DIR=/tmp/smoke-cache OUT_DIR=/tmp/smoke/raw
           EXPORT_HDF5=/tmp/smoke-export
           cargo run --release --locked --bin mpo_mpo_aniso_patched
+      - name: smoke vertex Bethe-Salpeter contraction (downloads one 3 MB input)
+        run: >
+          BENCH_VERTEX_TAUS=1e-4 BENCH_RUNS=1 BENCH_WARMUPS=0
+          BENCH_INPUT_CACHE_DIR=/tmp/smoke-cache OUT_DIR=/tmp/smoke/raw
+          cargo run --release --locked --bin vertex_bse
       - uses: julia-actions/setup-julia@v2
         with:
           version: "1"

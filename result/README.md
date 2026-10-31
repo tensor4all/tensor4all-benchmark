@@ -1,7 +1,7 @@
 # result/
 
 One directory per (hardware profile, measured tensor4all-rs revision), each
-holding one complete sweep of the three maintained cases:
+holding one complete sweep of the maintained cases:
 
 ```text
 result/INDEX.md                       generated table of contents over every sweep

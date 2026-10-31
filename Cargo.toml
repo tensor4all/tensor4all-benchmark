@@ -15,14 +15,14 @@ default = []
 patched-partitionedtt = []
 
 [dependencies]
-tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-simplett" }
-tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-aci" }
-tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-treetn" }
-tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-itensorlike" }
-tensor4all-partitionedtreetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-partitionedtreetn" }
-tensor4all-interpolativeqtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-interpolativeqtt" }
-tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-hdf5" }
-tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "12f14b9b3920fdec6f4fd1b5dde513f76586b0ec", package = "tensor4all-core" }
+tensor4all-simplett = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-simplett" }
+tensor4all-aci = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-aci" }
+tensor4all-treetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-treetn" }
+tensor4all-itensorlike = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-itensorlike" }
+tensor4all-partitionedtreetn = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-partitionedtreetn" }
+tensor4all-interpolativeqtt = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-interpolativeqtt" }
+tensor4all-hdf5 = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-hdf5" }
+tensor4all-core = { git = "https://github.com/tensor4all/tensor4all-rs", rev = "c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d", package = "tensor4all-core" }
 num-complex = "0.4"
 rand = "0.9"
 rand_chacha = "0.9"
@@ -30,6 +30,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
 libm = "0.2"
+hdf5-metno = { version = "0.12", default-features = false }
 
 [profile.release]
 debug = 0            # CARGO_PROFILE_RELEASE_DEBUG=true restores full debug info

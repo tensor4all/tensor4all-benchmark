@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render and validate the three maintained benchmark cases."""
+"""Render and validate the four maintained benchmark cases."""
 
 import json
 import sys
@@ -16,11 +16,13 @@ MEASURED = {
     "elementwise_fourier": {"naive", "zipup", "fit", "aci"},
     "gaussian_elementwise": {"global_fit", "global_aci"},
     "gaussian_mpo_contraction": {"global_fit"},
+    "vertex_bse_contraction": {"zipup", "fit"},
 }
 PAUSED = {
     "elementwise_fourier": set(),
     "gaussian_elementwise": {"patched_fit", "patched_aci"},
     "gaussian_mpo_contraction": {"patched_fit"},
+    "vertex_bse_contraction": set(),
 }
 
 

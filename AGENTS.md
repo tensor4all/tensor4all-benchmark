@@ -4,11 +4,13 @@ Read `README.md` before changing case definitions, timing boundaries, input gene
 
 ## Maintained scope
 
-The repository has exactly three benchmark cases: Fourier elementwise, Gaussian elementwise global versus patched, and Gaussian MPO-MPO contraction global versus patched. Do not add another case when an arm or metric in one of these cases answers the question.
+The repository has exactly four benchmark cases: Fourier elementwise, Gaussian elementwise global versus patched, Gaussian MPO-MPO contraction global versus patched, and the vertex Bethe-Salpeter contraction. Do not add another case when an arm or metric in one of these cases answers the question.
 
 The patched arms of the two Gaussian cases are paused: `tensor4all-rs#1005` removed `tensor4all-partitionedtt`, so at the pinned revision they are excluded from the build and from measurement, and only the Fourier case and the global arms of cases 2 and 3 are measured. Porting them to `tensor4all-partitionedtreetn` is tracked as tensor4all-benchmark#11. Do not report patched numbers at a revision that does not build them.
 
 Gaussian inputs use independent two-dimensional interpolative decomposition per term, deterministic balanced pairwise add-and-compress, final relative-L2/SVD tolerance `1e-6`, and fixed patch cap 128. Do not add TCI generation, whole-mixture interpolation, isotropic controls, independent `R` sweeps, or a runtime patch-cap knob without an explicit design change.
+
+Vertex inputs are the fixed files of the `vertex-bse-inputs-v1` release. Do not regenerate or replace them; new inputs need a new release tag.
 
 ACI residual tolerance is not an L2 tolerance. Keep its internal metric explicit and compare it with other arms only through the common achieved external error.
 
@@ -20,7 +22,7 @@ Run release builds with one pinned CPU core and single-threaded Rayon and BLAS. 
 
 A machine may carry one additional scaling profile named `<machine>-<n>t`,
 produced with `BENCH_THREADS=n`, which pins a contiguous core range and lets the
-same three cases run on `n` Rayon and BLAS threads. Its `run.yaml` records the
+same four cases run on `n` Rayon and BLAS threads. Its `run.yaml` records the
 thread count and the core range. Treat it as scaling evidence only: the
 single-core profile stays the reference, and the two profiles are never merged.
 

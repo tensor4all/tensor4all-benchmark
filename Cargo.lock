@@ -1781,7 +1781,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-aci"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "num-complex",
  "rand",
@@ -1796,7 +1796,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-core"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1821,7 +1821,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-cpu-platform"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "tenferro-einsum",
  "tenferro-linalg",
@@ -1830,7 +1830,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-hdf5"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "hdf5-metno",
@@ -1846,7 +1846,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-interpolativeqtt"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "tensor4all-simplett",
  "tensor4all-tensorbackend",
@@ -1856,7 +1856,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-itensorlike"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "num-complex",
@@ -1872,7 +1872,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-partitionedtreetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "hataori",
@@ -1886,7 +1886,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-simplett"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "bnum",
@@ -1902,7 +1902,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-tensorbackend"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "libc",
@@ -1925,7 +1925,7 @@ dependencies = [
 [[package]]
 name = "tensor4all-treetn"
 version = "0.2.0"
-source = "git+https://github.com/tensor4all/tensor4all-rs?rev=12f14b9b3920fdec6f4fd1b5dde513f76586b0ec#12f14b9b3920fdec6f4fd1b5dde513f76586b0ec"
+source = "git+https://github.com/tensor4all/tensor4all-rs?rev=c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d#c5f06db600aa5c8c1c40f4bf95b6e9476e552d9d"
 dependencies = [
  "anyhow",
  "dyn-clone",

@@ -1,5 +1,5 @@
 //! Case 4: the Bethe-Salpeter contraction Φ(ν,ν',ω) = Σ_ν₁ Γ(ν,ν₁,ω) χ0(ν₁,ω) F(ν₁,ν',ω) of impurity-model vertices,
-//! zip-up and fit. Inputs: the fixed files of the `vertex-bse-inputs-v1` release (layout in its notes), downloaded once
+//! zip-up, fit, and fit from a zip-up start capped at bond dimension 16 (`fit_capped`). Inputs: the fixed files of the `vertex-bse-inputs-v1` release (layout in its notes), downloaded once
 //! into the input cache.
 
 use std::path::{Path, PathBuf};
@@ -26,6 +26,8 @@ const FILES: [(f64, &str); 3] = [
 /// Quantics bits per frequency.
 const R: usize = 10;
 const MAX_BOND: usize = 4096;
+/// Bond cap of the zip-up start of the `fit_capped` arm.
+const FIT_START_BOND: usize = 16;
 
 fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
     std::env::var(name)
@@ -85,7 +87,7 @@ fn max_bond(tree: &Tree) -> usize {
 
 fn main() -> anyhow::Result<()> {
     let taus = std::env::var("BENCH_VERTEX_TAUS").unwrap_or_else(|_| "1e-4,1e-6".into());
-    let algos = std::env::var("BENCH_ALGOS").unwrap_or_else(|_| "zipup,fit".into());
+    let algos = std::env::var("BENCH_ALGOS").unwrap_or_else(|_| "zipup,fit,fit_capped".into());
     let out_dir = PathBuf::from(env_or("OUT_DIR", "result/dev/raw".to_string()));
     let cache = PathBuf::from(env_or("BENCH_INPUT_CACHE_DIR", ".cache/inputs".to_string()));
     let (runs, warmups) = (
@@ -109,7 +111,7 @@ fn main() -> anyhow::Result<()> {
         let full = load(file, "F", &[&f_omega, &f_nu1, &f_nup])?;
         let bubble = load(file, "bubble", &[&b_omega, &b_nu1])?;
         let h5 = hdf5_metno::File::open(&path)?;
-        let best: f64 = h5.attr("contraction_error_of_inputs")?.read_scalar()?;
+        let exact_product_error: f64 = h5.attr("contraction_error_of_inputs")?.read_scalar()?;
         let reference = |n: &str| h5.dataset(&format!("reference/{n}"))?.read_raw::<i64>();
         let points = [reference("omega")?, reference("nu")?, reference("nup")?];
         let exact: Vec<f64> = h5.dataset("reference/value")?.read_raw()?;
@@ -146,6 +148,10 @@ fn main() -> anyhow::Result<()> {
                 "fit" => ContractionOptions::fit()
                     .with_nfullsweeps(1)
                     .with_convergence_tol(rtol),
+                "fit_capped" => ContractionOptions::fit()
+                    .with_nfullsweeps(1)
+                    .with_convergence_tol(rtol)
+                    .with_initial_max_bond_dim(FIT_START_BOND),
                 _ => anyhow::bail!("unknown arm {algo}"),
             }
             .with_svd_policy(policy)
@@ -200,7 +206,8 @@ fn main() -> anyhow::Result<()> {
                 params: serde_json::json!({
                     "input_tolerance": tau, "input_file": name, "cache_hit": cache_hit,
                     "gamma_chi": max_bond(&gamma), "f_chi": max_bond(&full), "bubble_chi": max_bond(&bubble),
-                    "best_attainable_error": best, "external_error_metric": "reference_relative_l2",
+                    "exact_product_error": exact_product_error, "external_error_metric": "reference_relative_l2",
+                    "fit_start_max_bond_dim": (algo == "fit_capped").then_some(FIT_START_BOND),
                 }),
                 seed: 0,
                 tolerance: rtol,
@@ -220,7 +227,7 @@ fn main() -> anyhow::Result<()> {
             };
             write_record(&out_dir, &format!("{CASE}-{algo}-tau{tau:e}"), &record)?;
             eprintln!(
-                "tau {tau:e} {algo}: {:.2} s, error {error:.3e} (best {best:.3e})",
+                "tau {tau:e} {algo}: {:.2} s, error {error:.3e} (exact product {exact_product_error:.3e})",
                 timing.median_secs
             );
         }

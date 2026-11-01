@@ -23,7 +23,7 @@ has the layout.
 | `elementwise_fourier` | Elementwise product of two random one-dimensional Fourier QTTs | naive, zip-up, fit, ACI | measured input χ |
 | `gaussian_elementwise` | Elementwise product of randomly rotated anisotropic Gaussian QTTs | global fit, global ACI (patched fit and patched ACI paused) | compressed input χ |
 | `gaussian_mpo_contraction` | MPO-MPO contraction of the same Gaussian input family | global fit (patched fit paused) | compressed input χ |
-| `vertex_bse_contraction` | Bethe-Salpeter contraction of impurity-model vertices (fixed inputs, downloaded) | zip-up, fit | input tolerance |
+| `vertex_bse_contraction` | Bethe-Salpeter contraction of impurity-model vertices (fixed inputs, downloaded) | zip-up, fit, fit from a capped start | input tolerance |
 
 There is no independent `R` sweep. `R` is the smallest value that gives at least eight grid cells across the fixed minor-axis standard deviation. Gaussian count `N` and `R` are construction metadata, not analysis axes.
 
@@ -144,6 +144,8 @@ Gaussian knobs shared by Cases 2 and 3:
 Case 2 additionally accepts `BENCH_ACI_TOL`, default `1e-8`. This is an ACI residual threshold, not an L2 truncation tolerance.
 
 Case 1 accepts `BENCH_KS`, `BENCH_R`, `BENCH_TOL`, `BENCH_MAX_BOND`, `BENCH_RUNS`, `BENCH_WARMUPS`, `BENCH_SEED`, and `BENCH_ALGOS`. Its report is sorted by measured input χ even though mode count generates the instances.
+
+Case 4 accepts `BENCH_VERTEX_TAUS` (default `1e-4,1e-6`; `1e-8` is also available), `BENCH_ALGOS` (default `zipup,fit,fit_capped`), `BENCH_RUNS`, and `BENCH_WARMUPS`. The `fit_capped` arm starts its sweep from a zip-up capped at bond dimension 16 (`with_initial_max_bond_dim`) instead of the full zip-up.
 
 ## Validation
 

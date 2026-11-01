@@ -16,7 +16,7 @@ MEASURED = {
     "elementwise_fourier": {"naive", "zipup", "fit", "aci"},
     "gaussian_elementwise": {"global_fit", "global_aci"},
     "gaussian_mpo_contraction": {"global_fit"},
-    "vertex_bse_contraction": {"zipup", "fit"},
+    "vertex_bse_contraction": {"zipup", "fit", "fit_capped"},
 }
 PAUSED = {
     "elementwise_fourier": set(),
@@ -84,7 +84,8 @@ def main(profile: Path) -> None:
         assert arms <= {record["algorithm"] for record in grouped[case]}, set(grouped[case])
         by_instance = defaultdict(list)
         for record in grouped[case]:
-            key = record["params"].get("k_max", record["params"].get("n_gauss"))
+            params = record["params"]
+            key = next((params[name] for name in ("k_max", "n_gauss", "input_tolerance") if name in params), None)
             by_instance[key].append(record["algorithm"])
         for key, actual in by_instance.items():
             assert arms <= set(actual), (case, key, actual)
@@ -132,6 +133,18 @@ def main(profile: Path) -> None:
             lines.append(
                 f"| {record['input_max_bond_dim']} | {raw_chi} | {params['n_gauss']} | {params['r']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {input_patch_count(params)} | {input_patch_chi(params)} | {record.get('n_patches', 1)} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} | {speedup:.3f} |"
             )
+    lines += [
+        "",
+        "## Case 4: vertex Bethe-Salpeter contraction",
+        "",
+        "| τ | input χ | arm | time (s) | relative L2 | exact product L2 | output χ | parameters | allocations | allocated (MiB) |",
+        "|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for record in sorted(grouped["vertex_bse_contraction"], key=lambda item: (-item["params"]["input_tolerance"], item["algorithm"])):
+        params = record["params"]
+        lines.append(
+            f"| {params['input_tolerance']:.0e} | {record['input_max_bond_dim']} | {record['algorithm']} | {record['wall_time_median_secs']:.6f} | {record['max_error']:.3e} | {params['exact_product_error']:.3e} | {record['output_max_bond_dim']} | {record.get('n_params', '')} | {alloc_calls(record)} | {alloc_mib(record)} |"
+        )
     (profile / "report.md").write_text("\n".join(lines) + "\n")
 
 

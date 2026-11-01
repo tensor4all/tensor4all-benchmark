@@ -79,7 +79,7 @@ def render(rows: list[dict[str, object]], pin: str) -> str:
         f"- Pinned tensor4all-rs revision: `{pin}`",
         f"- Recorded sweeps: {len(rows)}",
         "",
-        "One row is one complete sweep of the three maintained cases on one machine",
+        "One row is one complete sweep of the maintained cases on one machine",
         "at one tensor4all-rs revision. `status` compares the measured revision with",
         "the pin in `Cargo.toml`: `current` is measured at it, `superseded` is not.",
         "A `-<n>t` profile is that machine's optional multithreaded scaling sweep,",

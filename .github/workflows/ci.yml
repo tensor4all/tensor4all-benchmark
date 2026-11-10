@@ -6,10 +6,10 @@ on:
 
 jobs:
   rust:
-    # Pinned, not ubuntu-latest: on 2026-11-10 ubuntu-latest moved to ubuntu-26.04 (resolute), where
-    # hdf5-metno-sys 0.12.2 stops emitting -lhdf5_hl and the link fails with
-    # "undefined symbol: H5Literate". The same tree was green on ubuntu-24.04 on 2026-11-03
-    # (runs 41642212995 vs 42813871520). Unpin once the HL detection works on 26.04.
+    # Pinned, not ubuntu-latest: on 2026-11-10 ubuntu-latest moved to ubuntu-26.04 (resolute),
+    # where linking the test binaries fails with "undefined symbol: H5Literate" - the
+    # unversioned spelling, while 1.14.6 there exports only H5Literate1/H5Literate2. The same
+    # tree was green on ubuntu-24.04 on 2026-11-03 (runs 41642212995 vs 42813871520).
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
